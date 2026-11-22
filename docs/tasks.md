@@ -1,6 +1,6 @@
 # Claude Code implementation tasks
 
-Status: FS-001 to FS-006 complete; FS-007 onward pending. Read [architecture](architecture.md) before starting. Execute in numeric order unless a listed dependency and milestone gate permit otherwise. Each task should fit a focused implementation session; split further if its actual diff grows too large.
+Status: FS-001 to FS-007 complete (milestone M2 done); FS-008 onward pending. Read [architecture](architecture.md) before starting. Execute in numeric order unless a listed dependency and milestone gate permit otherwise. Each task should fit a focused implementation session; split further if its actual diff grows too large.
 
 Completion rule: make the bounded change, run its targeted checks, and record evidence before checking it off. Existing repository authentication is already configured; do not replace it. Do not commit or push without authorization from the implementation request.
 
@@ -56,6 +56,8 @@ Completion rule: make the bounded change, run its targeted checks, and record ev
 - Acceptance: two users load independent configs; malicious ownership fields fail validation; a valid PUT increments revision and round-trips content; two saves with the same base revision produce one success and one 409. Invalid/oversized/future-version data leaves storage intact.
 
 ### FS-007 — Implement private template APIs
+
+- **Status: ✅ Complete (2026-11-23).** Evidence: `pytest` 239 passed (41 new in `tests/test_templates_api.py`): anonymous 401 on every route; list shows the three system templates in order then only the caller's own, newest first, metadata only; another user's template returns 404 on read and delete (and stays intact for its owner); system delete is 403 `system_template_read_only`; unknown ids 404; create returns the full envelope with the owner taken from the session, rejects `ownerId`/`userId`/`systemKey`/`kind` in the body, validates names (trimmed, 1-80 code points) and configs (invalid, future version, non-object, oversize 413) without creating anything; validation errors do not echo private content; POST/DELETE need session, Origin, CSRF (and JSON for POST); **creating or deleting a template never changes the workspace, its revision or timestamp**; templates are snapshots independent of later workspace saves. Code: `backend/app/api/templates.py`, `app/services/templates_service.py`, `app/repositories/templates.py`, `app/schemas/templates.py`, shared `app/api/translate.py` (domain error to API error mapping, now also used by the workspace routes). Notes: no per-user cap on custom templates (not specified; add one if abuse matters); the no-SQL-in-routes test now ignores `@router.delete(` decorators.
 
 - Depends on: FS-006.
 - Implement template metadata listing, detail, custom snapshot creation, and own-custom deletion. Use the workspace validator and session-derived owner; system templates are read-only.

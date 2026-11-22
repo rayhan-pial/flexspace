@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite frontend and FastAPI + SQLAlchemy + SQLite backend. Planning docs are in [docs/](docs/); progress is tracked in [docs/tasks.md](docs/tasks.md).
 
-**Current status:** FS-001 (scaffold), FS-002 (config v1 contract) and FS-003 (database) FS-004 (credentials and registration service) FS-005 (session auth and CSRF) and FS-006 (workspace read/save API) complete. No editor features yet.
+**Current status:** FS-001 (scaffold), FS-002 (config v1 contract) and FS-003 (database) FS-004 (credentials and registration service) FS-005 (session auth and CSRF) FS-006 (workspace read/save API) and FS-007 (template API) complete. The backend (milestone M2) is feature-complete. No editor features yet.
 
 ## Prerequisites
 
@@ -65,6 +65,10 @@ Use PowerShell for the commands above; running Vitest from Git Bash with an abso
 ## Workspace API
 
 `GET /api/workspace` returns `{id, revision, updatedAt, config}` for the signed-in user. `PUT /api/workspace` with `{baseRevision, config}` (plus the CSRF header) validates the config and saves it only if `baseRevision` is still current; otherwise it returns 409 `revision_conflict` with `details.currentRevision`. Configs are limited to 1 MiB. The SQLite database runs in WAL mode, so `*.db-wal` / `*.db-shm` files appear next to it (git-ignored).
+
+## Template API
+
+`GET /api/templates` (system templates plus your own), `GET /api/templates/{id}`, `POST /api/templates` with `{name, config}` (private snapshot of a config; never touches your workspace), `DELETE /api/templates/{id}` (own custom templates only; system templates return 403, other users' templates 404).
 
 ## Dependency locking
 

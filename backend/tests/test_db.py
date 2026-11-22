@@ -205,7 +205,8 @@ def test_route_modules_contain_no_sql():
     for path in (Path(__file__).resolve().parents[1] / "app" / "api").glob("*.py"):
         text = path.read_text("utf-8")
         # A typing-only `from sqlalchemy.orm import Session` is fine; query construction is not.
-        for forbidden in (r"\bselect\(", r"\binsert\(", r"\bupdate\(", r"\bdelete\(", r"\.execute\(",
+        # (`@router.delete(` etc. are HTTP route decorators, not SQL.)
+        for forbidden in (r"\bselect\(", r"\binsert\(", r"(?<!router\.)\bupdate\(", r"(?<!router\.)\bdelete\(", r"\.execute\(",
                           r"\.query\(", r"\btext\(", r"from sqlalchemy import", r"import sqlalchemy",
                           r"sqlalchemy\.sql"):
             assert not re.search(forbidden, text), f"{path.name} contains {forbidden}"
