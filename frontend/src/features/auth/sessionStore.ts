@@ -4,12 +4,13 @@ import type { AuthUser } from '../../api/auth'
 import { ApiError } from '../../api/client'
 import { getWorkspace } from '../../api/workspace'
 import { parseWorkspaceConfig } from '../../domain/workspace/parse'
-import type { WorkspaceConfig } from '../../domain/workspace/types'
+import { useEditorStore } from '../editor/editorStore'
 
 export type WorkspaceLoad =
   | { status: 'idle' }
   | { status: 'loading' }
-  | { status: 'ready'; id: string; revision: number; updatedAt: string; config: WorkspaceConfig }
+  /** The data itself lives in the editor store (saved baseline + draft). */
+  | { status: 'ready' }
   | { status: 'error'; code: string; message: string }
 
 export type FieldErrors = { email?: string; password?: string }
@@ -41,6 +42,9 @@ export interface SessionState {
 }
 
 const SIGNED_OUT = { user: null, csrfToken: null, workspace: { status: 'idle' } } as const
+
+/** Drop any owner-bound editor state (draft, saved baseline, selection, history). */
+const resetEditor = () => useEditorStore.getState().reset()
 
 function describeAuthError(error: unknown, mode: 'login' | 'register'): { message: string; fields?: FieldErrors } {
   if (!(error instanceof ApiError)) return { message: 'Something went wrong. Please try again.' }
@@ -77,6 +81,7 @@ export const useSessionStore = create<SessionState>()((set, get) => {
     try {
       const response = await (mode === 'login' ? authApi.login : authApi.register)(email, password)
       if (!isCurrent(generation)) return { ok: false, superseded: true }
+      resetEditor() // never carry a previous owner's draft into a new sign-in
       set({ status: 'authenticated', user: response.user, csrfToken: response.csrfToken, notice: null, workspace: { status: 'idle' } })
       void get().loadWorkspace()
       return { ok: true }
@@ -100,10 +105,12 @@ export const useSessionStore = create<SessionState>()((set, get) => {
       try {
         const response = await authApi.me()
         if (!isCurrent(generation)) return
+        resetEditor()
         set({ status: 'authenticated', user: response.user, csrfToken: response.csrfToken, workspace: { status: 'idle' } })
         void get().loadWorkspace()
       } catch (error) {
         if (!isCurrent(generation)) return
+        resetEditor()
         if (error instanceof ApiError && error.status === 401) set({ status: 'anonymous', ...SIGNED_OUT })
         else set({ status: 'unavailable', ...SIGNED_OUT })
       }
@@ -116,6 +123,7 @@ export const useSessionStore = create<SessionState>()((set, get) => {
       const csrf = get().csrfToken
       begin()
       // Clear private state first so the previous user's data is never shown after logout.
+      resetEditor()
       set({ status: 'anonymous', notice: null, ...SIGNED_OUT })
       try {
         await authApi.logout(csrf)
@@ -142,11 +150,13 @@ export const useSessionStore = create<SessionState>()((set, get) => {
           set({ workspace: { status: 'error', code: parsed.code, message } })
           return
         }
-        set({ workspace: { status: 'ready', id: envelope.id, revision: envelope.revision, updatedAt: envelope.updatedAt, config: parsed.config } })
+        useEditorStore.getState().load({ ownerId: user.id, workspaceId: envelope.id, revision: envelope.revision, config: parsed.config })
+        set({ workspace: { status: 'ready' } })
       } catch (error) {
         if (!stillOwner()) return
         if (error instanceof ApiError && error.status === 401) {
           begin() // invalidate anything else still in flight for the expired session
+          resetEditor()
           set({ status: 'anonymous', notice: 'Your session expired. Please sign in again.', ...SIGNED_OUT })
           return
         }

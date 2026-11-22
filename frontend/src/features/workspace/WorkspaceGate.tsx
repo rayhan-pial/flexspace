@@ -1,4 +1,5 @@
 import { useSessionStore } from '../auth/sessionStore'
+import { useEditorStore } from '../editor/editorStore'
 
 /**
  * Protected workspace loading (FS-008). It proves the signed-in user's own saved workspace
@@ -9,6 +10,8 @@ export default function WorkspaceGate() {
   const workspace = useSessionStore((s) => s.workspace)
   const loadWorkspace = useSessionStore((s) => s.loadWorkspace)
   const logout = useSessionStore((s) => s.logout)
+  const draft = useEditorStore((s) => s.draftConfig)
+  const revision = useEditorStore((s) => s.revision)
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -46,14 +49,14 @@ export default function WorkspaceGate() {
           </div>
         )}
 
-        {workspace.status === 'ready' && (
+        {workspace.status === 'ready' && draft && (
           <section aria-labelledby="workspace-title" className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <h1 id="workspace-title" className="text-2xl font-semibold tracking-tight text-slate-900">
-              {workspace.config.title}
+              {draft.title}
             </h1>
-            <p className="mt-1 text-sm text-slate-500">Saved revision {workspace.revision}</p>
+            <p className="mt-1 text-sm text-slate-500">Saved revision {revision}</p>
             <ul className="mt-4 divide-y divide-slate-100">
-              {workspace.config.sections.map((section) => (
+              {draft.sections.map((section) => (
                 <li key={section.id} className="flex justify-between py-2 text-sm">
                   <span className="text-slate-800">{section.title || 'Untitled section'}</span>
                   <span className="text-slate-500">

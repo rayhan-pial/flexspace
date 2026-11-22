@@ -2,12 +2,17 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   apiError, authResponse, deferred, installFetch, json, noContent, workspaceEnvelope,
 } from '../../test/fakeApi'
+import { useEditorStore } from '../editor/editorStore'
 import { useSessionStore } from './sessionStore'
 
 const store = () => useSessionStore.getState()
+const editor = () => useEditorStore.getState()
 const flush = () => new Promise((resolve) => setTimeout(resolve, 0))
 
-beforeEach(() => useSessionStore.setState(useSessionStore.getInitialState(), true))
+beforeEach(() => {
+  useSessionStore.setState(useSessionStore.getInitialState(), true)
+  useEditorStore.setState(useEditorStore.getInitialState(), true)
+})
 afterEach(() => vi.unstubAllGlobals())
 
 describe('bootstrap', () => {
@@ -19,7 +24,8 @@ describe('bootstrap', () => {
     await store().bootstrap()
     await flush()
     expect(store()).toMatchObject({ status: 'authenticated', user: { id: 'a' }, csrfToken: 'csrf-a' })
-    expect(store().workspace).toMatchObject({ status: 'ready', revision: 3, config: { title: 'A workspace' } })
+    expect(store().workspace).toEqual({ status: 'ready' })
+    expect(editor()).toMatchObject({ ownerId: 'a', revision: 3, savedConfig: { title: 'A workspace' }, draftConfig: { title: 'A workspace' } })
   })
 
   it('is anonymous on 401 and unavailable when the server cannot be reached', async () => {
@@ -102,12 +108,13 @@ describe('late responses from a previous account or attempt', () => {
     await store().logout()
     await store().login('b@example.com', 'correct horse battery')
     await flush()
-    expect(store().workspace).toMatchObject({ status: 'ready', config: { title: 'B workspace' } })
+    expect(editor()).toMatchObject({ ownerId: 'b', draftConfig: { title: 'B workspace' } })
 
     workspaceA.resolve(json(200, workspaceEnvelope('A workspace')))
     await flush()
     expect(store().user?.id).toBe('b')
-    expect(store().workspace).toMatchObject({ status: 'ready', config: { title: 'B workspace' } })
+    expect(store().workspace).toEqual({ status: 'ready' })
+    expect(editor()).toMatchObject({ ownerId: 'b', savedConfig: { title: 'B workspace' }, draftConfig: { title: 'B workspace' } })
   })
 
   it('a delayed workspace after logout is discarded', async () => {
@@ -185,7 +192,8 @@ describe('workspace loading', () => {
     await signIn(() => (attempt++ === 0 ? apiError(500, 'internal_error') : json(200, workspaceEnvelope('Recovered'))))
     expect(store().workspace).toMatchObject({ status: 'error' })
     await store().loadWorkspace()
-    expect(store().workspace).toMatchObject({ status: 'ready', config: { title: 'Recovered' } })
+    expect(store().workspace).toEqual({ status: 'ready' })
+    expect(editor().draftConfig?.title).toBe('Recovered')
   })
 })
 
@@ -233,5 +241,55 @@ describe('browser storage', () => {
     expect(setItem).not.toHaveBeenCalled()
     expect(localStorage.length + sessionStorage.length).toBe(0)
     setItem.mockRestore()
+  })
+})
+
+describe('editor store integration', () => {
+  const handlers = (title = 'A workspace') => ({
+    'POST /auth/login': () => json(200, authResponse('a')),
+    'GET /workspace': () => json(200, workspaceEnvelope(title)),
+    'POST /auth/logout': () => noContent(),
+  })
+
+  it('logout discards the draft, including unsaved edits', async () => {
+    installFetch(handlers())
+    await store().login('a@example.com', 'correct horse battery')
+    await flush()
+    editor().apply((c) => ({ ok: true, config: { ...c, title: 'Unsaved edit' } }))
+    expect(editor().draftConfig?.title).toBe('Unsaved edit')
+    await store().logout()
+    expect(editor()).toMatchObject({ ownerId: null, savedConfig: null, draftConfig: null, selection: null })
+  })
+
+  it("a new sign-in never inherits the previous owner's unsaved draft", async () => {
+    installFetch({
+      ...handlers(),
+      'POST /auth/login': ({ body }) => json(200, authResponse((body as { email: string }).email.startsWith('a') ? 'a' : 'b')),
+      'GET /workspace': () => json(200, workspaceEnvelope('Fresh')),
+    })
+    await store().login('a@example.com', 'correct horse battery')
+    await flush()
+    editor().apply((c) => ({ ok: true, config: { ...c, title: 'A private draft' } }))
+    await store().login('b@example.com', 'correct horse battery') // switches without an explicit logout
+    expect(editor().draftConfig).toBeNull() // reset before B's workspace arrives
+    await flush()
+    expect(editor()).toMatchObject({ ownerId: 'b', draftConfig: { title: 'Fresh' } })
+  })
+
+  it('an expired session clears the editor state', async () => {
+    installFetch({ ...handlers(), 'GET /workspace': () => apiError(401, 'unauthenticated') })
+    await store().login('a@example.com', 'correct horse battery')
+    await flush()
+    expect(editor().draftConfig).toBeNull()
+  })
+
+  it('does not populate the editor from a response that arrived after logout', async () => {
+    const workspace = deferred<Response>()
+    installFetch({ ...handlers(), 'GET /workspace': () => workspace.promise })
+    await store().login('a@example.com', 'correct horse battery')
+    await store().logout()
+    workspace.resolve(json(200, workspaceEnvelope('Late A')))
+    await flush()
+    expect(editor().draftConfig).toBeNull()
   })
 })
