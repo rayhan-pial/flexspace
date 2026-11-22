@@ -1,0 +1,49 @@
+import { memo, useCallback, useMemo } from 'react'
+import { updateWidget } from '../../domain/workspace/commands'
+import type { Widget } from '../../domain/workspace/types'
+import { useEditorStore } from '../editor/editorStore'
+import { InvalidWidgetBody, PendingWidgetBody, UnsupportedWidget } from './WidgetPlaceholders'
+import WidgetShell from './WidgetShell'
+import { getWidgetDefinition, isKnownWidgetType, widgetTypeLabel } from './registry'
+
+/**
+ * Resolves a widget's `type` through the code-owned registry and renders it inside the common
+ * shell. Widget components get parsed props and a callback; the callback becomes a validated
+ * domain command here, so widgets never touch the store themselves.
+ */
+function WidgetRenderer({ widget }: { widget: Widget }) {
+  const mode = useEditorStore((s) => s.mode)
+  const selected = useEditorStore((s) => s.selection?.kind === 'widget' && s.selection.id === widget.id)
+  const apply = useEditorStore((s) => s.apply)
+  const select = useEditorStore((s) => s.select)
+
+  const definition = getWidgetDefinition(widget.type)
+  const props = useMemo(() => (definition ? definition.parseProps(widget.props) : null), [definition, widget.props])
+
+  const widgetId = widget.id
+  const onChangeProps = useCallback(
+    (patch: Record<string, unknown>) => {
+      apply(updateWidget(widgetId, { props: patch }))
+    },
+    [apply, widgetId],
+  )
+  const onSelect = useCallback(() => select({ kind: 'widget', id: widgetId }), [select, widgetId])
+
+  // Not a known type at all: bounded placeholder, no appearance (its data is opaque), data untouched.
+  if (!isKnownWidgetType(widget.type)) return <UnsupportedWidget widgetId={widget.id} type={widget.type} />
+
+  const label = widgetTypeLabel(widget.type)
+  const title = widget.title || label
+  const shell = (body: React.ReactNode) => (
+    <WidgetShell widgetId={widget.id} title={title} mode={mode} selected={selected} appearance={widget.appearance} onSelect={onSelect}>
+      {body}
+    </WidgetShell>
+  )
+
+  if (!definition) return shell(<PendingWidgetBody label={label} />)
+  if (!props) return shell(<InvalidWidgetBody />)
+  const { Component } = definition
+  return shell(<Component title={title} props={props} mode={mode} onChangeProps={onChangeProps} />)
+}
+
+export default memo(WidgetRenderer)

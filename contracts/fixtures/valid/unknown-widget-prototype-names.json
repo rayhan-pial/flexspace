@@ -1,0 +1,92 @@
+{
+  "description": "Unknown widget types named like Object.prototype members are plain unknown types, not crashes",
+  "input": {
+    "schemaVersion": 1,
+    "title": "Prototype-looking widget types",
+    "theme": {
+      "primary": "#6366f1",
+      "background": "#f8fafc",
+      "surface": "#ffffff",
+      "text": "#0f172a",
+      "fontFamily": "system",
+      "fontSizePx": 16
+    },
+    "navigation": {
+      "placement": "left",
+      "primaryItems": [],
+      "secondaryItems": []
+    },
+    "sections": [
+      {
+        "id": "s1",
+        "kind": "grid",
+        "title": "",
+        "hidden": false,
+        "widgets": [
+          {
+            "id": "u1",
+            "type": "constructor",
+            "title": "",
+            "hidden": false,
+            "appearance": {},
+            "props": {}
+          },
+          {
+            "id": "u2",
+            "type": "__proto__",
+            "title": "",
+            "hidden": false,
+            "appearance": {},
+            "props": {}
+          },
+          {
+            "id": "u3",
+            "type": "toString",
+            "title": "",
+            "hidden": false,
+            "appearance": {},
+            "props": {}
+          },
+          {
+            "id": "u4",
+            "type": "hasOwnProperty",
+            "title": "",
+            "hidden": false,
+            "appearance": {},
+            "props": {}
+          }
+        ],
+        "layout": [
+          {
+            "i": "u1",
+            "x": 0,
+            "y": 0,
+            "w": 3,
+            "h": 2
+          },
+          {
+            "i": "u2",
+            "x": 3,
+            "y": 0,
+            "w": 3,
+            "h": 2
+          },
+          {
+            "i": "u3",
+            "x": 6,
+            "y": 0,
+            "w": 3,
+            "h": 2
+          },
+          {
+            "i": "u4",
+            "x": 9,
+            "y": 0,
+            "w": 3,
+            "h": 2
+          }
+        ]
+      }
+    ]
+  }
+}

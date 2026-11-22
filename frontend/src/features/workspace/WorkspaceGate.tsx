@@ -4,11 +4,12 @@ import { useSessionStore } from '../auth/sessionStore'
 import { setWorkspaceTitle } from '../../domain/workspace/commands'
 import { selectIsDirty, useEditorStore } from '../editor/editorStore'
 import SaveBar from '../editor/SaveBar'
+import WorkspaceView from './WorkspaceView'
 import { useUnsavedChangesGuard } from '../editor/useUnsavedChangesGuard'
 
 /**
- * Protected workspace shell. The workspace title is the first editable property; the registry
- * renderer replaces the body in FS-011.
+ * Protected workspace shell: header, save bar, workspace title, and the registry-rendered
+ * sections. Selection, outline and properties panels join in FS-012 onward.
  */
 export default function WorkspaceGate() {
   const user = useSessionStore((s) => s.user)
@@ -48,7 +49,7 @@ export default function WorkspaceGate() {
 
       {workspace.status === 'ready' && draft && <SaveBar />}
 
-      <main className="mx-auto max-w-3xl p-6">
+      <main className="mx-auto max-w-6xl p-6">
         {(workspace.status === 'idle' || workspace.status === 'loading') && (
           <p role="status" className="text-slate-600">Loading your workspace…</p>
         )}
@@ -87,18 +88,10 @@ export default function WorkspaceGate() {
             />
             {titleError && <p role="alert" className="mt-1 text-sm text-rose-700">{titleError}</p>}
 
-            <ul className="mt-6 divide-y divide-slate-100">
-              {draft.sections.map((section) => (
-                <li key={section.id} className="flex justify-between py-2 text-sm">
-                  <span className="text-slate-800">{section.title || 'Untitled section'}</span>
-                  <span className="text-slate-500">
-                    {section.widgets.length} widget{section.widgets.length === 1 ? '' : 's'}
-                  </span>
-                </li>
-              ))}
-            </ul>
           </section>
         )}
+
+        {workspace.status === 'ready' && draft && <WorkspaceView />}
       </main>
 
       {confirmLogout && (

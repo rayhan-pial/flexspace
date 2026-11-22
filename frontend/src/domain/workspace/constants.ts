@@ -22,7 +22,7 @@ export const ICONS = [
 export const ASSET_KEYS = ['aurora', 'workspace', 'mountain', 'studio', 'forest', 'city'] as const
 export const KNOWN_WIDGET_TYPES = ['welcome', 'tasks', 'notes', 'gallery', 'analytics', 'calendar'] as const
 
-/** Per-type minimum grid size. The FS-011 registry will take over ownership of this table. */
+/** Per-type minimum grid size. Owned by the domain (it validates layouts); the widget registry re-exposes it. */
 export const MIN_SIZE: Record<string, readonly [w: number, h: number]> = {
   welcome: [3, 2], tasks: [3, 4], notes: [3, 3],
   gallery: [4, 4], analytics: [4, 3], calendar: [4, 5],

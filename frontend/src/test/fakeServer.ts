@@ -13,10 +13,14 @@ interface UserData {
  * In-memory stand-in for the backend: per-user workspaces, sessions, conditional saves with 409,
  * and hooks to inject failures. Handlers plug into `installFetch`.
  */
-export function createFakeServer(titles: Record<string, string> = { a: 'Original A', b: 'Original B' }) {
+export function createFakeServer(
+  titles: Record<string, string> = { a: 'Original A', b: 'Original B' },
+  /** Optional full starting configs per user (otherwise an empty workspace with the given title). */
+  configs: Record<string, unknown> = {},
+) {
   const users: Record<string, UserData> = {}
   for (const [id, title] of Object.entries(titles)) {
-    const parsed = parseWorkspaceConfig({ schemaVersion: 1, title, sections: [] })
+    const parsed = parseWorkspaceConfig(configs[id] ?? { schemaVersion: 1, title, sections: [] })
     if (!parsed.ok) throw new Error(parsed.message)
     users[id] = { revision: 1, config: parsed.config }
   }

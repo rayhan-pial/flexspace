@@ -9,3 +9,27 @@ body {
   background: #f8fafc;
   color: #0f172a;
 }
+
+/*
+ * Dashboard grid sections. Below 1024px the items simply stack in semantic (array) order; from
+ * 1024px each item is placed from the saved layout via custom properties (12 columns, 32px rows,
+ * 16px gaps - the same units as the persisted rectangles).
+ */
+.fs-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+@media (min-width: 1024px) {
+  .fs-grid {
+    display: grid;
+    grid-template-columns: repeat(12, minmax(0, 1fr));
+    grid-auto-rows: 32px;
+    gap: 16px;
+  }
+  .fs-grid-item {
+    grid-column: var(--col, auto) / span var(--span, 12);
+    grid-row: var(--row, auto) / span var(--rows, 4);
+  }
+}

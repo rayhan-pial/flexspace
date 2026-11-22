@@ -34,7 +34,7 @@ export default function SaveBar() {
 
   return (
     <div className="border-b border-slate-200 bg-white px-6 py-2">
-      <div className="mx-auto flex max-w-3xl flex-wrap items-center justify-between gap-3">
+      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
         <p role="status" aria-live="polite" className={`text-sm ${dirty && !saving ? 'font-medium text-amber-700' : 'text-slate-600'}`}>
           {status}
         </p>
@@ -59,7 +59,7 @@ export default function SaveBar() {
       </div>
 
       {saveStatus.state === 'error' && !conflict && saveStatus.kind !== 'unauthenticated' && (
-        <div role="alert" className="mx-auto mt-2 flex max-w-3xl items-start justify-between gap-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">
+        <div role="alert" className="mx-auto mt-2 flex max-w-6xl items-start justify-between gap-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">
           <span>{saveStatus.message}</span>
           <button type="button" onClick={dismissSaveError} className="shrink-0 font-medium underline focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">
             Dismiss
@@ -68,7 +68,7 @@ export default function SaveBar() {
       )}
 
       {conflict && (
-        <div role="alert" className="mx-auto mt-2 max-w-3xl rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
+        <div role="alert" className="mx-auto mt-2 max-w-6xl rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
           <p className="font-medium">{conflict.message}</p>
           <p className="mt-1">
             The saved workspace is now at revision {conflict.currentRevision}. Your changes were not saved and are still here.
@@ -85,7 +85,7 @@ export default function SaveBar() {
       )}
 
       {reloadError && (
-        <p role="alert" className="mx-auto mt-2 max-w-3xl rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">
+        <p role="alert" className="mx-auto mt-2 max-w-6xl rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">
           {reloadError}
         </p>
       )}

@@ -153,6 +153,19 @@ const PROPS: Record<string, PropsParser> = {
     }
   },
 }
+export type KnownPropsResult = { ok: true; props: Record<string, unknown> } | { ok: false; message: string }
+
+/** Runtime parser for a known widget type's props (used by the registry). Unknown types fail. */
+export function parseKnownProps(type: string, raw: unknown): KnownPropsResult {
+  if (!Object.hasOwn(PROPS, type)) return { ok: false, message: `${type} is not a known widget type` }
+  try {
+    return { ok: true, props: PROPS[type](raw, 'props') }
+  } catch (error) {
+    if (error instanceof Invalid) return { ok: false, message: error.message }
+    throw error
+  }
+}
+
 // Props key holding each type's repeatable entries (all carry globally unique ids).
 const ITEM_LISTS: Record<string, string> = { tasks: 'items', gallery: 'items', analytics: 'metrics', calendar: 'events' }
 
@@ -248,7 +261,7 @@ function parseSection(v: unknown, path: string, ctx: Ctx): Section {
   }
   for (const [wid, rect] of rects) {
     const type = byId.get(wid)!.type
-    const [minW, minH] = MIN_SIZE[type] ?? DEFAULT_MIN_SIZE
+    const [minW, minH] = Object.hasOwn(MIN_SIZE, type) ? MIN_SIZE[type] : DEFAULT_MIN_SIZE // own keys only: "constructor" is just an unknown type
     if (rect.w < minW || rect.h < minH) fail(path, `${wid} is smaller than the ${type} minimum`)
   }
   const visible = widgets.filter((w) => !w.hidden).map((w) => rects.get(w.id)!)
