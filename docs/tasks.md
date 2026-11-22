@@ -1,6 +1,6 @@
 # Claude Code implementation tasks
 
-Status: FS-001 and FS-002 complete; FS-003 onward pending. Read [architecture](architecture.md) before starting. Execute in numeric order unless a listed dependency and milestone gate permit otherwise. Each task should fit a focused implementation session; split further if its actual diff grows too large.
+Status: FS-001 to FS-003 complete; FS-004 onward pending. Read [architecture](architecture.md) before starting. Execute in numeric order unless a listed dependency and milestone gate permit otherwise. Each task should fit a focused implementation session; split further if its actual diff grows too large.
 
 Completion rule: make the bounded change, run its targeted checks, and record evidence before checking it off. Existing repository authentication is already configured; do not replace it. Do not commit or push without authorization from the implementation request.
 
@@ -22,6 +22,8 @@ Completion rule: make the bounded change, run its targeted checks, and record ev
 - Acceptance: both runtimes agree on fixtures for defaults, all six prop types, ID/reference/layout/type limits, unknown widgets retained, invalid current data rejected, and unsupported future versions blocked. No fabricated legacy migration; no arbitrary executable props.
 
 ### FS-003 — Add the database boundary
+
+- **Status: ✅ Complete (2026-11-23).** Evidence: `pytest` 83 passed (22 new in `tests/test_db.py`) on temporary SQLite databases migrated with Alembic: tables, migration-vs-models drift check, downgrade, foreign keys, unique email/workspace/system_key, system-xor-custom template check, cascades, rollback of partial registration, seeding twice, `DATABASE_URL`, and no SQL in `app/api`. `scripts/init_db.py` verified against a throwaway DB. Code: `backend/app/db/`, `app/repositories/`, `app/services/{seed,starter_templates}.py`, `backend/migrations/`. Notes: seeding inserts missing keys only and never overwrites rows (FS-024 adds deliberate updates); starter configs are valid placeholders for FS-024 to replace; the SQLite engine takes over transaction control (`BEGIN` emitted by SQLAlchemy) so rollbacks are real.
 
 - Depends on: FS-002.
 - Implement engine/session factory, ORM models, repositories, and an initial Alembic migration for users, workspaces, templates, and sessions. Seed the three system-template keys idempotently with valid starter configs; visual refinement comes later.

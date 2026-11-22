@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite frontend and FastAPI + SQLAlchemy + SQLite backend. Planning docs are in [docs/](docs/); progress is tracked in [docs/tasks.md](docs/tasks.md).
 
-**Current status:** FS-001 (scaffold) and FS-002 (config v1 contract) complete. No editor features yet.
+**Current status:** FS-001 (scaffold), FS-002 (config v1 contract) and FS-003 (database) complete. No editor features yet.
 
 ## Prerequisites
 
@@ -16,6 +16,9 @@ React + TypeScript + Vite frontend and FastAPI + SQLAlchemy + SQLite backend. Pl
 py -3.12 -m venv backend\.venv        # or use any Python 3.12+ interpreter
 backend\.venv\Scripts\python -m pip install -r backend\requirements-dev.txt
 Copy-Item backend\.env.example backend\.env
+
+# Create/upgrade the SQLite database and seed the system templates (safe to re-run)
+cd backend; .venv\Scripts\python scripts\init_db.py; cd ..
 
 # Frontend
 cd frontend; npm install; cd ..
