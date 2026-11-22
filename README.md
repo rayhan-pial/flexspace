@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite frontend and FastAPI + SQLAlchemy + SQLite backend. Planning docs are in [docs/](docs/); progress is tracked in [docs/tasks.md](docs/tasks.md).
 
-**Current status:** FS-001 (scaffold), FS-002 (config v1 contract) and FS-003 (database) and FS-004 (credentials and registration service) complete. No editor features yet.
+**Current status:** FS-001 (scaffold), FS-002 (config v1 contract) and FS-003 (database) FS-004 (credentials and registration service) and FS-005 (session auth and CSRF) complete. No editor features yet.
 
 ## Prerequisites
 
@@ -57,6 +57,10 @@ npm run build
 The workspace JSON v1 contract, shared fixtures and exported JSON Schema live in [contracts/](contracts/README.md). Regenerate the schema after changing backend models: `cd backend; .venv\Scripts\python scripts\export_schema.py`.
 
 Use PowerShell for the commands above; running Vitest from Git Bash with an absolute `/c/...` path can break module resolution.
+
+## Authentication API
+
+`POST /api/auth/register`, `POST /api/auth/login`, `GET /api/auth/me`, `POST /api/auth/logout`. Sessions are HttpOnly SameSite=Lax cookies; every browser POST/PUT/DELETE must send an allowed `Origin`, and authenticated ones also an `X-CSRF-Token` (returned as `csrfToken` by register/login/me). Session cookies are `Secure` by default: `backend/.env.example` sets `FLEXSPACE_COOKIE_SECURE=false` for plain-HTTP localhost, so keep that line when copying it to `.env`. Add your real origin to `FLEXSPACE_ALLOWED_ORIGINS` (JSON list) when deploying.
 
 ## Dependency locking
 

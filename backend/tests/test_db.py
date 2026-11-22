@@ -1,3 +1,4 @@
+import re
 from datetime import UTC, datetime, timedelta
 from pathlib import Path
 
@@ -203,4 +204,8 @@ def test_starter_configs_are_valid_distinct_and_fresh():
 def test_route_modules_contain_no_sql():
     for path in (Path(__file__).resolve().parents[1] / "app" / "api").glob("*.py"):
         text = path.read_text("utf-8")
-        assert "sqlalchemy" not in text and "select(" not in text, path.name
+        # A typing-only `from sqlalchemy.orm import Session` is fine; query construction is not.
+        for forbidden in (r"\bselect\(", r"\binsert\(", r"\bupdate\(", r"\bdelete\(", r"\.execute\(",
+                          r"\.query\(", r"\btext\(", r"from sqlalchemy import", r"import sqlalchemy",
+                          r"sqlalchemy\.sql"):
+            assert not re.search(forbidden, text), f"{path.name} contains {forbidden}"

@@ -1,6 +1,6 @@
 # Claude Code implementation tasks
 
-Status: FS-001 to FS-004 complete; FS-005 onward pending. Read [architecture](architecture.md) before starting. Execute in numeric order unless a listed dependency and milestone gate permit otherwise. Each task should fit a focused implementation session; split further if its actual diff grows too large.
+Status: FS-001 to FS-005 complete; FS-006 onward pending. Read [architecture](architecture.md) before starting. Execute in numeric order unless a listed dependency and milestone gate permit otherwise. Each task should fit a focused implementation session; split further if its actual diff grows too large.
 
 Completion rule: make the bounded change, run its targeted checks, and record evidence before checking it off. Existing repository authentication is already configured; do not replace it. Do not commit or push without authorization from the implementation request.
 
@@ -40,6 +40,8 @@ Completion rule: make the bounded change, run its targeted checks, and record ev
 - Acceptance: service tests cover valid registration, duplicate normalized emails, invalid/oversized inputs, wrong password, and rollback. Stored passwords are hashes; default config passes FS-002 validation.
 
 ### FS-005 — Complete session authentication and CSRF
+
+- **Status: ✅ Complete (2026-11-23).** Evidence: `pytest` 157 passed (30 new in `tests/test_auth_api.py`, run against temporary SQLite): cookie flags in HTTPS and localhost modes (HttpOnly, SameSite=Lax, Path=/, no Domain, Max-Age 8h, Secure only in HTTPS mode), token stored only as SHA-256 hash, fresh token per login with the old session revoked, independent sessions per browser, login/me/logout, expired and revoked sessions, replay of a logged-out token, missing/wrong/foreign CSRF token, missing/foreign Origin, non-JSON bodies, indistinguishable login failures, anonymous 401, error envelope for validation/404/405 without echoing submitted passwords, `Cache-Control: no-store` on private responses, and no credentials or tokens in responses or logs. A live uvicorn smoke test also passed. Code: `backend/app/api/{auth,deps}.py`, `app/core/{errors,security,settings}.py`, `app/services/sessions.py`, `app/schemas/auth.py`, `app/main.py`. Decisions: `cookie_secure` now defaults to **true** (the `.env.example` turns it off for localhost); order of checks is session (401) then Origin/CSRF (403); non-JSON login/register bodies return 415; sessions have a fixed 8 h expiry and expired rows are purged at login; the no-SQL-in-routes test now forbids query constructs rather than a typing-only `Session` import.
 
 - Depends on: FS-004.
 - Implement register/login/me/logout routes, hashed opaque session tokens, expiry, fresh-login tokens, protected cookie settings, Origin validation, CSRF tokens, and current-user dependencies. Add the common error envelope and private-response cache policy.
