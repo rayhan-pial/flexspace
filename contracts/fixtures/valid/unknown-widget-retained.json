@@ -1,0 +1,77 @@
+{
+  "description": "Unknown widget types keep opaque props/appearance in grid and stack sections",
+  "input": {
+    "schemaVersion": 1,
+    "title": "Unknown",
+    "theme": {
+      "primary": "#6366f1",
+      "background": "#f8fafc",
+      "surface": "#ffffff",
+      "text": "#0f172a",
+      "fontFamily": "system",
+      "fontSizePx": 16
+    },
+    "navigation": {
+      "placement": "left",
+      "primaryItems": [],
+      "secondaryItems": []
+    },
+    "sections": [
+      {
+        "id": "s1",
+        "kind": "grid",
+        "title": "G",
+        "hidden": false,
+        "widgets": [
+          {
+            "id": "u1",
+            "type": "kanban",
+            "title": "Board",
+            "hidden": false,
+            "appearance": {
+              "anything": "goes",
+              "nested": {
+                "x": 1
+              }
+            },
+            "props": {
+              "columns": [
+                1,
+                2,
+                {
+                  "a": null
+                }
+              ],
+              "flag": true
+            }
+          }
+        ],
+        "layout": [
+          {
+            "i": "u1",
+            "x": 0,
+            "y": 0,
+            "w": 2,
+            "h": 2
+          }
+        ]
+      },
+      {
+        "id": "s2",
+        "kind": "stack",
+        "title": "S",
+        "hidden": true,
+        "widgets": [
+          {
+            "id": "u2",
+            "type": "kanban-2",
+            "title": "",
+            "hidden": false,
+            "appearance": {},
+            "props": {}
+          }
+        ]
+      }
+    ]
+  }
+}

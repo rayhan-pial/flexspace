@@ -1,0 +1,53 @@
+{
+  "description": "layout: null on a stack is treated as absent; on an empty grid it becomes []",
+  "input": {
+    "schemaVersion": 1,
+    "title": "Nulls",
+    "sections": [
+      {
+        "id": "s1",
+        "kind": "stack",
+        "layout": null
+      },
+      {
+        "id": "s2",
+        "kind": "grid",
+        "layout": null
+      }
+    ]
+  },
+  "expected": {
+    "schemaVersion": 1,
+    "title": "Nulls",
+    "theme": {
+      "primary": "#6366f1",
+      "background": "#f8fafc",
+      "surface": "#ffffff",
+      "text": "#0f172a",
+      "fontFamily": "system",
+      "fontSizePx": 16
+    },
+    "navigation": {
+      "placement": "left",
+      "primaryItems": [],
+      "secondaryItems": []
+    },
+    "sections": [
+      {
+        "id": "s1",
+        "kind": "stack",
+        "title": "",
+        "hidden": false,
+        "widgets": []
+      },
+      {
+        "id": "s2",
+        "kind": "grid",
+        "title": "",
+        "hidden": false,
+        "widgets": [],
+        "layout": []
+      }
+    ]
+  }
+}

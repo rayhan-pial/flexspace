@@ -1,6 +1,6 @@
 # Claude Code implementation tasks
 
-Status: FS-001 complete; FS-002 onward pending. Read [architecture](architecture.md) before starting. Execute in numeric order unless a listed dependency and milestone gate permit otherwise. Each task should fit a focused implementation session; split further if its actual diff grows too large.
+Status: FS-001 and FS-002 complete; FS-003 onward pending. Read [architecture](architecture.md) before starting. Execute in numeric order unless a listed dependency and milestone gate permit otherwise. Each task should fit a focused implementation session; split further if its actual diff grows too large.
 
 Completion rule: make the bounded change, run its targeted checks, and record evidence before checking it off. Existing repository authentication is already configured; do not replace it. Do not commit or push without authorization from the implementation request.
 
@@ -14,6 +14,8 @@ Completion rule: make the bounded change, run its targeted checks, and record ev
 - Acceptance: frontend shows a minimal placeholder and calls health through the proxy; backend reports healthy; type check/build pass; lockfiles record compatible stable versions, including React Grid Layout v2 and the current dnd-kit family. Runtime prerequisites and both start commands are documented. No editor features yet.
 
 ### FS-002 — Specify and validate config v1
+
+- **Status: ✅ Complete (2026-11-23).** Evidence: `pytest` 61 passed, `npm test` 64 passed (both run the same 5 valid / 45 invalid fixtures in `contracts/fixtures/`, plus generated limit tests incl. code-point length parity); `npm run typecheck`, `npm run lint`, `npm run build` clean. Code: `backend/app/schemas/config.py`, `backend/app/services/workspace_config.py`, `frontend/src/domain/workspace/`. Schema exported to `contracts/workspace-config.schema.json` with a drift test. Contract details settled during implementation are in `contracts/README.md`.
 
 - Depends on: FS-001.
 - Add frontend domain types/parsing/defaults and backend Pydantic config models. Add shared valid/invalid fixtures and exported JSON Schema under `contracts/`; provide the future migration dispatcher with v1 identity behavior.

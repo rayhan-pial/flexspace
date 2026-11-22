@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite frontend and FastAPI + SQLAlchemy + SQLite backend. Planning docs are in [docs/](docs/); progress is tracked in [docs/tasks.md](docs/tasks.md).
 
-**Current status:** FS-001 (scaffold) complete. No editor features yet.
+**Current status:** FS-001 (scaffold) and FS-002 (config v1 contract) complete. No editor features yet.
 
 ## Prerequisites
 
@@ -48,6 +48,12 @@ npm run typecheck
 npm run lint
 npm run build
 ```
+
+## Config contract
+
+The workspace JSON v1 contract, shared fixtures and exported JSON Schema live in [contracts/](contracts/README.md). Regenerate the schema after changing backend models: `cd backend; .venv\Scripts\python scripts\export_schema.py`.
+
+Use PowerShell for the commands above; running Vitest from Git Bash with an absolute `/c/...` path can break module resolution.
 
 ## Dependency locking
 

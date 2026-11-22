@@ -1,0 +1,164 @@
+{
+  "description": "Missing hidden/title/appearance/props/theme/nav fields are filled; calendar month defaulted",
+  "input": {
+    "schemaVersion": 1,
+    "title": "Defaults",
+    "theme": {
+      "primary": "#112233"
+    },
+    "navigation": {
+      "primaryItems": [
+        {
+          "id": "n1",
+          "label": "Home"
+        }
+      ]
+    },
+    "sections": [
+      {
+        "id": "s1",
+        "kind": "grid",
+        "widgets": [
+          {
+            "id": "w1",
+            "type": "calendar"
+          },
+          {
+            "id": "w2",
+            "type": "tasks"
+          },
+          {
+            "id": "w3",
+            "type": "welcome",
+            "props": {
+              "greeting": "Hi"
+            }
+          }
+        ],
+        "layout": [
+          {
+            "i": "w1",
+            "x": 0,
+            "y": 0,
+            "w": 6,
+            "h": 5
+          },
+          {
+            "i": "w2",
+            "x": 6,
+            "y": 0,
+            "w": 6,
+            "h": 4
+          },
+          {
+            "i": "w3",
+            "x": 0,
+            "y": 5,
+            "w": 6,
+            "h": 3
+          }
+        ]
+      },
+      {
+        "id": "s2",
+        "kind": "stack"
+      }
+    ]
+  },
+  "expected": {
+    "schemaVersion": 1,
+    "title": "Defaults",
+    "theme": {
+      "primary": "#112233",
+      "background": "#f8fafc",
+      "surface": "#ffffff",
+      "text": "#0f172a",
+      "fontFamily": "system",
+      "fontSizePx": 16
+    },
+    "navigation": {
+      "placement": "left",
+      "secondaryItems": [],
+      "primaryItems": [
+        {
+          "id": "n1",
+          "label": "Home",
+          "targetSectionId": null,
+          "icon": "home"
+        }
+      ]
+    },
+    "sections": [
+      {
+        "id": "s1",
+        "kind": "grid",
+        "title": "",
+        "hidden": false,
+        "widgets": [
+          {
+            "id": "w1",
+            "type": "calendar",
+            "title": "",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "displayMonth": "2026-01",
+              "events": []
+            }
+          },
+          {
+            "id": "w2",
+            "type": "tasks",
+            "title": "",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "items": []
+            }
+          },
+          {
+            "id": "w3",
+            "type": "welcome",
+            "title": "",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "greeting": "Hi",
+              "subtitle": ""
+            }
+          }
+        ],
+        "layout": [
+          {
+            "i": "w1",
+            "x": 0,
+            "y": 0,
+            "w": 6,
+            "h": 5
+          },
+          {
+            "i": "w2",
+            "x": 6,
+            "y": 0,
+            "w": 6,
+            "h": 4
+          },
+          {
+            "i": "w3",
+            "x": 0,
+            "y": 5,
+            "w": 6,
+            "h": 3
+          }
+        ]
+      },
+      {
+        "id": "s2",
+        "kind": "stack",
+        "title": "",
+        "hidden": false,
+        "widgets": []
+      }
+    ]
+  }
+}

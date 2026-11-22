@@ -1,0 +1,550 @@
+{
+  "widgetProps": {
+    "analytics": {
+      "$defs": {
+        "Metric": {
+          "additionalProperties": false,
+          "properties": {
+            "id": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "title": "Id",
+              "type": "string"
+            },
+            "label": {
+              "maxLength": 120,
+              "title": "Label",
+              "type": "string"
+            },
+            "value": {
+              "anyOf": [
+                {
+                  "type": "integer"
+                },
+                {
+                  "type": "number"
+                }
+              ],
+              "title": "Value"
+            }
+          },
+          "required": [
+            "id",
+            "label",
+            "value"
+          ],
+          "title": "Metric",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "metrics": {
+          "items": {
+            "$ref": "#/$defs/Metric"
+          },
+          "maxItems": 100,
+          "title": "Metrics",
+          "type": "array"
+        }
+      },
+      "title": "AnalyticsProps",
+      "type": "object"
+    },
+    "calendar": {
+      "$defs": {
+        "CalendarEvent": {
+          "additionalProperties": false,
+          "properties": {
+            "date": {
+              "pattern": "^(19|20|21)[0-9]{2}-[0-9]{2}-[0-9]{2}$",
+              "title": "Date",
+              "type": "string"
+            },
+            "id": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "title": "Id",
+              "type": "string"
+            },
+            "title": {
+              "maxLength": 120,
+              "title": "Title",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "date",
+            "title"
+          ],
+          "title": "CalendarEvent",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "displayMonth": {
+          "default": "2026-01",
+          "pattern": "^(19|20|21)[0-9]{2}-[0-9]{2}$",
+          "title": "Displaymonth",
+          "type": "string"
+        },
+        "events": {
+          "items": {
+            "$ref": "#/$defs/CalendarEvent"
+          },
+          "maxItems": 100,
+          "title": "Events",
+          "type": "array"
+        }
+      },
+      "title": "CalendarProps",
+      "type": "object"
+    },
+    "gallery": {
+      "$defs": {
+        "GalleryItem": {
+          "additionalProperties": false,
+          "properties": {
+            "alt": {
+              "default": "",
+              "maxLength": 2000,
+              "title": "Alt",
+              "type": "string"
+            },
+            "assetKey": {
+              "enum": [
+                "aurora",
+                "workspace",
+                "mountain",
+                "studio",
+                "forest",
+                "city"
+              ],
+              "title": "Assetkey",
+              "type": "string"
+            },
+            "caption": {
+              "default": "",
+              "maxLength": 2000,
+              "title": "Caption",
+              "type": "string"
+            },
+            "id": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "title": "Id",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "assetKey"
+          ],
+          "title": "GalleryItem",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/GalleryItem"
+          },
+          "maxItems": 100,
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "title": "GalleryProps",
+      "type": "object"
+    },
+    "notes": {
+      "additionalProperties": false,
+      "properties": {
+        "body": {
+          "default": "",
+          "maxLength": 10000,
+          "title": "Body",
+          "type": "string"
+        }
+      },
+      "title": "NotesProps",
+      "type": "object"
+    },
+    "tasks": {
+      "$defs": {
+        "TaskItem": {
+          "additionalProperties": false,
+          "properties": {
+            "done": {
+              "default": false,
+              "title": "Done",
+              "type": "boolean"
+            },
+            "id": {
+              "pattern": "^[A-Za-z0-9_-]{1,64}$",
+              "title": "Id",
+              "type": "string"
+            },
+            "text": {
+              "maxLength": 2000,
+              "title": "Text",
+              "type": "string"
+            }
+          },
+          "required": [
+            "id",
+            "text"
+          ],
+          "title": "TaskItem",
+          "type": "object"
+        }
+      },
+      "additionalProperties": false,
+      "properties": {
+        "items": {
+          "items": {
+            "$ref": "#/$defs/TaskItem"
+          },
+          "maxItems": 100,
+          "title": "Items",
+          "type": "array"
+        }
+      },
+      "title": "TasksProps",
+      "type": "object"
+    },
+    "welcome": {
+      "additionalProperties": false,
+      "properties": {
+        "greeting": {
+          "default": "",
+          "maxLength": 2000,
+          "title": "Greeting",
+          "type": "string"
+        },
+        "subtitle": {
+          "default": "",
+          "maxLength": 2000,
+          "title": "Subtitle",
+          "type": "string"
+        }
+      },
+      "title": "WelcomeProps",
+      "type": "object"
+    }
+  },
+  "workspace": {
+    "$defs": {
+      "NavItem": {
+        "additionalProperties": false,
+        "properties": {
+          "icon": {
+            "default": "home",
+            "enum": [
+              "home",
+              "layout-dashboard",
+              "check-square",
+              "notebook",
+              "image",
+              "bar-chart",
+              "calendar",
+              "settings",
+              "star",
+              "folder",
+              "users",
+              "mail"
+            ],
+            "title": "Icon",
+            "type": "string"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "label": {
+            "maxLength": 120,
+            "title": "Label",
+            "type": "string"
+          },
+          "targetSectionId": {
+            "anyOf": [
+              {
+                "pattern": "^[A-Za-z0-9_-]{1,64}$",
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Targetsectionid"
+          }
+        },
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "NavItem",
+        "type": "object"
+      },
+      "Navigation": {
+        "additionalProperties": false,
+        "properties": {
+          "placement": {
+            "default": "left",
+            "enum": [
+              "top",
+              "left",
+              "right"
+            ],
+            "title": "Placement",
+            "type": "string"
+          },
+          "primaryItems": {
+            "items": {
+              "$ref": "#/$defs/NavItem"
+            },
+            "maxItems": 100,
+            "title": "Primaryitems",
+            "type": "array"
+          },
+          "secondaryItems": {
+            "items": {
+              "$ref": "#/$defs/NavItem"
+            },
+            "maxItems": 100,
+            "title": "Secondaryitems",
+            "type": "array"
+          }
+        },
+        "title": "Navigation",
+        "type": "object"
+      },
+      "Rect": {
+        "additionalProperties": false,
+        "properties": {
+          "h": {
+            "maximum": 24,
+            "minimum": 2,
+            "title": "H",
+            "type": "integer"
+          },
+          "i": {
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "title": "I",
+            "type": "string"
+          },
+          "w": {
+            "maximum": 12,
+            "minimum": 1,
+            "title": "W",
+            "type": "integer"
+          },
+          "x": {
+            "minimum": 0,
+            "title": "X",
+            "type": "integer"
+          },
+          "y": {
+            "minimum": 0,
+            "title": "Y",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "i",
+          "x",
+          "y",
+          "w",
+          "h"
+        ],
+        "title": "Rect",
+        "type": "object"
+      },
+      "Section": {
+        "additionalProperties": false,
+        "properties": {
+          "hidden": {
+            "default": false,
+            "title": "Hidden",
+            "type": "boolean"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "kind": {
+            "enum": [
+              "grid",
+              "stack"
+            ],
+            "title": "Kind",
+            "type": "string"
+          },
+          "layout": {
+            "anyOf": [
+              {
+                "items": {
+                  "$ref": "#/$defs/Rect"
+                },
+                "maxItems": 100,
+                "type": "array"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "default": null,
+            "title": "Layout"
+          },
+          "title": {
+            "default": "",
+            "maxLength": 120,
+            "title": "Title",
+            "type": "string"
+          },
+          "widgets": {
+            "items": {
+              "$ref": "#/$defs/Widget"
+            },
+            "maxItems": 100,
+            "title": "Widgets",
+            "type": "array"
+          }
+        },
+        "required": [
+          "id",
+          "kind"
+        ],
+        "title": "Section",
+        "type": "object"
+      },
+      "Theme": {
+        "additionalProperties": false,
+        "properties": {
+          "background": {
+            "default": "#f8fafc",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Background",
+            "type": "string"
+          },
+          "fontFamily": {
+            "default": "system",
+            "enum": [
+              "system",
+              "serif",
+              "mono"
+            ],
+            "title": "Fontfamily",
+            "type": "string"
+          },
+          "fontSizePx": {
+            "default": 16,
+            "maximum": 20,
+            "minimum": 12,
+            "title": "Fontsizepx",
+            "type": "integer"
+          },
+          "primary": {
+            "default": "#6366f1",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Primary",
+            "type": "string"
+          },
+          "surface": {
+            "default": "#ffffff",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Surface",
+            "type": "string"
+          },
+          "text": {
+            "default": "#0f172a",
+            "pattern": "^#[0-9a-fA-F]{6}$",
+            "title": "Text",
+            "type": "string"
+          }
+        },
+        "title": "Theme",
+        "type": "object"
+      },
+      "Widget": {
+        "additionalProperties": false,
+        "properties": {
+          "appearance": {
+            "additionalProperties": true,
+            "title": "Appearance",
+            "type": "object"
+          },
+          "hidden": {
+            "default": false,
+            "title": "Hidden",
+            "type": "boolean"
+          },
+          "id": {
+            "pattern": "^[A-Za-z0-9_-]{1,64}$",
+            "title": "Id",
+            "type": "string"
+          },
+          "props": {
+            "additionalProperties": true,
+            "title": "Props",
+            "type": "object"
+          },
+          "title": {
+            "default": "",
+            "maxLength": 120,
+            "title": "Title",
+            "type": "string"
+          },
+          "type": {
+            "maxLength": 64,
+            "minLength": 1,
+            "title": "Type",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type"
+        ],
+        "title": "Widget",
+        "type": "object"
+      }
+    },
+    "additionalProperties": false,
+    "properties": {
+      "navigation": {
+        "$ref": "#/$defs/Navigation"
+      },
+      "schemaVersion": {
+        "const": 1,
+        "title": "Schemaversion",
+        "type": "integer"
+      },
+      "sections": {
+        "items": {
+          "$ref": "#/$defs/Section"
+        },
+        "maxItems": 12,
+        "title": "Sections",
+        "type": "array"
+      },
+      "theme": {
+        "$ref": "#/$defs/Theme"
+      },
+      "title": {
+        "maxLength": 120,
+        "title": "Title",
+        "type": "string"
+      }
+    },
+    "required": [
+      "schemaVersion",
+      "title"
+    ],
+    "title": "WorkspaceConfig",
+    "type": "object"
+  }
+}

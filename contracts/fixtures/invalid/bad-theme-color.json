@@ -1,0 +1,218 @@
+{
+  "description": "named colour instead of hex",
+  "error": "invalid_config",
+  "input": {
+    "schemaVersion": 1,
+    "title": "Full workspace",
+    "theme": {
+      "primary": "red",
+      "background": "#f8fafc",
+      "surface": "#ffffff",
+      "text": "#0f172a",
+      "fontFamily": "serif",
+      "fontSizePx": 15
+    },
+    "navigation": {
+      "placement": "top",
+      "primaryItems": [
+        {
+          "id": "nav-home",
+          "label": "Home",
+          "targetSectionId": "section-main",
+          "icon": "home"
+        },
+        {
+          "id": "nav-cards",
+          "label": "Cards",
+          "targetSectionId": "section-cards",
+          "icon": "layout-dashboard"
+        }
+      ],
+      "secondaryItems": [
+        {
+          "id": "nav-settings",
+          "label": "Settings",
+          "targetSectionId": null,
+          "icon": "settings"
+        }
+      ]
+    },
+    "sections": [
+      {
+        "id": "section-main",
+        "kind": "grid",
+        "title": "Overview",
+        "hidden": false,
+        "widgets": [
+          {
+            "id": "w-welcome",
+            "type": "welcome",
+            "title": "Welcome",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "greeting": "Good morning",
+              "subtitle": "Plan the day"
+            }
+          },
+          {
+            "id": "w-notes",
+            "type": "notes",
+            "title": "Notes",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "body": "Prepare the demo.\nSecond line."
+            }
+          },
+          {
+            "id": "w-tasks",
+            "type": "tasks",
+            "title": "Tasks",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "items": [
+                {
+                  "id": "task-1",
+                  "text": "Write plan",
+                  "done": true
+                },
+                {
+                  "id": "task-2",
+                  "text": "Review",
+                  "done": false
+                }
+              ]
+            }
+          },
+          {
+            "id": "w-analytics",
+            "type": "analytics",
+            "title": "Analytics",
+            "hidden": false,
+            "appearance": {
+              "background": "#eef2ff",
+              "text": "#1e1b4b",
+              "fontSizePx": 14
+            },
+            "props": {
+              "metrics": [
+                {
+                  "id": "metric-1",
+                  "label": "Visits",
+                  "value": 1200
+                },
+                {
+                  "id": "metric-2",
+                  "label": "Rate",
+                  "value": 4.5
+                }
+              ]
+            }
+          },
+          {
+            "id": "w-hidden",
+            "type": "notes",
+            "title": "Hidden",
+            "hidden": true,
+            "appearance": {},
+            "props": {
+              "body": "hidden"
+            }
+          }
+        ],
+        "layout": [
+          {
+            "i": "w-welcome",
+            "x": 0,
+            "y": 0,
+            "w": 6,
+            "h": 3
+          },
+          {
+            "i": "w-notes",
+            "x": 6,
+            "y": 0,
+            "w": 6,
+            "h": 4
+          },
+          {
+            "i": "w-tasks",
+            "x": 0,
+            "y": 3,
+            "w": 6,
+            "h": 5
+          },
+          {
+            "i": "w-analytics",
+            "x": 6,
+            "y": 4,
+            "w": 6,
+            "h": 4
+          },
+          {
+            "i": "w-hidden",
+            "x": 0,
+            "y": 0,
+            "w": 6,
+            "h": 3
+          }
+        ]
+      },
+      {
+        "id": "section-cards",
+        "kind": "stack",
+        "title": "Cards",
+        "hidden": false,
+        "widgets": [
+          {
+            "id": "w-gallery",
+            "type": "gallery",
+            "title": "Gallery",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "items": [
+                {
+                  "id": "img-1",
+                  "assetKey": "aurora",
+                  "alt": "Aurora",
+                  "caption": "Night sky"
+                },
+                {
+                  "id": "img-2",
+                  "assetKey": "city",
+                  "alt": "",
+                  "caption": ""
+                }
+              ]
+            }
+          },
+          {
+            "id": "w-calendar",
+            "type": "calendar",
+            "title": "Calendar",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "displayMonth": "2026-11",
+              "events": [
+                {
+                  "id": "event-1",
+                  "date": "2026-11-23",
+                  "title": "Demo"
+                },
+                {
+                  "id": "event-2",
+                  "date": "2024-02-29",
+                  "title": "Leap day"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,25 @@
+{
+  "description": "Only required fields; every optional field defaulted",
+  "input": {
+    "schemaVersion": 1,
+    "title": "Minimal"
+  },
+  "expected": {
+    "schemaVersion": 1,
+    "title": "Minimal",
+    "theme": {
+      "primary": "#6366f1",
+      "background": "#f8fafc",
+      "surface": "#ffffff",
+      "text": "#0f172a",
+      "fontFamily": "system",
+      "fontSizePx": 16
+    },
+    "navigation": {
+      "placement": "left",
+      "primaryItems": [],
+      "secondaryItems": []
+    },
+    "sections": []
+  }
+}
