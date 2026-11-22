@@ -1,6 +1,8 @@
 """Request guards: current user, Origin check, JSON-only bodies, and synchronizer-token CSRF."""
 
+import json
 from dataclasses import dataclass
+from typing import Any
 
 from fastapi import Depends, Request
 from sqlalchemy.orm import Session
@@ -14,6 +16,8 @@ from app.repositories import users
 from app.services import sessions as session_service
 
 CSRF_HEADER = "X-CSRF-Token"
+# Workspace config limit (1 MiB) plus headroom for the request envelope.
+MAX_BODY_BYTES = 1024 * 1024 + 4096
 
 
 @dataclass
@@ -62,3 +66,28 @@ def require_csrf(
     if not supplied or not tokens_match(supplied, auth.session.csrf_token):
         raise ApiError(403, "csrf_failed", "CSRF token is missing or invalid.")
     return auth
+
+
+def _reject_constant(name: str) -> None:
+    raise ValueError(f"{name} is not valid JSON")
+
+
+async def read_json_body(request: Request) -> Any:
+    """Read a bounded JSON body. Oversized -> 413, non-JSON content type -> 415, bad JSON -> 422.
+
+    The size is enforced while streaming so a missing or false Content-Length cannot bypass it.
+    """
+    if request.headers.get("content-type", "").split(";")[0].strip().lower() != "application/json":
+        raise ApiError(415, "unsupported_media_type", "Send the request body as application/json.")
+    declared = request.headers.get("content-length")
+    if declared and declared.isdigit() and int(declared) > MAX_BODY_BYTES:
+        raise ApiError(413, "payload_too_large", "The request body is too large.")
+    received = bytearray()
+    async for chunk in request.stream():
+        received.extend(chunk)
+        if len(received) > MAX_BODY_BYTES:
+            raise ApiError(413, "payload_too_large", "The request body is too large.")
+    try:  # NaN/Infinity are rejected: they are not JSON and would corrupt stored documents
+        return json.loads(bytes(received), parse_constant=_reject_constant)
+    except (ValueError, UnicodeDecodeError) as exc:
+        raise ApiError(422, "invalid_json", "The request body is not valid JSON.") from exc

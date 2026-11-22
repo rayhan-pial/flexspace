@@ -27,6 +27,14 @@ def error_response(status_code: int, code: str, message: str, details: dict[str,
     return JSONResponse(body, status_code=status_code)
 
 
+def sanitize_errors(errors: Any) -> list[dict[str, Any]]:
+    """Location/message/type only. Pydantic and FastAPI normally echo the submitted input,
+    which could be a password or private workspace content."""
+    if isinstance(errors, str):
+        return [{"loc": [], "msg": errors, "type": "invalid"}]
+    return [{"loc": list(e["loc"]), "msg": e["msg"], "type": e["type"]} for e in errors]
+
+
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ApiError)
     async def _api_error(_request: Request, exc: ApiError):
@@ -34,10 +42,8 @@ def install_error_handlers(app: FastAPI) -> None:
 
     @app.exception_handler(RequestValidationError)
     async def _validation(_request: Request, exc: RequestValidationError):
-        # Report location/message/type only: FastAPI's default echoes the submitted input,
-        # which here could be a password.
-        errors = [{"loc": list(e["loc"]), "msg": e["msg"], "type": e["type"]} for e in exc.errors()]
-        return error_response(422, "validation_error", "The request is not valid.", {"errors": errors})
+        return error_response(422, "validation_error", "The request is not valid.",
+                              {"errors": sanitize_errors(exc.errors())})
 
     @app.exception_handler(StarletteHTTPException)
     async def _http(_request: Request, exc: StarletteHTTPException):

@@ -1,6 +1,6 @@
 # Claude Code implementation tasks
 
-Status: FS-001 to FS-005 complete; FS-006 onward pending. Read [architecture](architecture.md) before starting. Execute in numeric order unless a listed dependency and milestone gate permit otherwise. Each task should fit a focused implementation session; split further if its actual diff grows too large.
+Status: FS-001 to FS-006 complete; FS-007 onward pending. Read [architecture](architecture.md) before starting. Execute in numeric order unless a listed dependency and milestone gate permit otherwise. Each task should fit a focused implementation session; split further if its actual diff grows too large.
 
 Completion rule: make the bounded change, run its targeted checks, and record evidence before checking it off. Existing repository authentication is already configured; do not replace it. Do not commit or push without authorization from the implementation request.
 
@@ -48,6 +48,8 @@ Completion rule: make the bounded change, run its targeted checks, and record ev
 - Acceptance: API tests cover cookie flags in localhost/HTTPS modes, login/me/logout, revoked/expired sessions, forged or missing CSRF/Origin, generic login failure, and anonymous 401. A logged-out token cannot access protected routes. Credentials never appear in logs/responses.
 
 ### FS-006 — Read and conditionally save the user's workspace
+
+- **Status: ✅ Complete (2026-11-23).** Evidence: `pytest` 198 passed (41 new in `tests/test_workspace_api.py`): anonymous 401; two users with independent workspaces; GET normalizes in memory and never rewrites storage; unreadable stored data (future version, invalid) returns 422 and is left untouched; save round-trips the canonical config and increments the revision; stale-tab 409 with `currentRevision`; a **truly concurrent** pair of saves (two threads, repeated) yields exactly one 200 and one 409; base revision of another user's row cannot touch it; ownership fields in the body or config rejected; invalid, future-version, non-object and NaN payloads leave storage intact; 1 MiB limit (just under accepted, over -> 413, streamed body cap); validation errors do not echo private content; PUT needs session, Origin, CSRF and JSON; unknown widgets survive an unrelated save. Code: `backend/app/api/workspace.py`, `app/services/workspace_service.py`, `app/repositories/workspaces.py` (`save_if_revision`), `app/schemas/workspace.py`, bounded `read_json_body` in `app/api/deps.py`. Decisions: save is a single `UPDATE ... WHERE user_id AND revision` compare-and-swap; the session is authenticated *before* the body is read; SQLite now runs in WAL mode with a 5 s busy timeout (readers no longer block the writer; found when a test's open read transaction caused `database is locked`); NaN/Infinity are rejected at the JSON layer; shared API test fixtures moved to `tests/conftest.py` and `tests/helpers.py`.
 
 - Depends on: FS-005.
 - Implement `GET/PUT /api/workspace` with server normalization/validation, session-derived ownership, and atomic revision-matched updates. Enforce payload size and unsupported-schema errors without rewriting stored data on GET.

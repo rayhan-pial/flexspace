@@ -22,6 +22,10 @@ def make_engine(url: str) -> Engine:
             dbapi_connection.isolation_level = None
             cursor = dbapi_connection.cursor()
             cursor.execute("PRAGMA foreign_keys=ON")  # off by default in SQLite
+            # WAL lets readers and the single writer proceed concurrently (two tabs, overlapping
+            # requests); busy_timeout makes a brief writer-vs-writer clash wait instead of failing.
+            cursor.execute("PRAGMA journal_mode=WAL")
+            cursor.execute("PRAGMA busy_timeout=5000")
             cursor.close()
 
         @event.listens_for(engine, "begin")

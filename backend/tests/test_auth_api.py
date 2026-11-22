@@ -2,72 +2,11 @@ import logging
 from datetime import UTC, datetime, timedelta
 
 import pytest
-from fastapi.testclient import TestClient
-from sqlalchemy import func, select, update
+from sqlalchemy import select, update
 
 from app.core.security import hash_token
-from app.core.settings import Settings, get_settings
-from app.db.engine import get_session, make_session_factory
 from app.db.models import User, UserSession, Workspace
-from app.main import create_app
-
-ORIGIN = "http://localhost:5173"
-PASSWORD = "correct horse battery"
-COOKIE = "flexspace_session"
-
-
-@pytest.fixture
-def make_client(engine):
-    """Factory for clients bound to the temp database; ``secure`` selects the cookie mode."""
-    factory = make_session_factory(engine)
-    clients = []
-
-    def build(secure: bool = True) -> TestClient:
-        app = create_app()
-
-        def override_session():
-            with factory() as s:
-                yield s
-
-        app.dependency_overrides[get_session] = override_session
-        app.dependency_overrides[get_settings] = lambda: Settings(cookie_secure=secure)
-        client = TestClient(app, base_url="https://testserver" if secure else "http://testserver")
-        clients.append(client)
-        return client
-
-    yield build
-    for c in clients:
-        c.close()
-
-
-@pytest.fixture
-def client(make_client):
-    return make_client(secure=True)
-
-
-def post(client, path, body=None, *, origin=ORIGIN, csrf=None, **kwargs):
-    headers = {}
-    if origin is not None:
-        headers["Origin"] = origin
-    if csrf is not None:
-        headers["X-CSRF-Token"] = csrf
-    return client.post(path, json=body, headers=headers, **kwargs)
-
-
-def register(client, email="alice@example.com", password=PASSWORD):
-    return post(client, "/api/auth/register", {"email": email, "password": password})
-
-
-def login(client, email="alice@example.com", password=PASSWORD):
-    return post(client, "/api/auth/login", {"email": email, "password": password})
-
-
-def count(session, model):
-    return session.scalar(select(func.count()).select_from(model))
-
-
-def set_cookie(response) -> str:
-    return response.headers.get_list("set-cookie")[0].lower()
+from tests.helpers import COOKIE, ORIGIN, PASSWORD, count, login, post, register, set_cookie
 
 
 # ---- register / me ---------------------------------------------------------------

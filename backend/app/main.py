@@ -1,6 +1,6 @@
 from fastapi import FastAPI, Request
 
-from app.api import auth, health
+from app.api import auth, health, workspace
 from app.core.errors import install_error_handlers
 
 
@@ -18,6 +18,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(auth.router)
+    app.include_router(workspace.router)
     return app
 
 
