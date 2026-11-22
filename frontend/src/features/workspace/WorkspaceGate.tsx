@@ -1,9 +1,14 @@
+import { useId, useState } from 'react'
+import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import { useSessionStore } from '../auth/sessionStore'
-import { useEditorStore } from '../editor/editorStore'
+import { setWorkspaceTitle } from '../../domain/workspace/commands'
+import { selectIsDirty, useEditorStore } from '../editor/editorStore'
+import SaveBar from '../editor/SaveBar'
+import { useUnsavedChangesGuard } from '../editor/useUnsavedChangesGuard'
 
 /**
- * Protected workspace loading (FS-008). It proves the signed-in user's own saved workspace
- * arrives and shows loading/error states; the registry renderer replaces the body in FS-011.
+ * Protected workspace shell. The workspace title is the first editable property; the registry
+ * renderer replaces the body in FS-011.
  */
 export default function WorkspaceGate() {
   const user = useSessionStore((s) => s.user)
@@ -12,6 +17,18 @@ export default function WorkspaceGate() {
   const logout = useSessionStore((s) => s.logout)
   const draft = useEditorStore((s) => s.draftConfig)
   const revision = useEditorStore((s) => s.revision)
+  const apply = useEditorStore((s) => s.apply)
+  const dirty = useEditorStore(selectIsDirty)
+  const [confirmLogout, setConfirmLogout] = useState(false)
+  const [titleError, setTitleError] = useState<string | null>(null)
+  const titleId = useId()
+
+  useUnsavedChangesGuard()
+
+  function onTitleChange(value: string) {
+    const outcome = apply(setWorkspaceTitle(value))
+    setTitleError(outcome.status === 'rejected' ? outcome.error : null)
+  }
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -21,13 +38,15 @@ export default function WorkspaceGate() {
           <span className="text-slate-600" data-testid="current-user">{user?.email}</span>
           <button
             type="button"
-            onClick={() => void logout()}
+            onClick={() => (dirty ? setConfirmLogout(true) : void logout())}
             className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
             Log out
           </button>
         </div>
       </header>
+
+      {workspace.status === 'ready' && draft && <SaveBar />}
 
       <main className="mx-auto max-w-3xl p-6">
         {(workspace.status === 'idle' || workspace.status === 'loading') && (
@@ -52,10 +71,23 @@ export default function WorkspaceGate() {
         {workspace.status === 'ready' && draft && (
           <section aria-labelledby="workspace-title" className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <h1 id="workspace-title" className="text-2xl font-semibold tracking-tight text-slate-900">
-              {draft.title}
+              {draft.title || 'Untitled workspace'}
             </h1>
             <p className="mt-1 text-sm text-slate-500">Saved revision {revision}</p>
-            <ul className="mt-4 divide-y divide-slate-100">
+
+            <label htmlFor={titleId} className="mt-5 block text-sm font-medium text-slate-700">Workspace title</label>
+            <input
+              id={titleId}
+              type="text"
+              maxLength={120}
+              value={draft.title}
+              onChange={(e) => onTitleChange(e.target.value)}
+              aria-invalid={titleError ? true : undefined}
+              className="mt-1 block w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-900 shadow-sm focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40"
+            />
+            {titleError && <p role="alert" className="mt-1 text-sm text-rose-700">{titleError}</p>}
+
+            <ul className="mt-6 divide-y divide-slate-100">
               {draft.sections.map((section) => (
                 <li key={section.id} className="flex justify-between py-2 text-sm">
                   <span className="text-slate-800">{section.title || 'Untitled section'}</span>
@@ -68,6 +100,20 @@ export default function WorkspaceGate() {
           </section>
         )}
       </main>
+
+      {confirmLogout && (
+        <ConfirmDialog
+          destructive
+          title="Log out and discard changes?"
+          message="You have unsaved changes. Logging out will discard them."
+          confirmLabel="Discard and log out"
+          onCancel={() => setConfirmLogout(false)}
+          onConfirm={() => {
+            setConfirmLogout(false)
+            void logout()
+          }}
+        />
+      )}
     </div>
   )
 }

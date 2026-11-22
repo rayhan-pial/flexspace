@@ -37,5 +37,7 @@ export default function App() {
     )
   }
 
-  return status === 'authenticated' ? <WorkspaceGate /> : <AuthScreen />
+  // `key` remounts the sign-in form when moving between "sign in again" and a clean sign-in,
+  // so a discarded session's email never lingers in the form.
+  return status === 'authenticated' ? <WorkspaceGate /> : <AuthScreen key={status} />
 }

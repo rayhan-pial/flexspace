@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite frontend and FastAPI + SQLAlchemy + SQLite backend. Planning docs are in [docs/](docs/); progress is tracked in [docs/tasks.md](docs/tasks.md).
 
-**Current status:** FS-001 (scaffold), FS-002 (config v1 contract) and FS-003 (database) FS-004 (credentials and registration service) FS-005 (session auth and CSRF) FS-006 (workspace read/save API) and FS-007 (template API) complete. The backend (milestone M2) is feature-complete. FS-008 adds the frontend sign-in/registration screens and protected workspace loading. FS-009 adds the editor domain state (saved baseline vs draft, commands, save lifecycle). No editor features yet.
+**Current status:** FS-001 (scaffold), FS-002 (config v1 contract) and FS-003 (database) FS-004 (credentials and registration service) FS-005 (session auth and CSRF) FS-006 (workspace read/save API) and FS-007 (template API) complete. The backend (milestone M2) is feature-complete. FS-008 adds the frontend sign-in/registration screens and protected workspace loading. FS-009 adds the editor domain state (saved baseline vs draft, commands, save lifecycle). FS-010 connects explicit Save/Cancel to the API with conflict handling, unsaved-change guards and session-expiry recovery; you can already rename your workspace, Save it, log out and see it again after logging in. No editor features yet.
 
 ## Prerequisites
 

@@ -50,6 +50,11 @@ export interface EditorState {
   /** Transient gesture state; a Save is refused while one is active. */
   interaction: { gesture: GestureKind | null }
   saveStatus: SaveStatus
+  /**
+   * True while the session has expired but the owner's draft is kept in memory awaiting a
+   * re-login. A frozen editor accepts no mutations, saves or cancels.
+   */
+  frozen: boolean
 
   load: (input: LoadInput) => void
   reset: () => void
@@ -62,6 +67,10 @@ export interface EditorState {
   saveSucceeded: (ticket: SaveTicket, result: { revision: number; config: WorkspaceConfig }) => 'applied' | 'ignored'
   saveFailed: (ticket: SaveTicket, failure: SaveFailure) => 'applied' | 'ignored'
   dismissSaveError: () => void
+  /** Record a failure that is not tied to a save ticket (e.g. a conflict found after re-login). */
+  reportFailure: (failure: SaveFailure) => void
+  freeze: () => void
+  unfreeze: () => void
   cancel: () => boolean
 }
 
@@ -75,6 +84,7 @@ const EMPTY = {
   selection: null,
   interaction: { gesture: null },
   saveStatus: { state: 'idle' } as SaveStatus,
+  frozen: false,
 }
 
 export const useEditorStore = create<EditorState>()((set, get) => {
@@ -104,6 +114,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     apply(command) {
       const { draftConfig } = get()
       if (!draftConfig) return { status: 'rejected', error: 'No workspace is loaded.' }
+      if (get().frozen) return { status: 'rejected', error: 'Your session expired. Sign in to continue editing.' }
       const result = command(draftConfig)
       if (!result.ok) return { status: 'rejected', error: result.error }
       if (result.config === draftConfig || deepEqual(result.config, draftConfig)) return { status: 'noop' }
@@ -129,8 +140,8 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     endGesture: () => set({ interaction: { gesture: null } }),
 
     beginSave() {
-      const { ownerId, revision, draftConfig, savedConfig, saveStatus, interaction, epoch } = get()
-      if (!ownerId || revision === null || !draftConfig || !savedConfig) return null
+      const { ownerId, revision, draftConfig, savedConfig, saveStatus, interaction, epoch, frozen } = get()
+      if (!ownerId || revision === null || !draftConfig || !savedConfig || frozen) return null
       if (saveStatus.state === 'saving' || interaction.gesture) return null // no duplicate or mid-drag saves
       if (selectIsDirty(get()) === false) return null
       // The draft is frozen, so this reference is an immutable snapshot of what is being saved.
@@ -165,9 +176,20 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       if (get().saveStatus.state === 'error') set({ saveStatus: { state: 'idle' } })
     },
 
+    reportFailure: (failure) => set({ saveStatus: { state: 'error', ...failure } }),
+
+    freeze: () => set({ frozen: true, interaction: { gesture: null } }),
+
+    unfreeze() {
+      const { saveStatus } = get()
+      // An interrupted save (`unauthenticated`) is over; any other error stays visible.
+      const interrupted = saveStatus.state === 'saving' || (saveStatus.state === 'error' && saveStatus.kind === 'unauthenticated')
+      set({ frozen: false, ...(interrupted && { saveStatus: { state: 'idle' } as SaveStatus }) })
+    },
+
     cancel() {
-      const { savedConfig, saveStatus } = get()
-      if (!savedConfig || saveStatus.state === 'saving') return false
+      const { savedConfig, saveStatus, frozen } = get()
+      if (!savedConfig || saveStatus.state === 'saving' || frozen) return false
       set({
         draftConfig: savedConfig, // frozen, so sharing the reference is safe
         selection: null,

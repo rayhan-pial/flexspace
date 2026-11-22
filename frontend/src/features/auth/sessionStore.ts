@@ -3,6 +3,7 @@ import * as authApi from '../../api/auth'
 import type { AuthUser } from '../../api/auth'
 import { ApiError } from '../../api/client'
 import { getWorkspace } from '../../api/workspace'
+import { deepEqual } from '../../domain/workspace/immutable'
 import { parseWorkspaceConfig } from '../../domain/workspace/parse'
 import { useEditorStore } from '../editor/editorStore'
 
@@ -22,7 +23,12 @@ export type AuthResult =
   | { ok: false; superseded?: false; message: string; fields?: FieldErrors }
 
 export interface SessionState {
-  status: 'bootstrapping' | 'anonymous' | 'authenticated' | 'unavailable'
+  /**
+   * `reauth`: the session expired while a workspace was open. The owner's draft stays frozen in
+   * memory (the workspace itself is hidden) until the same account signs in again; a different
+   * account clears it.
+   */
+  status: 'bootstrapping' | 'anonymous' | 'authenticated' | 'reauth' | 'unavailable'
   user: AuthUser | null
   /** In memory only: never written to localStorage/sessionStorage/IndexedDB. */
   csrfToken: string | null
@@ -39,6 +45,10 @@ export interface SessionState {
   register: (email: string, password: string) => Promise<AuthResult>
   logout: () => Promise<void>
   loadWorkspace: () => Promise<void>
+  /** Call when any authenticated request returns 401. */
+  handleUnauthorized: () => void
+  /** Give up on a frozen draft (user chose to discard it) and return to a clean sign-in. */
+  discardFrozenDraft: () => void
 }
 
 const SIGNED_OUT = { user: null, csrfToken: null, workspace: { status: 'idle' } } as const
@@ -81,13 +91,49 @@ export const useSessionStore = create<SessionState>()((set, get) => {
     try {
       const response = await (mode === 'login' ? authApi.login : authApi.register)(email, password)
       if (!isCurrent(generation)) return { ok: false, superseded: true }
-      resetEditor() // never carry a previous owner's draft into a new sign-in
-      set({ status: 'authenticated', user: response.user, csrfToken: response.csrfToken, notice: null, workspace: { status: 'idle' } })
-      void get().loadWorkspace()
+      const editor = useEditorStore.getState()
+      const resuming = get().status === 'reauth' && editor.frozen && editor.ownerId === response.user.id
+      if (resuming) {
+        // Same account signing back in: keep its frozen draft and check the server revision.
+        set({ status: 'authenticated', user: response.user, csrfToken: response.csrfToken, notice: null })
+        void resumeAfterReauth(generation, response.user)
+      } else {
+        resetEditor() // a different account (or a normal sign-in) never inherits another owner's draft
+        set({ status: 'authenticated', user: response.user, csrfToken: response.csrfToken, notice: null, workspace: { status: 'idle' } })
+        void get().loadWorkspace()
+      }
       return { ok: true }
     } catch (error) {
       if (!isCurrent(generation)) return { ok: false, superseded: true }
       return { ok: false, ...describeAuthError(error, mode) }
+    }
+  }
+
+  /** After re-login as the same owner: unfreeze, and surface a conflict if the server moved on. */
+  async function resumeAfterReauth(generation: number, user: AuthUser) {
+    const stillOwner = () => isCurrent(generation) && get().user?.id === user.id && useEditorStore.getState().ownerId === user.id
+    try {
+      const envelope = await getWorkspace()
+      if (!stillOwner()) return
+      const editor = useEditorStore.getState()
+      editor.unfreeze()
+      const parsed = parseWorkspaceConfig(envelope.config)
+      const changed = envelope.revision !== editor.revision || (parsed.ok && !deepEqual(parsed.config, editor.savedConfig))
+      if (changed) {
+        editor.reportFailure({
+          kind: 'conflict',
+          message: 'This workspace was changed in another tab or session while you were signed out.',
+          currentRevision: envelope.revision,
+        })
+      }
+    } catch (error) {
+      if (!stillOwner()) return
+      if (error instanceof ApiError && error.status === 401) {
+        get().handleUnauthorized()
+        return
+      }
+      // Could not verify; the server still rejects a stale save with a conflict, so resume.
+      useEditorStore.getState().unfreeze()
     }
   }
 
@@ -155,9 +201,7 @@ export const useSessionStore = create<SessionState>()((set, get) => {
       } catch (error) {
         if (!stillOwner()) return
         if (error instanceof ApiError && error.status === 401) {
-          begin() // invalidate anything else still in flight for the expired session
-          resetEditor()
-          set({ status: 'anonymous', notice: 'Your session expired. Please sign in again.', ...SIGNED_OUT })
+          get().handleUnauthorized()
           return
         }
         const message =
@@ -168,6 +212,25 @@ export const useSessionStore = create<SessionState>()((set, get) => {
             : 'Could not load your workspace.'
         set({ workspace: { status: 'error', code: error instanceof ApiError ? error.code : 'unknown', message } })
       }
+    },
+
+    handleUnauthorized() {
+      begin() // invalidate everything still in flight for the expired session
+      const editor = useEditorStore.getState()
+      if (editor.ownerId && editor.draftConfig) {
+        // Hide the workspace and freeze the owner's draft in memory; never touch browser storage.
+        editor.freeze()
+        set({ status: 'reauth', csrfToken: null, notice: 'Your session expired. Sign in to continue.' })
+      } else {
+        resetEditor()
+        set({ status: 'anonymous', notice: 'Your session expired. Please sign in again.', ...SIGNED_OUT })
+      }
+    },
+
+    discardFrozenDraft() {
+      begin()
+      resetEditor()
+      set({ status: 'anonymous', notice: null, ...SIGNED_OUT })
     },
   }
 })
