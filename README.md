@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite frontend and FastAPI + SQLAlchemy + SQLite backend. Planning docs are in [docs/](docs/); progress is tracked in [docs/tasks.md](docs/tasks.md).
 
-**Current status:** FS-001 (scaffold), FS-002 (config v1 contract) and FS-003 (database) FS-004 (credentials and registration service) FS-005 (session auth and CSRF) FS-006 (workspace read/save API) and FS-007 (template API) complete. The backend (milestone M2) is feature-complete. No editor features yet.
+**Current status:** FS-001 (scaffold), FS-002 (config v1 contract) and FS-003 (database) FS-004 (credentials and registration service) FS-005 (session auth and CSRF) FS-006 (workspace read/save API) and FS-007 (template API) complete. The backend (milestone M2) is feature-complete. FS-008 adds the frontend sign-in/registration screens and protected workspace loading. No editor features yet.
 
 ## Prerequisites
 
@@ -36,7 +36,7 @@ cd frontend
 npm run dev
 ```
 
-Open http://localhost:5173; the card should show "Backend healthy". API docs: http://127.0.0.1:8000/api/docs.
+Open http://localhost:5173, create an account and you land in your saved workspace summary (the visual editor arrives in later tasks). Use `http://localhost:5173` or `http://127.0.0.1:5173` (both are allowed origins) and keep `FLEXSPACE_COOKIE_SECURE=false` in `backend/.env` for plain-HTTP development. API docs: http://127.0.0.1:8000/api/docs.
 
 ## Test and check
 
