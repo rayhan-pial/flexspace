@@ -1,6 +1,6 @@
 # Claude Code implementation tasks
 
-Status: FS-001 to FS-003 complete; FS-004 onward pending. Read [architecture](architecture.md) before starting. Execute in numeric order unless a listed dependency and milestone gate permit otherwise. Each task should fit a focused implementation session; split further if its actual diff grows too large.
+Status: FS-001 to FS-004 complete; FS-005 onward pending. Read [architecture](architecture.md) before starting. Execute in numeric order unless a listed dependency and milestone gate permit otherwise. Each task should fit a focused implementation session; split further if its actual diff grows too large.
 
 Completion rule: make the bounded change, run its targeted checks, and record evidence before checking it off. Existing repository authentication is already configured; do not replace it. Do not commit or push without authorization from the implementation request.
 
@@ -32,6 +32,8 @@ Completion rule: make the bounded change, run its targeted checks, and record ev
 ## M2 — Backend behavior
 
 ### FS-004 — Register and verify credentials
+
+- **Status: ✅ Complete (2026-11-23).** Evidence: `pytest` 127 passed (44 new in `tests/test_auth_service.py`): valid registration with a config-valid Productivity workspace at revision 1, independent workspaces per user, Argon2id-only storage (salted), email normalization, duplicate normalized/raced emails, 19 invalid emails, password length bounds (11/12/128/129, code points), oversized input never reaching the hasher, rollback after a mid-registration failure, wrong password / unknown user / bad input all returning the same `None`, dummy-hash verification for unknown users, and transparent rehash of outdated hashes. Code: `backend/app/core/passwords.py`, `backend/app/services/auth.py`. Decisions: email validation is a small ASCII-only check (no extra dependency); password policy is length-only (12-128); `register_user` hashes before touching the database and commits itself; routes and cookies arrive in FS-005.
 
 - Depends on: FS-003.
 - Add email/password validation, normalization, Argon2 hash/verify, and the registration service creating a user and Productivity workspace atomically. Expose registration/login routes as part of the session integration in FS-005.

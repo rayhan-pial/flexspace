@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite frontend and FastAPI + SQLAlchemy + SQLite backend. Planning docs are in [docs/](docs/); progress is tracked in [docs/tasks.md](docs/tasks.md).
 
-**Current status:** FS-001 (scaffold), FS-002 (config v1 contract) and FS-003 (database) complete. No editor features yet.
+**Current status:** FS-001 (scaffold), FS-002 (config v1 contract) and FS-003 (database) and FS-004 (credentials and registration service) complete. No editor features yet.
 
 ## Prerequisites
 
