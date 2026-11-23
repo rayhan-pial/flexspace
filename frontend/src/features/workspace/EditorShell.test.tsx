@@ -124,9 +124,9 @@ describe('Preview mode', () => {
     await user.click(screen.getByRole('button', { name: 'Preview' }))
     await user.type(screen.getByLabelText('Meeting notes text'), '!')
     expect(editor().draftConfig!.sections[0].widgets[0].props).toEqual({ body: 'Original note!' })
-    expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes. Switch to Edit to save or cancel them.')
+    expect(screen.getByRole('status', { name: 'Save status' })).toHaveTextContent('Unsaved changes. Switch to Edit to save or cancel them.')
     await user.click(screen.getByRole('button', { name: 'Edit workspace' }))
-    expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes')
+    expect(screen.getByRole('status', { name: 'Save status' })).toHaveTextContent('Unsaved changes')
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
     await user.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(screen.getByText('All changes saved')).toBeInTheDocument())
@@ -260,7 +260,7 @@ describe('below desktop width', () => {
     const user = await open()
     await user.type(screen.getByLabelText('Meeting notes text'), '!')
     expect(editor().draftConfig!.sections[0].widgets[0].props).toEqual({ body: 'Original note!' })
-    expect(screen.getByRole('status')).toHaveTextContent('Open this workspace on a larger screen to save or cancel them.')
+    expect(screen.getByRole('status', { name: 'Save status' })).toHaveTextContent('Open this workspace on a larger screen to save or cancel them.')
   })
 
   it('does not select widgets', async () => {

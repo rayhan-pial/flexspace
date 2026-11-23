@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { parseWorkspaceConfig } from '../../domain/workspace/parse'
@@ -247,8 +247,9 @@ describe('selection', () => {
 })
 
 describe('temporary navigation', () => {
-  it('lists both groups and disables items without a target', () => {
+  it('lists both groups and disables items without a target (Preview)', () => {
     renderView()
+    act(() => useEditorStore.getState().setMode('preview'))
     const nav = screen.getByRole('navigation', { name: 'Workspace' })
     expect(within(nav).getByRole('button', { name: 'Overview' })).toBeEnabled()
     expect(within(nav).getByRole('button', { name: 'Reference' })).toBeEnabled()
@@ -279,8 +280,30 @@ describe('temporary navigation', () => {
       ownerId: 'a', workspaceId: 'ws', revision: 1,
       config: { ...sampleConfig(), navigation: { placement: 'left', primaryItems: [], secondaryItems: [] } },
     })
+    useEditorStore.getState().setMode('preview')
     render(<WorkspaceView />)
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
+  })
+
+  it('in Edit an empty navigation still shows both (empty) groups as drop targets', () => {
+    useEditorStore.getState().load({
+      ownerId: 'a', workspaceId: 'ws', revision: 1,
+      config: { ...sampleConfig(), navigation: { placement: 'left', primaryItems: [], secondaryItems: [] } },
+    })
+    render(<WorkspaceView />)
+    const nav = screen.getByRole('navigation', { name: 'Workspace' })
+    expect(within(nav).getByRole('list', { name: 'Primary navigation' })).toBeInTheDocument()
+    expect(within(nav).getByRole('list', { name: 'Secondary navigation' })).toBeInTheDocument()
+    expect(within(nav).getByText('Drop an item here to add it to primary')).toBeInTheDocument()
+    expect(within(nav).getByText('Drop an item here to add it to secondary')).toBeInTheDocument()
+  })
+
+  it('in Edit an unlinked item is clickable (it selects the item) and every item has a reorder handle', async () => {
+    renderView()
+    const nav = screen.getByRole('navigation', { name: 'Workspace' })
+    await userEvent.setup().click(within(nav).getByRole('button', { name: 'Nowhere' }))
+    expect(useEditorStore.getState().selection).toEqual({ kind: 'navItem', id: 'nav-3' })
+    for (const label of ['Overview', 'Reference', 'Nowhere']) expect(within(nav).getByRole('button', { name: `Reorder ${label}` })).toBeInTheDocument()
   })
 })
 

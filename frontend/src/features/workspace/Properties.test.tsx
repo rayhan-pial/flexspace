@@ -222,14 +222,14 @@ describe('navigation', () => {
     const user = await open()
     const items = editor().draftConfig!.navigation
     const nav = () => screen.getByRole('navigation', { name: 'Workspace' })
-    expect(within(nav()).getAllByRole('button')).toHaveLength(2)
+    expect(within(nav()).getAllByRole('button', { name: /^(Overview|Reference)$/ })).toHaveLength(2)
     for (const placement of ['top', 'right', 'left']) {
       await user.selectOptions(left().getByLabelText('Navigation placement'), placement)
       expect(editor().draftConfig!.navigation.placement).toBe(placement)
       expect(editor().draftConfig!.navigation.primaryItems).toBe(items.primaryItems)
       expect(editor().draftConfig!.navigation.secondaryItems).toBe(items.secondaryItems)
       expect(screen.getAllByRole('navigation', { name: 'Workspace' })).toHaveLength(1)
-      expect(within(nav()).getAllByRole('button')).toHaveLength(2)
+      expect(within(nav()).getAllByRole('button', { name: /^(Overview|Reference)$/ })).toHaveLength(2)
     }
     expect(selectIsDirty(editor())).toBe(false) // back where it started
   })
@@ -246,6 +246,8 @@ describe('navigation', () => {
     expect(within(screen.getByRole('navigation', { name: 'Workspace' })).getByRole('button', { name: 'Docs' })).toBeEnabled()
     await user.selectOptions(settings().getByLabelText('Goes to'), '')
     expect(editor().draftConfig!.navigation.secondaryItems[0].targetSectionId).toBeNull()
+    expect(within(screen.getByRole('navigation', { name: 'Workspace' })).getByRole('button', { name: 'Docs' })).toBeEnabled() // still selectable in Edit
+    await user.click(screen.getByRole('button', { name: 'Preview' }))
     expect(within(screen.getByRole('navigation', { name: 'Workspace' })).getByRole('button', { name: 'Docs' })).toBeDisabled()
   })
 

@@ -35,4 +35,4 @@ export const ICON_LABELS: Record<IconName, string> = {
   mail: 'Mail',
 }
 
-export const navIcon = (name: string): LucideIcon => (Object.hasOwn(NAV_ICONS, name) ? NAV_ICONS[name as IconName] : House)
+export const resolveIcon = (name: string): LucideIcon => (Object.hasOwn(NAV_ICONS, name) ? NAV_ICONS[name as IconName] : House)

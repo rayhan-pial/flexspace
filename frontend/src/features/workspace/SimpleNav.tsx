@@ -1,5 +1,10 @@
+import { GripVertical } from 'lucide-react'
 import type { NavItem, Navigation } from '../../domain/workspace/types'
-import { navIcon } from './navIcons'
+import { useEditorStore } from '../editor/editorStore'
+import { useEffectiveMode } from '../editor/useEffectiveMode'
+import SortableSection from '../sorting/SortableSection'
+import { NAV_ITEM_TYPE, NAV_PRIMARY, NAV_SECONDARY } from '../sorting/workspaceAdapter'
+import NavIcon from './NavIcon'
 
 function scrollToSection(sectionId: string) {
   const target = document.querySelector<HTMLElement>(`[data-section-id="${sectionId}"]`)
@@ -9,39 +14,99 @@ function scrollToSection(sectionId: string) {
   target.focus({ preventScroll: true })
 }
 
+function NavLink({ item, editing }: { item: NavItem; editing: boolean }) {
+  const select = useEditorStore((s) => s.select)
+  const selected = useEditorStore((s) => editing && s.selection?.kind === 'navItem' && s.selection.id === item.id)
+  return (
+    <button
+      type="button"
+      // In Edit an unlinked item is still clickable: it selects the item so its target can be set.
+      disabled={!editing && item.targetSectionId === null}
+      aria-current={selected ? 'true' : undefined}
+      onClick={() => {
+        if (editing) select({ kind: 'navItem', id: item.id })
+        if (item.targetSectionId) scrollToSection(item.targetSectionId)
+      }}
+      className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm font-medium text-[color:var(--fs-primary,#6366f1)] hover:bg-black/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent ${
+        selected ? 'ring-2 ring-indigo-500' : ''
+      }`}
+    >
+      <NavIcon name={item.icon} className="size-4 shrink-0" />
+      {item.label}
+    </button>
+  )
+}
+
 /**
- * Temporary navigation shell: one list of buttons for both groups. It honours the saved placement
- * (top bar, or a side column on wide screens). Icons, editing and reordering arrive in FS-014/019.
+ * The workspace navigation. It honours the saved placement (top bar, or a side column on wide
+ * screens). In Preview it is a plain list of links; in Edit each group is a sortable container, so
+ * items can be reordered and moved between the Primary and Secondary groups (an empty group is an
+ * explicit drop target), by dragging a handle, with the keyboard, or with the Move buttons in the
+ * item's properties. All of them end in the same domain command.
  */
 export default function SimpleNav({ navigation }: { navigation: Navigation }) {
-  const groups: Array<{ label: string; items: NavItem[] }> = [
-    { label: 'Primary', items: navigation.primaryItems },
-    { label: 'Secondary', items: navigation.secondaryItems },
-  ].filter((group) => group.items.length > 0)
-  if (groups.length === 0) return null
-
+  const editing = useEffectiveMode() === 'edit'
   const vertical = navigation.placement !== 'top'
+  const groups = [
+    { id: NAV_PRIMARY, label: 'Primary', items: navigation.primaryItems },
+    { id: NAV_SECONDARY, label: 'Secondary', items: navigation.secondaryItems },
+  ]
+  const visibleGroups = editing ? groups : groups.filter((group) => group.items.length > 0)
+  if (visibleGroups.length === 0) return null
+
+  const navClass = `flex gap-4 ${vertical ? 'flex-wrap lg:w-48 lg:shrink-0 lg:flex-col' : 'flex-wrap'}`
+
+  if (!editing) {
+    return (
+      <nav aria-label="Workspace" className={navClass}>
+        {visibleGroups.map((group) => (
+          <ul key={group.id} aria-label={`${group.label} navigation`} className={`flex gap-1 ${vertical ? 'flex-wrap lg:flex-col' : 'flex-wrap'}`}>
+            {group.items.map((item) => (
+              <li key={item.id}>
+                <NavLink item={item} editing={false} />
+              </li>
+            ))}
+          </ul>
+        ))}
+      </nav>
+    )
+  }
+
+  const byId = new Map([...navigation.primaryItems, ...navigation.secondaryItems].map((item) => [item.id, item]))
   return (
-    <nav aria-label="Workspace" className={`flex gap-4 ${vertical ? 'flex-wrap lg:w-48 lg:shrink-0 lg:flex-col' : 'flex-wrap'}`}>
+    <nav aria-label="Workspace" className={navClass}>
       {groups.map((group) => (
-        <ul key={group.label} aria-label={`${group.label} navigation`} className={`flex gap-1 ${vertical ? 'flex-wrap lg:flex-col' : 'flex-wrap'}`}>
-          {group.items.map((item) => {
-            const Icon = navIcon(item.icon)
-            return (
-            <li key={item.id}>
-              <button
-                type="button"
-                disabled={item.targetSectionId === null}
-                onClick={() => item.targetSectionId && scrollToSection(item.targetSectionId)}
-                className="flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm font-medium text-[color:var(--fs-primary,#6366f1)] hover:bg-black/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent"
-              >
-                <Icon aria-hidden="true" className="size-4 shrink-0" />
-                {item.label}
-              </button>
-            </li>
-            )
-          })}
-        </ul>
+        <div key={group.id} className="min-w-0">
+          <p className="mb-1 text-xs font-medium uppercase tracking-wide opacity-60">{group.label}</p>
+          <SortableSection
+            containerId={group.id}
+            itemType={NAV_ITEM_TYPE}
+            items={group.items.map((item) => item.id)}
+            orientation={vertical ? 'vertical' : 'horizontal'}
+            label={`${group.label} navigation`}
+            emptyLabel={`Drop an item here to add it to ${group.label.toLowerCase()}`}
+            renderItem={(id, { handleRef }) => {
+              const item = byId.get(id)
+              if (!item) return null
+              return (
+                <div className="flex items-center gap-1">
+                  <span
+                    ref={handleRef}
+                    role="button"
+                    tabIndex={0}
+                    aria-label={`Reorder ${item.label}`}
+                    className="cursor-grab touch-none rounded p-0.5 text-slate-500 hover:bg-black/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 active:cursor-grabbing"
+                  >
+                    <GripVertical aria-hidden="true" className="size-4" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <NavLink item={item} editing />
+                  </div>
+                </div>
+              )
+            }}
+          />
+        </div>
       ))}
     </nav>
   )

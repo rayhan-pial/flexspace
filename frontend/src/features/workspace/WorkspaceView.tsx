@@ -1,4 +1,6 @@
 import { useEditorStore } from '../editor/editorStore'
+import SortProvider from '../sorting/SortProvider'
+import { workspaceAdapter } from '../sorting/workspaceAdapter'
 import SectionView from './SectionView'
 import { themeVariables } from './theme'
 import SimpleNav from './SimpleNav'
@@ -12,6 +14,7 @@ export default function WorkspaceView() {
   const direction = placement === 'top' ? 'flex-col' : placement === 'left' ? 'flex-col lg:flex-row' : 'flex-col lg:flex-row-reverse'
 
   return (
+    <SortProvider adapter={workspaceAdapter}>
     <div style={themeVariables(draft.theme)} className={`fs-themed mt-6 flex gap-6 rounded-2xl p-4 ${direction}`}>
       <SimpleNav navigation={draft.navigation} />
       <div className="min-w-0 flex-1 space-y-8">
@@ -27,5 +30,6 @@ export default function WorkspaceView() {
         )}
       </div>
     </div>
+    </SortProvider>
   )
 }

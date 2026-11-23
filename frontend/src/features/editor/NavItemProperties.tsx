@@ -5,6 +5,8 @@ import type { NavItemPatch } from '../../domain/workspace/navigation'
 import type { IconName, NavItem, WorkspaceConfig } from '../../domain/workspace/types'
 import { SelectField, TextField } from '../../shared/ui/fields'
 import { ICON_LABELS } from '../workspace/navIcons'
+import MoveButtons from '../sorting/MoveButtons'
+import { NAV_PRIMARY, NAV_SECONDARY, workspaceAdapter } from '../sorting/workspaceAdapter'
 import { useEditorStore } from './editorStore'
 
 /** Label, target section and icon of the selected navigation item. */
@@ -18,6 +20,7 @@ export default function NavItemProperties({ item, config }: { item: NavItem; con
   }
 
   const NONE = ''
+  const inPrimary = config.navigation.primaryItems.some((i) => i.id === item.id)
   return (
     <div className="mt-4 space-y-4 border-t border-slate-200 pt-3">
       <TextField label="Label" value={item.label} maxLength={MAX_LABEL} onChange={(label) => change({ label })} />
@@ -36,6 +39,15 @@ export default function NavItemProperties({ item, config }: { item: NavItem; con
         onChange={(icon) => change({ icon: icon as IconName })}
         options={ICONS.map((value) => ({ value, label: ICON_LABELS[value] }))}
       />
+      <fieldset className="space-y-2">
+        <legend className="text-xs font-medium uppercase tracking-wide text-slate-500">Order</legend>
+        <MoveButtons
+          adapter={workspaceAdapter}
+          itemId={item.id}
+          containerId={inPrimary ? NAV_PRIMARY : NAV_SECONDARY}
+          otherContainers={[inPrimary ? { id: NAV_SECONDARY, label: 'Secondary' } : { id: NAV_PRIMARY, label: 'Primary' }]}
+        />
+      </fieldset>
       {error && <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">{error}</p>}
     </div>
   )

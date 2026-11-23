@@ -10,9 +10,10 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b",
-    "test:browser": "node e2e/grid-gesture.mjs && node e2e/welcome-tasks.mjs && node e2e/gallery-analytics.mjs && node e2e/calendar.mjs"
+    "test:browser": "node e2e/grid-gesture.mjs && node e2e/welcome-tasks.mjs && node e2e/gallery-analytics.mjs && node e2e/calendar.mjs && node e2e/nav-sorting.mjs"
   },
   "dependencies": {
+    "@dnd-kit/dom": "^0.5.3",
     "@dnd-kit/react": "^0.5.3",
     "lucide-react": "^1.77.0",
     "react": "^19.3.1",

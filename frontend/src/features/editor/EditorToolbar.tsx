@@ -43,7 +43,7 @@ export default function EditorToolbar() {
   return (
     <div className="border-b border-slate-200 bg-white px-6 py-2">
       <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3">
-        <p role="status" aria-live="polite" className={`text-sm ${dirty && !saving ? 'font-medium text-amber-700' : 'text-slate-600'}`}>
+        <p role="status" aria-label="Save status" aria-live="polite" className={`text-sm ${dirty && !saving ? 'font-medium text-amber-700' : 'text-slate-600'}`}>
           {status}
         </p>
 

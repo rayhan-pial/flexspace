@@ -119,7 +119,7 @@ describe('Tasks widget', () => {
     await user.click(tasksCard().getByRole('checkbox', { name: /Plan the demo/ }))
     expect(items()[0].done).toBe(true)
     expect(selectIsDirty(editor())).toBe(true)
-    expect(screen.getByRole('status')).toHaveTextContent('Unsaved changes. Switch to Edit to save or cancel them.')
+    expect(screen.getByRole('status', { name: 'Save status' })).toHaveTextContent('Unsaved changes. Switch to Edit to save or cancel them.')
     expect(server.puts).toHaveLength(0)
     await user.click(screen.getByRole('button', { name: 'Edit workspace' }))
     await user.click(screen.getByRole('button', { name: 'Save' }))
