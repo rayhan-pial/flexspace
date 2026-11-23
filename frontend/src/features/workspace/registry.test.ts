@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest'
+import { KNOWN_WIDGET_TYPES } from '../../domain/workspace/constants'
 import { deepEqual } from '../../domain/workspace/immutable'
 import { getWidgetDefinition, isKnownWidgetType, widgetTypeLabel } from './registry'
 
@@ -26,10 +27,15 @@ describe('widget registry', () => {
     expect(notes.parseProps([])).toBeNull()
   })
 
-  it('has no entry for schema-known types whose renderers ship later, or for unknown types', () => {
-    for (const type of ['calendar', 'kanban']) {
-      expect(getWidgetDefinition(type)).toBeUndefined()
+  it('has an entry for every schema-known type, whose default props satisfy its own parser, and none for unknown types', () => {
+    for (const type of KNOWN_WIDGET_TYPES) {
+      const definition = getWidgetDefinition(type)!
+      expect(definition, type).toBeDefined()
+      expect(definition.type).toBe(type)
+      expect(deepEqual(definition.parseProps(definition.defaultProps), definition.defaultProps), type).toBe(true)
+      expect(definition.minSize[0]).toBeGreaterThanOrEqual(1)
     }
+    expect(getWidgetDefinition('kanban')).toBeUndefined()
   })
 
   it('treats Object.prototype names as plain unknown types', () => {

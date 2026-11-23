@@ -25,15 +25,6 @@ export function UnsupportedWidget({ widgetId, type, handle }: { widgetId: string
   )
 }
 
-/** A type the schema knows whose renderer arrives in a later task. */
-export function PendingWidgetBody({ label }: { label: string }) {
-  return (
-    <p className="text-sm text-slate-500">
-      The {label.toLowerCase()} widget is not available in this build yet. Its content is kept and saved unchanged.
-    </p>
-  )
-}
-
 export function InvalidWidgetBody() {
   return <p className="text-sm text-rose-700">This widget's saved data is not valid, so it cannot be shown.</p>
 }

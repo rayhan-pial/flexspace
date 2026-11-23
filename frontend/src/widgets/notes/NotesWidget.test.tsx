@@ -1,4 +1,4 @@
-import { render, screen } from '@testing-library/react'
+import { cleanup, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { describe, expect, it, vi } from 'vitest'
 import NotesWidget from './NotesWidget'
@@ -54,5 +54,31 @@ describe('NotesWidget', () => {
     const { textarea } = setup(body)
     expect(textarea).toHaveValue(body)
     expect(document.querySelector('script, img, b')).toBeNull()
+  })
+
+  describe('approaching the 10,000 character limit', () => {
+    const body = (n: number) => 'x'.repeat(n)
+
+    it('turns the counter amber from 90% and shows it in Preview as a warning', () => {
+      setup(body(9000), 'preview')
+      const counter = screen.getByText('9,000 / 10,000')
+      expect(counter.className).toContain('text-amber-700')
+      expect(screen.getByRole('textbox')).toHaveAttribute('aria-describedby', counter.id)
+    })
+
+    it('says so when the limit is reached', () => {
+      setup(body(10_000), 'edit')
+      const counter = screen.getByText(/10,000 \/ 10,000/)
+      expect(counter).toHaveTextContent('Limit reached')
+      expect(counter.className).toContain('text-rose-700')
+    })
+
+    it('stays quiet below 90%: neutral in Edit, absent in Preview', () => {
+      setup(body(8999), 'edit')
+      expect(screen.getByText('8,999 / 10,000').className).toContain('text-slate-500')
+      cleanup()
+      setup(body(8999), 'preview')
+      expect(screen.queryByText(/10,000/)).not.toBeInTheDocument()
+    })
   })
 })

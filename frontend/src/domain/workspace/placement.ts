@@ -7,7 +7,7 @@ export function minSizeFor(type: string): readonly [w: number, h: number] {
 }
 
 /** Roomier starting sizes for widgets that show lists of content (never below the type minimum). */
-const PREFERRED_SIZE: Record<string, readonly [w: number, h: number]> = { gallery: [6, 6], analytics: [6, 5], tasks: [4, 6] }
+const PREFERRED_SIZE: Record<string, readonly [w: number, h: number]> = { gallery: [6, 6], analytics: [6, 5], tasks: [4, 6], calendar: [6, 8] }
 
 /** Size a newly added widget starts with: comfortable, but never below its minimum. */
 export function defaultSizeFor(type: string): { w: number; h: number } {

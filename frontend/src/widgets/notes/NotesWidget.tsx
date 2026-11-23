@@ -11,11 +11,13 @@ export const NOTES_MAX = 10_000
 export default function NotesWidget({ title, props, mode, onChangeProps }: WidgetRenderProps<NotesProps>) {
   const countId = useId()
   const editing = mode === 'edit'
+  const atLimit = props.body.length >= NOTES_MAX
+  const nearLimit = props.body.length >= NOTES_MAX * 0.9
   return (
     <div className="flex h-full min-h-0 flex-col">
       <textarea
         aria-label={`${title || 'Note'} text`}
-        aria-describedby={editing ? countId : undefined}
+        aria-describedby={editing || nearLimit ? countId : undefined}
         value={props.body}
         maxLength={NOTES_MAX}
         placeholder="Write a note…"
@@ -24,9 +26,14 @@ export default function NotesWidget({ title, props, mode, onChangeProps }: Widge
           editing ? 'border border-slate-300 bg-white/60' : 'border border-transparent'
         }`}
       />
-      {editing && (
-        <p id={countId} className="mt-1 text-right text-xs text-slate-500">
+      {(editing || nearLimit) && (
+        <p
+          id={countId}
+          aria-live="polite"
+          className={`mt-1 text-right text-xs ${atLimit ? 'font-medium text-rose-700' : nearLimit ? 'text-amber-700' : 'text-slate-500'}`}
+        >
           {props.body.length.toLocaleString()} / {NOTES_MAX.toLocaleString()}
+          {atLimit && ' · Limit reached'}
         </p>
       )}
     </div>

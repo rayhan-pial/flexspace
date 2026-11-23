@@ -6,9 +6,9 @@ import type { DispatchResult } from '../../widgets/types'
 import { useEditorStore } from '../editor/editorStore'
 import { useEffectiveMode } from '../editor/useEffectiveMode'
 import GridHandle from './GridHandle'
-import { InvalidWidgetBody, PendingWidgetBody, UnsupportedWidget } from './WidgetPlaceholders'
+import { InvalidWidgetBody, UnsupportedWidget } from './WidgetPlaceholders'
 import WidgetShell from './WidgetShell'
-import { getWidgetDefinition, isKnownWidgetType, widgetTypeLabel } from './registry'
+import { getWidgetDefinition, widgetTypeLabel } from './registry'
 
 /**
  * Resolves a widget's `type` through the code-owned registry and renders it inside the common
@@ -40,8 +40,8 @@ function WidgetRenderer({ widget, inGrid = false }: { widget: Widget; inGrid?: b
   )
   const onSelect = useCallback(() => select({ kind: 'widget', id: widgetId }), [select, widgetId])
 
-  // Not a known type at all: bounded placeholder, no appearance (its data is opaque), data untouched.
-  if (!isKnownWidgetType(widget.type)) return <UnsupportedWidget widgetId={widget.id} type={widget.type} handle={inGrid && mode === 'edit' ? <GridHandle widgetId={widget.id} title="unsupported widget" /> : undefined} />
+  // No registry entry (an unknown type, which is the only way to get here): bounded placeholder, no appearance (its data is opaque), data untouched.
+  if (!definition) return <UnsupportedWidget widgetId={widget.id} type={widget.type} handle={inGrid && mode === 'edit' ? <GridHandle widgetId={widget.id} title="unsupported widget" /> : undefined} />
 
   const label = widgetTypeLabel(widget.type)
   const title = widget.title || label
@@ -52,7 +52,6 @@ function WidgetRenderer({ widget, inGrid = false }: { widget: Widget; inGrid?: b
     </WidgetShell>
   )
 
-  if (!definition) return shell(<PendingWidgetBody label={label} />)
   if (!props) return shell(<InvalidWidgetBody />)
   const { Component } = definition
   return shell(<Component widgetId={widget.id} title={title} props={props} mode={mode} onChangeProps={onChangeProps} dispatch={dispatch} />)

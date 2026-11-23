@@ -1,6 +1,7 @@
 import { DEFAULT_MIN_SIZE, KNOWN_WIDGET_TYPES, MIN_SIZE } from '../../domain/workspace/constants'
 import { parseKnownProps } from '../../domain/workspace/parse'
 import { analyticsWidget } from '../../widgets/analytics'
+import { calendarWidget } from '../../widgets/calendar'
 import { galleryWidget } from '../../widgets/gallery'
 import { notesWidget } from '../../widgets/notes'
 import { tasksWidget } from '../../widgets/tasks'
@@ -33,7 +34,7 @@ function register(definition: WidgetDefinition<any>): RegisteredWidget { // esli
 
 // A Map avoids prototype lookups: a widget whose type is "constructor" or "__proto__" is simply unknown.
 const registry = new Map<string, RegisteredWidget>(
-  [welcomeWidget, tasksWidget, notesWidget, galleryWidget, analyticsWidget].map((definition) => [definition.type, register(definition)]),
+  [welcomeWidget, tasksWidget, notesWidget, galleryWidget, analyticsWidget, calendarWidget].map((definition) => [definition.type, register(definition)]),
 )
 
 export const getWidgetDefinition = (type: string): RegisteredWidget | undefined => registry.get(type)

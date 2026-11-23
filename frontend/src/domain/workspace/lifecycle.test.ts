@@ -71,6 +71,7 @@ describe('placement', () => {
     expect(minSizeFor('constructor')).toEqual([1, 2])
     expect(defaultSizeFor('gallery')).toEqual({ w: 6, h: 6 }) // roomier than the 4x4 minimum
     expect(defaultSizeFor('analytics')).toEqual({ w: 6, h: 5 })
+    expect(defaultSizeFor('calendar')).toEqual({ w: 6, h: 8 })
     expect(defaultSizeFor('notes')).toEqual({ w: 4, h: 4 })
     expect(defaultSizeFor('constructor')).toEqual({ w: 4, h: 4 }) // prototype names are plain unknown types
   })
