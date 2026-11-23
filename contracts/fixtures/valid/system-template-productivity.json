@@ -1,0 +1,160 @@
+{
+  "description": "The curated Productivity system template, as served by the API.",
+  "input": {
+    "schemaVersion": 1,
+    "title": "My workspace",
+    "theme": {
+      "primary": "#6366f1",
+      "background": "#f8fafc",
+      "surface": "#ffffff",
+      "text": "#0f172a",
+      "fontFamily": "system",
+      "fontSizePx": 16
+    },
+    "navigation": {
+      "placement": "left",
+      "primaryItems": [
+        {
+          "id": "nav-section-today",
+          "label": "Today",
+          "targetSectionId": "section-today",
+          "icon": "home"
+        },
+        {
+          "id": "nav-section-reference",
+          "label": "Reference",
+          "targetSectionId": "section-reference",
+          "icon": "folder"
+        }
+      ],
+      "secondaryItems": []
+    },
+    "sections": [
+      {
+        "id": "section-today",
+        "kind": "grid",
+        "title": "Today",
+        "hidden": false,
+        "widgets": [
+          {
+            "id": "w-welcome",
+            "type": "welcome",
+            "title": "Welcome",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "greeting": "Welcome back",
+              "subtitle": "Here is what is on your plate today."
+            }
+          },
+          {
+            "id": "w-tasks",
+            "type": "tasks",
+            "title": "Tasks",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "items": [
+                {
+                  "id": "task-1",
+                  "text": "Review project brief",
+                  "done": true
+                },
+                {
+                  "id": "task-2",
+                  "text": "Draft the weekly update",
+                  "done": false
+                },
+                {
+                  "id": "task-3",
+                  "text": "Prepare the demo",
+                  "done": false
+                }
+              ]
+            }
+          },
+          {
+            "id": "w-notes",
+            "type": "notes",
+            "title": "Notes",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "body": "Keep the demo focused:\nbuild, save, log in again."
+            }
+          },
+          {
+            "id": "w-calendar",
+            "type": "calendar",
+            "title": "Calendar",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "displayMonth": "2026-11",
+              "events": [
+                {
+                  "id": "event-1",
+                  "date": "2026-11-24",
+                  "title": "Planning session"
+                },
+                {
+                  "id": "event-2",
+                  "date": "2026-11-27",
+                  "title": "Demo day"
+                }
+              ]
+            }
+          }
+        ],
+        "layout": [
+          {
+            "i": "w-welcome",
+            "x": 0,
+            "y": 0,
+            "w": 12,
+            "h": 3
+          },
+          {
+            "i": "w-tasks",
+            "x": 0,
+            "y": 3,
+            "w": 6,
+            "h": 6
+          },
+          {
+            "i": "w-notes",
+            "x": 6,
+            "y": 3,
+            "w": 6,
+            "h": 6
+          },
+          {
+            "i": "w-calendar",
+            "x": 0,
+            "y": 9,
+            "w": 12,
+            "h": 7
+          }
+        ]
+      },
+      {
+        "id": "section-reference",
+        "kind": "stack",
+        "title": "Reference",
+        "hidden": false,
+        "widgets": [
+          {
+            "id": "w-ref-notes",
+            "type": "notes",
+            "title": "Reading list",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "body": "Architecture notes\nTeam handbook"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

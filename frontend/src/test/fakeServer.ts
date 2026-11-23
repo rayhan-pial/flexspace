@@ -1,8 +1,26 @@
+import { readFileSync } from 'node:fs'
+import { join } from 'node:path'
 import { apiError, authResponse, json, noContent } from './fakeApi'
 import type { RecordedCall } from './fakeApi'
 import { parseWorkspaceConfig } from '../domain/workspace/parse'
 
 type PutHook = (call: RecordedCall) => Response | Promise<Response> | 'commit-then-drop' | 'drop' | 'commit-then-500' | undefined
+
+export interface FakeTemplate {
+  id: string
+  name: string
+  kind: 'system' | 'custom'
+  updatedAt: string
+  config: unknown
+}
+
+/** The three curated system templates, read from the shared fixtures so tests use the real designs. */
+function systemTemplates(): FakeTemplate[] {
+  return [['productivity', 'Productivity'], ['analytics', 'Analytics'], ['creative', 'Creative']].map(([key, name]) => {
+    const file = join(__dirname, `../../../contracts/fixtures/valid/system-template-${key}.json`)
+    return { id: `tpl-${key}`, name, kind: 'system' as const, updatedAt: '2026-11-23T09:00:00Z', config: JSON.parse(readFileSync(file, 'utf-8')).input }
+  })
+}
 
 interface UserData {
   revision: number
@@ -28,6 +46,10 @@ export function createFakeServer(
   const server = {
     users,
     session: null as string | null,
+    templates: systemTemplates(),
+    templateListGets: 0,
+    templateDetailGets: [] as string[],
+    templateHook: undefined as ((call: RecordedCall) => Response | Promise<Response> | undefined) | undefined,
     puts: [] as Array<{ baseRevision: number; config: unknown; csrf?: string }>,
     gets: 0,
     putHook: undefined as PutHook | undefined,
@@ -62,7 +84,24 @@ export function createFakeServer(
     users[userId].revision += 1
   }
 
+  const templateDetail = (id: string) => (call: RecordedCall) => {
+    server.templateDetailGets.push(id)
+    const override = server.templateHook?.(call)
+    if (override) return override
+    if (!server.session) return apiError(401, 'unauthenticated')
+    const template = server.templates.find((t) => t.id === id)
+    return template ? json(200, template) : apiError(404, 'not_found', 'Template not found.')
+  }
+
   server.handlers = {
+    'GET /templates': (call) => {
+      server.templateListGets += 1
+      const override = server.templateHook?.(call)
+      if (override) return override
+      if (!server.session) return apiError(401, 'unauthenticated')
+      return json(200, { items: server.templates.map(({ id, name, kind, updatedAt }) => ({ id, name, kind, updatedAt })) })
+    },
+    ...Object.fromEntries(server.templates.map((t) => [`GET /templates/${t.id}`, templateDetail(t.id)])),
     'POST /auth/login': ({ body }) => {
       const id = (body as { email: string }).email.startsWith('b') ? 'b' : 'a'
       server.session = id

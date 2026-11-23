@@ -82,7 +82,7 @@ describe('Edit mode on desktop', () => {
     await user.click(settings().getByRole('tab', { name: 'Theme' }))
     expect(settings().getByLabelText('Primary color')).toBeInTheDocument()
     await user.click(settings().getByRole('tab', { name: 'Templates' }))
-    expect(settings().getByText('Templates will appear here.')).toBeInTheDocument()
+    expect(await settings().findByText(/Start from a ready-made design/)).toBeInTheDocument()
   })
 })
 

@@ -1,0 +1,290 @@
+{
+  "description": "The curated Analytics system template, as served by the API.",
+  "input": {
+    "schemaVersion": 1,
+    "title": "Analytics workspace",
+    "theme": {
+      "primary": "#0ea5e9",
+      "background": "#f1f5f9",
+      "surface": "#ffffff",
+      "text": "#0f172a",
+      "fontFamily": "system",
+      "fontSizePx": 16
+    },
+    "navigation": {
+      "placement": "top",
+      "primaryItems": [
+        {
+          "id": "nav-section-overview",
+          "label": "Overview",
+          "targetSectionId": "section-overview",
+          "icon": "bar-chart"
+        },
+        {
+          "id": "nav-section-reports",
+          "label": "Reports",
+          "targetSectionId": "section-reports",
+          "icon": "layout-dashboard"
+        }
+      ],
+      "secondaryItems": [
+        {
+          "id": "nav-section-notes",
+          "label": "Notes",
+          "targetSectionId": "section-notes",
+          "icon": "notebook"
+        }
+      ]
+    },
+    "sections": [
+      {
+        "id": "section-overview",
+        "kind": "grid",
+        "title": "Overview",
+        "hidden": false,
+        "widgets": [
+          {
+            "id": "w-overview",
+            "type": "welcome",
+            "title": "Overview",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "greeting": "Performance overview",
+              "subtitle": "Sample data for this quarter."
+            }
+          },
+          {
+            "id": "w-kpis",
+            "type": "analytics",
+            "title": "Key metrics",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "metrics": [
+                {
+                  "id": "metric-visitors",
+                  "label": "Visitors",
+                  "value": 12400
+                },
+                {
+                  "id": "metric-signups",
+                  "label": "Signups",
+                  "value": 860
+                },
+                {
+                  "id": "metric-revenue",
+                  "label": "Revenue ($)",
+                  "value": 48200
+                },
+                {
+                  "id": "metric-conversion",
+                  "label": "Conversion %",
+                  "value": 6.9
+                }
+              ]
+            }
+          },
+          {
+            "id": "w-engagement",
+            "type": "analytics",
+            "title": "Engagement",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "metrics": [
+                {
+                  "id": "metric-sessions",
+                  "label": "Sessions",
+                  "value": 9300
+                },
+                {
+                  "id": "metric-pages",
+                  "label": "Pages per visit",
+                  "value": 3.4
+                },
+                {
+                  "id": "metric-duration",
+                  "label": "Avg. session (min)",
+                  "value": 4.2
+                },
+                {
+                  "id": "metric-bounce",
+                  "label": "Bounce rate %",
+                  "value": 38
+                }
+              ]
+            }
+          },
+          {
+            "id": "w-followups",
+            "type": "tasks",
+            "title": "Follow-ups",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "items": [
+                {
+                  "id": "task-signups",
+                  "text": "Investigate the signup dip on Tuesday",
+                  "done": false
+                },
+                {
+                  "id": "task-funnel",
+                  "text": "Review the onboarding funnel",
+                  "done": true
+                },
+                {
+                  "id": "task-report",
+                  "text": "Send the weekly report",
+                  "done": false
+                },
+                {
+                  "id": "task-forecast",
+                  "text": "Update the quarterly forecast",
+                  "done": false
+                },
+                {
+                  "id": "task-filters",
+                  "text": "Tidy the dashboard filters",
+                  "done": false
+                }
+              ]
+            }
+          },
+          {
+            "id": "w-reporting",
+            "type": "calendar",
+            "title": "Reporting calendar",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "displayMonth": "2026-11",
+              "events": [
+                {
+                  "id": "event-board",
+                  "date": "2026-11-19",
+                  "title": "Board review"
+                },
+                {
+                  "id": "event-close",
+                  "date": "2026-11-30",
+                  "title": "Quarter close"
+                },
+                {
+                  "id": "event-kickoff",
+                  "date": "2026-12-02",
+                  "title": "Planning kickoff"
+                }
+              ]
+            }
+          }
+        ],
+        "layout": [
+          {
+            "i": "w-overview",
+            "x": 0,
+            "y": 0,
+            "w": 12,
+            "h": 3
+          },
+          {
+            "i": "w-kpis",
+            "x": 0,
+            "y": 3,
+            "w": 7,
+            "h": 6
+          },
+          {
+            "i": "w-engagement",
+            "x": 7,
+            "y": 3,
+            "w": 5,
+            "h": 6
+          },
+          {
+            "i": "w-followups",
+            "x": 0,
+            "y": 9,
+            "w": 6,
+            "h": 9
+          },
+          {
+            "i": "w-reporting",
+            "x": 6,
+            "y": 9,
+            "w": 6,
+            "h": 9
+          }
+        ]
+      },
+      {
+        "id": "section-reports",
+        "kind": "stack",
+        "title": "Reports",
+        "hidden": false,
+        "widgets": [
+          {
+            "id": "w-next-steps",
+            "type": "tasks",
+            "title": "Next steps",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "items": [
+                {
+                  "id": "task-experiment",
+                  "text": "Plan the pricing experiment",
+                  "done": false
+                },
+                {
+                  "id": "task-dashboard",
+                  "text": "Share the dashboard with sales",
+                  "done": false
+                }
+              ]
+            }
+          },
+          {
+            "id": "w-findings",
+            "type": "notes",
+            "title": "Findings",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "body": "Conversion improved after the new onboarding.\nMobile traffic grew faster than desktop."
+            }
+          }
+        ]
+      },
+      {
+        "id": "section-notes",
+        "kind": "stack",
+        "title": "Notes",
+        "hidden": false,
+        "widgets": [
+          {
+            "id": "w-method",
+            "type": "notes",
+            "title": "Methodology",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "body": "Figures are sample data.\nVisitors are unique per week."
+            }
+          },
+          {
+            "id": "w-glossary",
+            "type": "notes",
+            "title": "Glossary",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "body": "Conversion % = signups / visitors.\nBounce rate = single-page sessions / sessions."
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

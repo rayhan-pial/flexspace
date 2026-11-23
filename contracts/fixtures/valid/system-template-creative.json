@@ -1,0 +1,294 @@
+{
+  "description": "The curated Creative system template, as served by the API.",
+  "input": {
+    "schemaVersion": 1,
+    "title": "Creative workspace",
+    "theme": {
+      "primary": "#db2777",
+      "background": "#fdf2f8",
+      "surface": "#ffffff",
+      "text": "#0f172a",
+      "fontFamily": "serif",
+      "fontSizePx": 16
+    },
+    "navigation": {
+      "placement": "right",
+      "primaryItems": [
+        {
+          "id": "nav-section-studio",
+          "label": "Studio",
+          "targetSectionId": "section-studio",
+          "icon": "image"
+        },
+        {
+          "id": "nav-section-ideas",
+          "label": "Ideas",
+          "targetSectionId": "section-ideas",
+          "icon": "star"
+        }
+      ],
+      "secondaryItems": [
+        {
+          "id": "nav-section-archive",
+          "label": "Archive",
+          "targetSectionId": "section-archive",
+          "icon": "folder"
+        }
+      ]
+    },
+    "sections": [
+      {
+        "id": "section-studio",
+        "kind": "grid",
+        "title": "Studio",
+        "hidden": false,
+        "widgets": [
+          {
+            "id": "w-studio",
+            "type": "welcome",
+            "title": "Studio",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "greeting": "Let's make something",
+              "subtitle": "Collect inspiration and ideas."
+            }
+          },
+          {
+            "id": "w-sketchbook",
+            "type": "notes",
+            "title": "Sketchbook",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "body": "Palette: magenta, cream, charcoal.\nTry a serif headline."
+            }
+          },
+          {
+            "id": "w-inspiration",
+            "type": "gallery",
+            "title": "Inspiration",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "items": [
+                {
+                  "id": "img-aurora",
+                  "assetKey": "aurora",
+                  "alt": "Aurora over mountains",
+                  "caption": "Colour study"
+                },
+                {
+                  "id": "img-mountain",
+                  "assetKey": "mountain",
+                  "alt": "Snowy mountain at sunrise",
+                  "caption": "Warm light"
+                },
+                {
+                  "id": "img-forest",
+                  "assetKey": "forest",
+                  "alt": "Pine forest",
+                  "caption": "Texture"
+                }
+              ]
+            }
+          },
+          {
+            "id": "w-moodboard",
+            "type": "gallery",
+            "title": "Mood board",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "items": [
+                {
+                  "id": "img-studio",
+                  "assetKey": "studio",
+                  "alt": "Desk with sketches",
+                  "caption": "Workspace"
+                },
+                {
+                  "id": "img-city",
+                  "assetKey": "city",
+                  "alt": "City skyline at dusk",
+                  "caption": "Evening mood"
+                },
+                {
+                  "id": "img-desk",
+                  "assetKey": "workspace",
+                  "alt": "Laptop on a desk",
+                  "caption": "Digital tools"
+                }
+              ]
+            }
+          },
+          {
+            "id": "w-todo",
+            "type": "tasks",
+            "title": "Studio to-do",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "items": [
+                {
+                  "id": "task-prints",
+                  "text": "Order test prints",
+                  "done": true
+                },
+                {
+                  "id": "task-palette",
+                  "text": "Finalise the colour palette",
+                  "done": false
+                },
+                {
+                  "id": "task-layout",
+                  "text": "Sketch three poster layouts",
+                  "done": false
+                }
+              ]
+            }
+          }
+        ],
+        "layout": [
+          {
+            "i": "w-studio",
+            "x": 0,
+            "y": 0,
+            "w": 8,
+            "h": 4
+          },
+          {
+            "i": "w-sketchbook",
+            "x": 8,
+            "y": 0,
+            "w": 4,
+            "h": 4
+          },
+          {
+            "i": "w-inspiration",
+            "x": 0,
+            "y": 4,
+            "w": 6,
+            "h": 7
+          },
+          {
+            "i": "w-moodboard",
+            "x": 6,
+            "y": 4,
+            "w": 6,
+            "h": 7
+          },
+          {
+            "i": "w-todo",
+            "x": 0,
+            "y": 11,
+            "w": 12,
+            "h": 6
+          }
+        ]
+      },
+      {
+        "id": "section-ideas",
+        "kind": "stack",
+        "title": "Ideas",
+        "hidden": false,
+        "widgets": [
+          {
+            "id": "w-ideas",
+            "type": "tasks",
+            "title": "Ideas to try",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "items": [
+                {
+                  "id": "task-poster",
+                  "text": "Poster series",
+                  "done": false
+                },
+                {
+                  "id": "task-zine",
+                  "text": "A small zine of sketches",
+                  "done": false
+                },
+                {
+                  "id": "task-colour",
+                  "text": "Risograph colour tests",
+                  "done": false
+                }
+              ]
+            }
+          },
+          {
+            "id": "w-schedule",
+            "type": "calendar",
+            "title": "Exhibition schedule",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "displayMonth": "2026-12",
+              "events": [
+                {
+                  "id": "event-install",
+                  "date": "2026-12-04",
+                  "title": "Gallery install"
+                },
+                {
+                  "id": "event-opening",
+                  "date": "2026-12-11",
+                  "title": "Opening night"
+                },
+                {
+                  "id": "event-talk",
+                  "date": "2026-12-18",
+                  "title": "Artist talk"
+                }
+              ]
+            }
+          }
+        ]
+      },
+      {
+        "id": "section-archive",
+        "kind": "stack",
+        "title": "Archive",
+        "hidden": false,
+        "widgets": [
+          {
+            "id": "w-archive",
+            "type": "gallery",
+            "title": "Past shots",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "items": [
+                {
+                  "id": "img-old-city",
+                  "assetKey": "city",
+                  "alt": "City skyline",
+                  "caption": "Last year"
+                },
+                {
+                  "id": "img-old-forest",
+                  "assetKey": "forest",
+                  "alt": "Pine forest",
+                  "caption": "Field trip"
+                }
+              ]
+            }
+          },
+          {
+            "id": "w-past",
+            "type": "notes",
+            "title": "Past projects",
+            "hidden": false,
+            "appearance": {},
+            "props": {
+              "body": "2025: Seasons poster set\n2024: Neighbourhood map"
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -4,11 +4,8 @@ import ComponentOutline from './ComponentOutline'
 import InspectorPanel from './InspectorPanel'
 import LibraryPanel from './LibraryPanel'
 import NavigationPanel from './NavigationPanel'
+import TemplatesPanel from './TemplatesPanel'
 import ThemePanel from './ThemePanel'
-
-function Slot({ children }: { children: string }) {
-  return <p className="text-sm text-slate-500">{children}</p>
-}
 
 /** Left builder panel: the component outline plus the library slot (FS-013 fills it). */
 export function LeftPanel() {
@@ -44,7 +41,7 @@ export function RightPanel() {
         tabs={[
           { id: 'properties', label: 'Properties', content: <InspectorPanel /> },
           { id: 'theme', label: 'Theme', content: <ThemePanel /> },
-          { id: 'templates', label: 'Templates', content: <Slot>Templates will appear here.</Slot> },
+          { id: 'templates', label: 'Templates', content: <TemplatesPanel /> },
         ]}
       />
     </aside>

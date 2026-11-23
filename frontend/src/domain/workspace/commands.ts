@@ -13,6 +13,11 @@ export type Command = (config: WorkspaceConfig) => CommandResult
 export const ok = (config: WorkspaceConfig): CommandResult => ({ ok: true, config })
 export const fail = (error: string): CommandResult => ({ ok: false, error })
 
+/** Replace the whole document (applying a template or restoring the default) as a single change. */
+export function replaceWorkspace(next: WorkspaceConfig): Command {
+  return () => ok(next)
+}
+
 export function setWorkspaceTitle(title: string): Command {
   return (config) => (config.title === title ? ok(config) : ok({ ...config, title }))
 }

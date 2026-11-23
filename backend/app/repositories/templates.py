@@ -1,3 +1,4 @@
+from datetime import UTC, datetime
 from typing import Any
 
 from sqlalchemy import or_, select
@@ -13,6 +14,17 @@ def get_by_system_key(session: Session, system_key: str) -> Template | None:
 def add_system(session: Session, system_key: str, name: str, config: dict[str, Any]) -> Template:
     template = Template(system_key=system_key, owner_id=None, name=name, config=config)
     session.add(template)
+    session.flush()
+    return template
+
+
+def update_system(session: Session, template: Template, name: str, config: dict[str, Any]) -> Template:
+    """Rewrite a system template in place (same id). Custom templates are never passed here."""
+    if template.system_key is None or template.owner_id is not None:
+        raise ValueError("Only system templates can be rewritten this way.")
+    template.name = name
+    template.config = config
+    template.updated_at = datetime.now(UTC)
     session.flush()
     return template
 
