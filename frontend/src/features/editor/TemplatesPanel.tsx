@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { ApiError } from '../../api/client'
-import { getTemplate, listTemplates } from '../../api/templates'
+import { createTemplate, deleteTemplate, getTemplate, listTemplates } from '../../api/templates'
 import type { TemplateSummary as TemplateListItem } from '../../api/templates'
 import { parseWorkspaceConfig } from '../../domain/workspace/parse'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
@@ -43,6 +43,11 @@ export default function TemplatesPanel() {
   const dirty = useEditorStore(selectIsDirty)
   const blocker = useEditorStore((s) => replacementBlocker(s))
   const handleUnauthorized = useSessionStore((s) => s.handleUnauthorized)
+  const csrf = useSessionStore((s) => s.csrfToken)
+  const hasDraft = useEditorStore((s) => s.draftConfig !== null && !s.frozen)
+  const [name, setName] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [removal, setRemoval] = useState<{ id: string; name: string } | null>(null)
   const [list, setList] = useState<ListState>({ status: 'loading' })
   const [selected, setSelected] = useState<string | null>(null)
   const [preview, setPreview] = useState<Preview | null>(null)
@@ -126,6 +131,47 @@ export default function TemplatesPanel() {
     }
   }
 
+  /** Snapshot the current draft as a private template. Touches neither the draft, the baseline nor the revision. */
+  async function saveSnapshot(event: React.FormEvent) {
+    event.preventDefault()
+    const trimmed = name.trim()
+    const draft = useEditorStore.getState().draftConfig
+    if (!trimmed || !draft || saving) return
+    setSaving(true)
+    setNotice(null)
+    try {
+      const created = await createTemplate(trimmed, draft, csrf)
+      if (!alive.current) return
+      setList((current) => (current.status === 'ready' ? { status: 'ready', items: [...current.items, { id: created.id, name: created.name, kind: created.kind, updatedAt: created.updatedAt }] } : current))
+      setName('')
+      setNotice({ tone: 'ok', text: `Saved "${created.name}" to your templates. Your workspace was not changed.` })
+    } catch (error) {
+      if (alive.current && !expired(error)) setNotice({ tone: 'error', text: failureMessage(error, "the template wasn't saved") })
+    } finally {
+      if (alive.current) setSaving(false)
+    }
+  }
+
+  async function remove(id: string, label: string) {
+    setBusy(true)
+    setNotice(null)
+    try {
+      await deleteTemplate(id, csrf)
+      if (!alive.current) return
+      setList((current) => (current.status === 'ready' ? { status: 'ready', items: current.items.filter((item) => item.id !== id) } : current))
+      if (selected === id) {
+        previewRequest.current += 1 // ignore a preview still on its way
+        setSelected(null)
+        setPreview(null)
+      }
+      setNotice({ tone: 'ok', text: `Deleted "${label}". Your workspace was not changed.` })
+    } catch (error) {
+      if (alive.current && !expired(error)) setNotice({ tone: 'error', text: failureMessage(error, "the template wasn't deleted") })
+    } finally {
+      if (alive.current) setBusy(false)
+    }
+  }
+
   /** Ask first when that would discard unsaved changes. */
   function request(templateId: string, label: string) {
     if (dirty) setConfirm({ templateId, label })
@@ -164,13 +210,20 @@ export default function TemplatesPanel() {
       <fieldset className="space-y-1.5">
         <legend className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</legend>
         {items.map((item) => (
-          <label key={item.id} className={`flex cursor-pointer items-start gap-2 rounded-lg p-2 ring-1 ${selected === item.id ? 'bg-indigo-50 ring-indigo-300' : 'ring-slate-200 hover:bg-slate-50'}`}>
-            <input type="radio" name="template" value={item.id} checked={selected === item.id} onChange={() => select(item.id)} className="mt-1" />
-            <span className="min-w-0">
-              <span className="block text-sm font-medium text-slate-900">{item.name}</span>
-              {DESCRIPTIONS[item.name] && item.kind === 'system' && <span className="block text-xs text-slate-600">{DESCRIPTIONS[item.name]}</span>}
-            </span>
-          </label>
+          <div key={item.id} className="flex items-start gap-1.5">
+            <label className={`flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded-lg p-2 ring-1 ${selected === item.id ? 'bg-indigo-50 ring-indigo-300' : 'ring-slate-200 hover:bg-slate-50'}`}>
+              <input type="radio" name="template" value={item.id} checked={selected === item.id} onChange={() => select(item.id)} className="mt-1" />
+              <span className="min-w-0">
+                <span className="block break-words text-sm font-medium text-slate-900">{item.name}</span>
+                {DESCRIPTIONS[item.name] && item.kind === 'system' && <span className="block text-xs text-slate-600">{DESCRIPTIONS[item.name]}</span>}
+              </span>
+            </label>
+            {item.kind === 'custom' && (
+              <button type="button" disabled={busy} onClick={() => setRemoval({ id: item.id, name: item.name })} aria-label={`Delete template ${item.name}`} className={button}>
+                Delete
+              </button>
+            )}
+          </div>
         ))}
       </fieldset>
     )
@@ -183,6 +236,24 @@ export default function TemplatesPanel() {
 
       {group('Ready-made', system)}
       {group('Your templates', custom)}
+      {custom.length === 0 && <p className="text-xs text-slate-500">You have no saved templates yet. Save your current design below to reuse it later.</p>}
+
+      <form onSubmit={saveSnapshot} className="space-y-1.5 rounded-xl p-3 ring-1 ring-slate-200">
+        <label className="block text-xs font-medium uppercase tracking-wide text-slate-500" htmlFor="template-name">
+          Template name
+        </label>
+        <input
+          id="template-name"
+          value={name}
+          maxLength={80}
+          onChange={(event) => setName(event.target.value)}
+          className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+        />
+        <button type="submit" disabled={saving || !hasDraft || name.trim() === ''} className={button}>
+          Save current design as template
+        </button>
+        <p className="text-xs text-slate-500">Keeps a private copy of your draft as it is now, including unsaved changes. It does not change or save your workspace.</p>
+      </form>
 
       {chosen && preview?.status === 'loading' && <p className="text-sm text-slate-500">Loading {chosen.name}…</p>}
       {chosen && preview?.status === 'error' && (
@@ -226,6 +297,22 @@ export default function TemplatesPanel() {
         <p aria-live="polite" role={notice.tone === 'error' ? 'alert' : undefined} className={`rounded-lg px-3 py-2 text-sm ring-1 ${notice.tone === 'error' ? 'bg-rose-50 text-rose-900 ring-rose-200' : 'bg-emerald-50 text-emerald-900 ring-emerald-200'}`}>
           {notice.text}
         </p>
+      )}
+
+      {removal && (
+        <ConfirmDialog
+          destructive
+          title="Delete this template?"
+          message={`"${removal.name}" will be removed from your templates. Your workspace is not affected.`}
+          confirmLabel="Delete template"
+          cancelLabel="Keep template"
+          onCancel={() => setRemoval(null)}
+          onConfirm={() => {
+            const { id, name: label } = removal
+            setRemoval(null)
+            void remove(id, label)
+          }}
+        />
       )}
 
       {confirm && (

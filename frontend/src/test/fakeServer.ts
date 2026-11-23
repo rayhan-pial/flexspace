@@ -12,6 +12,8 @@ export interface FakeTemplate {
   kind: 'system' | 'custom'
   updatedAt: string
   config: unknown
+  /** Set for a private custom template: only this user can list, read or delete it. */
+  owner?: string
 }
 
 /** The three curated system templates, read from the shared fixtures so tests use the real designs. */
@@ -49,6 +51,15 @@ export function createFakeServer(
     templates: systemTemplates(),
     templateListGets: 0,
     templateDetailGets: [] as string[],
+    templatePosts: [] as Array<{ name: string; config: unknown; csrf?: string }>,
+    templateDeletes: [] as string[],
+    templateDeleteCsrf: [] as Array<string | undefined>,
+    nextTemplate: 1,
+    /** Seed a template (e.g. another user's private one) and make its routes available. */
+    addTemplate(template: FakeTemplate) {
+      server.templates.push(template)
+      register(template)
+    },
     templateHook: undefined as ((call: RecordedCall) => Response | Promise<Response> | undefined) | undefined,
     puts: [] as Array<{ baseRevision: number; config: unknown; csrf?: string }>,
     gets: 0,
@@ -84,13 +95,29 @@ export function createFakeServer(
     users[userId].revision += 1
   }
 
+  const visible = (t: FakeTemplate) => !t.owner || t.owner === server.session
   const templateDetail = (id: string) => (call: RecordedCall) => {
     server.templateDetailGets.push(id)
     const override = server.templateHook?.(call)
     if (override) return override
     if (!server.session) return apiError(401, 'unauthenticated')
-    const template = server.templates.find((t) => t.id === id)
-    return template ? json(200, template) : apiError(404, 'not_found', 'Template not found.')
+    const template = server.templates.find((t) => t.id === id && visible(t))
+    return template ? json(200, { id: template.id, name: template.name, kind: template.kind, updatedAt: template.updatedAt, config: template.config }) : apiError(404, 'not_found', 'Template not found.')
+  }
+  const templateDelete = (id: string) => (call: RecordedCall) => {
+    server.templateDeletes.push(id)
+    server.templateDeleteCsrf.push(call.headers['X-CSRF-Token'])
+    const override = server.templateHook?.(call)
+    if (override) return override
+    if (!server.session) return apiError(401, 'unauthenticated')
+    const index = server.templates.findIndex((t) => t.id === id && t.owner === server.session)
+    if (index < 0) return apiError(404, 'not_found', 'Template not found.')
+    server.templates.splice(index, 1)
+    return noContent()
+  }
+  const register = (t: FakeTemplate) => {
+    server.handlers[`GET /templates/${t.id}`] = templateDetail(t.id)
+    server.handlers[`DELETE /templates/${t.id}`] = templateDelete(t.id)
   }
 
   server.handlers = {
@@ -99,9 +126,19 @@ export function createFakeServer(
       const override = server.templateHook?.(call)
       if (override) return override
       if (!server.session) return apiError(401, 'unauthenticated')
-      return json(200, { items: server.templates.map(({ id, name, kind, updatedAt }) => ({ id, name, kind, updatedAt })) })
+      return json(200, { items: server.templates.filter(visible).map(({ id, name, kind, updatedAt }) => ({ id, name, kind, updatedAt })) })
     },
-    ...Object.fromEntries(server.templates.map((t) => [`GET /templates/${t.id}`, templateDetail(t.id)])),
+    'POST /templates': (call) => {
+      const body = call.body as { name: string; config: unknown }
+      server.templatePosts.push({ ...body, csrf: call.headers['X-CSRF-Token'] })
+      const override = server.templateHook?.(call)
+      if (override) return override
+      if (!server.session) return apiError(401, 'unauthenticated')
+      const created: FakeTemplate = { id: `tpl-custom-${server.nextTemplate++}`, name: body.name.trim(), kind: 'custom', updatedAt: '2026-11-23T11:00:00Z', config: structuredClone(body.config), owner: server.session }
+      server.templates.push(created)
+      register(created)
+      return json(201, { id: created.id, name: created.name, kind: created.kind, updatedAt: created.updatedAt, config: created.config })
+    },
     'POST /auth/login': ({ body }) => {
       const id = (body as { email: string }).email.startsWith('b') ? 'b' : 'a'
       server.session = id
@@ -138,6 +175,7 @@ export function createFakeServer(
       return json(200, envelope(userId))
     },
   }
+  for (const template of server.templates) register(template)
   return server
 }
 

@@ -170,7 +170,7 @@ try {
   assert.equal(await page.getByRole('heading', { level: 1 }).innerText(), draftTitle)
 
   log('Save, reload: the applied design persists with its new ids; none of the template ids is left')
-  await page.getByRole('button', { name: 'Save' }).click()
+  await page.getByRole('button', { name: 'Save', exact: true }).click()
   await page.getByText('All changes saved').waitFor()
   const savedTitles = await sectionTitles()
   await page.reload()
