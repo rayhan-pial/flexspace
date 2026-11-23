@@ -8,6 +8,8 @@ import { newId } from '../../domain/workspace/ids'
 import type { GalleryProps } from '../../domain/workspace/types'
 import { CommitTextField, SelectField } from '../../shared/ui/fields'
 import type { WidgetInspectorProps } from '../types'
+import MoveButtons from '../../features/sorting/MoveButtons'
+import { listContainerId, transferTargets, workspaceAdapter } from '../../features/sorting/workspaceAdapter'
 import { GALLERY_ASSETS, galleryAsset } from './assets'
 
 const OPTIONS = ASSET_KEYS.map((key) => ({ value: key, label: GALLERY_ASSETS[key].label }))
@@ -50,6 +52,13 @@ export default function GalleryInspector({ widgetId, props, dispatch }: WidgetIn
               <CommitTextField label={`Alt text for ${name}`} value={item.alt} maxLength={MAX_TEXT} onCommit={(alt) => run(updateGalleryItem(widgetId, item.id, { alt } satisfies GalleryItemPatch))} />
               {item.alt === '' && <p className="text-xs text-slate-500">Describe the picture for screen readers, or leave empty if it is purely decorative.</p>}
               <CommitTextField label={`Caption for ${name}`} value={item.caption} maxLength={MAX_TEXT} onCommit={(caption) => run(updateGalleryItem(widgetId, item.id, { caption }))} />
+              <MoveButtons
+                adapter={workspaceAdapter}
+                itemId={item.id}
+                containerId={listContainerId('gallery', widgetId)}
+                otherContainers={transferTargets('gallery', widgetId)}
+                subject={name}
+              />
             </li>
           )
         })}

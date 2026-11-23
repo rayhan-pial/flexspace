@@ -118,6 +118,19 @@ describe('SortProvider', () => {
     vi.restoreAllMocks()
   })
 
+  it('a pointer over a container that takes a different kind of item is an outside drop', () => {
+    // Only the section container has bounds around the pointer; navigation containers are elsewhere.
+    vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
+      const near = this.getAttribute('data-item-type') === 'section'
+      return { left: near ? 0 : 1000, right: near ? 500 : 1100, top: 0, bottom: 500, width: 100, height: 100, x: 0, y: 0, toJSON: () => ({}) }
+    })
+    start(item('n2', 'nav:primary'))
+    hover(item('n2', 'nav:primary'), item('n3', 'nav:primary'))
+    act(() => provider.current.onDragEnd!({ canceled: false, operation: { source: item('n2', 'nav:primary'), target: null, position: { current: { x: 50, y: 50 } } } as never }))
+    expect(order()).toEqual({ primary: ['n1', 'n2', 'n3'], secondary: [] }) // nothing committed
+    vi.restoreAllMocks()
+  })
+
   it('an item moved out and back during one drag ends where it started: a no-op', () => {
     start(item('n2', 'nav:primary'))
     hover(item('n2', 'nav:primary'), container('nav:secondary'))

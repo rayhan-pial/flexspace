@@ -61,7 +61,10 @@ export default function SortProvider({ adapter, children }: { adapter: SortAdapt
       <DragDropProvider
         onDragStart={(event) => {
           origin.current = dragFacts(event.operation.source, null).source
-          startBounds.current = [...document.querySelectorAll('[data-container-id]')].map((el) => {
+          // Only containers that take this kind of item count as "somewhere to drop": ending over a
+          // gallery with a task in hand is dropping outside, not a drop on a target.
+          const itemType = origin.current?.itemType
+          startBounds.current = [...document.querySelectorAll('[data-container-id]')].filter((el) => !itemType || el.getAttribute('data-item-type') === itemType).map((el) => {
             const { left, right, top, bottom } = el.getBoundingClientRect()
             return { left, right, top, bottom }
           })

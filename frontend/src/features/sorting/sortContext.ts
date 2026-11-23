@@ -10,6 +10,11 @@ export interface SortContextValue {
 
 export const SortContext = createContext<SortContextValue | null>(null)
 
+/** The sorting context if a provider is above, otherwise `null` (Preview, or a widget rendered on its own). */
+export function useOptionalSortContext(): SortContextValue | null {
+  return useContext(SortContext)
+}
+
 export function useSortContext(): SortContextValue {
   const context = useContext(SortContext)
   if (!context) throw new Error('Sortable components must be rendered inside <SortProvider>.')

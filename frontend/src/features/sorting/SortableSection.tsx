@@ -24,7 +24,8 @@ interface SectionProps {
   /** Ordered item ids, read from the domain (the draft), never from DOM state. */
   items: readonly string[]
   itemType: string
-  orientation: 'horizontal' | 'vertical'
+  /** `grid`: the caller supplies the grid classes (for example a tile gallery). */
+  orientation: 'horizontal' | 'vertical' | 'grid'
   label: string
   /** Which item types and source containers this container takes; defaults to its own item type. */
   accepts?: (item: { itemType: string; fromContainerId: string }) => boolean
@@ -83,7 +84,8 @@ export default function SortableSection({ containerId, items, itemType, orientat
       ref={ref}
       aria-label={label}
       data-container-id={containerId}
-      className={`${orientation === 'horizontal' ? 'flex flex-row flex-wrap' : 'flex flex-col'} gap-1 ${isDropTarget ? 'rounded-lg ring-2 ring-indigo-300' : ''} ${className ?? ''}`}
+      data-item-type={itemType}
+      className={`${orientation === 'horizontal' ? 'flex flex-row flex-wrap gap-1' : orientation === 'vertical' ? 'flex flex-col gap-1' : 'grid'} ${isDropTarget ? 'rounded-lg ring-2 ring-indigo-300' : ''} ${className ?? ''}`}
     >
       {shown.map((id, index) => (
         <SortableItem key={id} id={id} index={index} containerId={containerId} itemType={itemType} accepts={accepts} renderItem={renderItem} />

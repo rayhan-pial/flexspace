@@ -10,16 +10,20 @@ interface Props {
   containerId: string
   /** The other containers this item may be moved to (shown as "Move to <label>"). */
   otherContainers: ReadonlyArray<{ id: string; label: string }>
+  /** Names the item in each button's accessible name ("Move up Photo 2") when several sets share a page. */
+  subject?: string
 }
 
 /**
  * Button alternative to dragging: Move up, Move down and Move to <other container>. They call the
  * very same adapter command as a drag, so keyboard users and pointer users get identical rules.
  */
-export default function MoveButtons({ adapter, itemId, containerId, otherContainers }: Props) {
+export default function MoveButtons({ adapter, itemId, containerId, otherContainers, subject }: Props) {
   const [error, setError] = useState<string | null>(null)
   const items = adapter.readItems(containerId) ?? []
   const index = items.indexOf(itemId)
+
+  const name = (action: string) => (subject ? `${action} ${subject}` : action)
 
   function move(toContainerId: string, toIndex: number) {
     const outcome: MoveOutcome = adapter.commitMove({ itemId, fromContainerId: containerId, toContainerId, toIndex })
@@ -29,10 +33,10 @@ export default function MoveButtons({ adapter, itemId, containerId, otherContain
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={index <= 0} onClick={() => move(containerId, index - 1)} className={button}>Move up</button>
-        <button type="button" disabled={index === -1 || index >= items.length - 1} onClick={() => move(containerId, index + 1)} className={button}>Move down</button>
+        <button type="button" disabled={index <= 0} onClick={() => move(containerId, index - 1)} aria-label={name('Move up')} className={button}>Move up</button>
+        <button type="button" disabled={index === -1 || index >= items.length - 1} onClick={() => move(containerId, index + 1)} aria-label={name('Move down')} className={button}>Move down</button>
         {otherContainers.map((container) => (
-          <button key={container.id} type="button" onClick={() => move(container.id, adapter.readItems(container.id)?.length ?? 0)} className={button}>
+          <button key={container.id} type="button" onClick={() => move(container.id, adapter.readItems(container.id)?.length ?? 0)} aria-label={name(`Move to ${container.label}`)} className={button}>
             Move to {container.label}
           </button>
         ))}

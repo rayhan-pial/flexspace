@@ -170,7 +170,7 @@ describe('Tasks widget', () => {
     await user.click(tasksCard().getByRole('button', { name: 'Delete task "Plan the demo"' }))
     expect(items()).toEqual([{ id: 't2', text: 'Write notes', done: true }])
     await user.click(tasksCard().getByRole('button', { name: 'Delete task "Write notes"' }))
-    expect(tasksCard().getByText('No tasks yet. Add one below.')).toBeInTheDocument()
+    expect(tasksCard().getByText(/No tasks yet. Add one below/)).toBeInTheDocument()
   })
 
   it('markup in a task is shown literally', async () => {

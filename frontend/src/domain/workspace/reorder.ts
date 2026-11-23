@@ -1,6 +1,6 @@
 import type { Command } from './commands'
 import { fail, ok } from './commands'
-import { KNOWN_WIDGET_TYPES } from './constants'
+import { KNOWN_WIDGET_TYPES, MAX_LIST_ITEMS } from './constants'
 import type { NavItem, Widget } from './types'
 
 /*
@@ -109,6 +109,45 @@ export function moveStackWidget(widgetId: string, toSectionId: string, toVisible
     return ok({
       ...config,
       sections: config.sections.map((s) => (Object.hasOwn(moved.lists, s.id) && moved.lists[s.id] !== s.widgets ? { ...s, widgets: [...moved.lists[s.id]] } : s)),
+    })
+  }
+}
+
+/** Repeatable groups whose items can move between widgets of the same type. */
+export type ListKind = 'tasks' | 'gallery'
+
+/**
+ * Reorder an item inside a Tasks or Gallery widget, or move it into another widget of the same type
+ * (an empty one included). Items keep their ids and content, so each exists exactly once afterwards;
+ * a destination that already holds the maximum number of items refuses the move. Items never cross
+ * types: a task id is simply not found among the gallery widgets, so nothing happens.
+ */
+export function moveListItem(kind: ListKind, itemId: string, toWidgetId: string, toIndex: number): Command {
+  return (config) => {
+    const widgets = config.sections.flatMap((s) => s.widgets).filter((w) => w.type === kind)
+    const itemsOf = (w: Widget): Array<{ id: string }> => (Array.isArray(w.props.items) ? (w.props.items as Array<{ id: string }>) : [])
+    const lists: Record<string, readonly { id: string }[]> = Object.fromEntries(widgets.map((w) => [w.id, itemsOf(w)]))
+
+    const fromId = widgets.find((w) => itemsOf(w).some((item) => item.id === itemId))?.id
+    if (fromId === undefined) return fail(`Item ${itemId} was not found in any ${kind} widget.`)
+    if (!Object.hasOwn(lists, toWidgetId)) return fail(`Items can only be moved into another ${kind} widget.`)
+    if (fromId !== toWidgetId && lists[toWidgetId].length >= MAX_LIST_ITEMS) return fail(`That list already holds ${MAX_LIST_ITEMS} items.`)
+
+    const moved = moveBetween(lists, itemId, toWidgetId, toIndex)
+    if (!moved) return fail(`Item ${itemId} could not be moved.`)
+    if (moved.lists === lists) return ok(config)
+    return ok({
+      ...config,
+      sections: config.sections.map((s) =>
+        s.widgets.some((w) => Object.hasOwn(moved.lists, w.id) && moved.lists[w.id] !== lists[w.id])
+          ? {
+              ...s,
+              widgets: s.widgets.map((w) =>
+                Object.hasOwn(moved.lists, w.id) && moved.lists[w.id] !== lists[w.id] ? { ...w, props: { ...w.props, items: [...moved.lists[w.id]] } } : w,
+              ),
+            }
+          : s,
+      ),
     })
   }
 }
