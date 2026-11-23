@@ -39,7 +39,7 @@ export default function WidgetShell({ widgetId, title, mode, selected, appearanc
       onClick={editing ? onSelect : undefined}
       onKeyDown={onKeyDown}
       style={safeAppearanceStyle(appearance)}
-      className={`flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-white p-4 shadow-sm ring-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
+      className={`flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-[var(--fs-surface,#ffffff)] p-4 shadow-sm ring-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
         editing && selected ? 'ring-2 ring-indigo-500' : 'ring-slate-200'
       }`}
     >

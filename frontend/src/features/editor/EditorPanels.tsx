@@ -3,6 +3,8 @@ import AddSection from './AddSection'
 import ComponentOutline from './ComponentOutline'
 import InspectorPanel from './InspectorPanel'
 import LibraryPanel from './LibraryPanel'
+import NavigationPanel from './NavigationPanel'
+import ThemePanel from './ThemePanel'
 
 function Slot({ children }: { children: string }) {
   return <p className="text-sm text-slate-500">{children}</p>
@@ -22,6 +24,7 @@ export function LeftPanel() {
               <>
                 <ComponentOutline />
                 <AddSection />
+                <NavigationPanel />
               </>
             ),
           },
@@ -40,7 +43,7 @@ export function RightPanel() {
         label="Settings"
         tabs={[
           { id: 'properties', label: 'Properties', content: <InspectorPanel /> },
-          { id: 'theme', label: 'Theme', content: <Slot>Colors and fonts will appear here.</Slot> },
+          { id: 'theme', label: 'Theme', content: <ThemePanel /> },
           { id: 'templates', label: 'Templates', content: <Slot>Templates will appear here.</Slot> },
         ]}
       />

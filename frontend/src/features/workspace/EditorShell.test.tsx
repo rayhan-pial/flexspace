@@ -80,7 +80,7 @@ describe('Edit mode on desktop', () => {
     expect(left.getByRole('list', { name: 'Component library' })).toBeInTheDocument()
     expect(settings().getByRole('tab', { name: 'Properties' })).toHaveAttribute('aria-selected', 'true')
     await user.click(settings().getByRole('tab', { name: 'Theme' }))
-    expect(settings().getByText('Colors and fonts will appear here.')).toBeInTheDocument()
+    expect(settings().getByLabelText('Primary color')).toBeInTheDocument()
     await user.click(settings().getByRole('tab', { name: 'Templates' }))
     expect(settings().getByText('Templates will appear here.')).toBeInTheDocument()
   })

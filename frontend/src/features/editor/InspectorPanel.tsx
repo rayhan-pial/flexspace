@@ -1,11 +1,13 @@
 import { isKnownWidgetType, widgetTypeLabel } from '../workspace/registry'
 import { useEditorStore } from './editorStore'
+import NavItemProperties from './NavItemProperties'
+import WidgetProperties from './WidgetProperties'
 import { SectionActions, WidgetActions } from './LifecycleActions'
 import { resolveSelection } from './selection'
 
 /**
  * Properties slot. It renders only what the current selection *resolves to* in the draft, so a
- * removed target can never leave a stale inspector behind. Editable fields arrive in FS-014.
+ * removed target can never leave a stale inspector behind. Editable fields live in the *Properties components.
  */
 export default function InspectorPanel() {
   const draft = useEditorStore((s) => s.draftConfig)
@@ -46,9 +48,11 @@ export default function InspectorPanel() {
           </div>
         ))}
       </dl>
+      {target.kind === 'widget' && <WidgetProperties widget={target.widget} />}
+      {target.kind === 'navItem' && draft && <NavItemProperties item={target.item} config={draft} />}
       {target.kind === 'widget' && <WidgetActions widget={target.widget} />}
       {target.kind === 'section' && <SectionActions section={target.section} />}
-      <p className="mt-4 text-xs text-slate-500">More editable properties will appear here.</p>
+
     </div>
   )
 }

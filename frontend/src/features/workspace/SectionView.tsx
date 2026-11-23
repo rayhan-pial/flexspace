@@ -15,7 +15,7 @@ export default function SectionView({ section }: { section: Section }) {
 
   return (
     <section data-section-id={section.id} aria-labelledby={headingId} tabIndex={-1} className="scroll-mt-4 focus:outline-none">
-      <h2 id={headingId} className="mb-3 text-lg font-semibold tracking-tight text-slate-900">
+      <h2 id={headingId} className="mb-3 text-lg font-semibold tracking-tight">
         {section.title || 'Untitled section'}
       </h2>
 
