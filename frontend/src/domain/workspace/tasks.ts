@@ -1,8 +1,8 @@
 import type { Command } from './commands'
-import { fail, ok } from './commands'
 import { MAX_LIST_ITEMS, MAX_TEXT } from './constants'
 import { collectIds } from './lifecycle'
-import type { Section, TaskItem, Widget, WorkspaceConfig } from './types'
+import { editItems } from './lists'
+import type { TaskItem, WorkspaceConfig } from './types'
 
 /*
  * Typed commands for the items of a Tasks widget. Task ids are stable (they never change after
@@ -12,28 +12,8 @@ import type { Section, TaskItem, Widget, WorkspaceConfig } from './types'
 
 const length = (text: string) => Array.from(text).length
 
-function itemsOf(widget: Widget): TaskItem[] {
-  return Array.isArray(widget.props.items) ? (widget.props.items as TaskItem[]) : []
-}
-
-/** Locate a tasks widget, run `change` on its items, and rebuild only that branch. */
-function editTasks(widgetId: string, change: (items: TaskItem[], config: WorkspaceConfig) => TaskItem[] | string): Command {
-  return (config) => {
-    const section = config.sections.find((s) => s.widgets.some((w) => w.id === widgetId))
-    const widget = section?.widgets.find((w) => w.id === widgetId)
-    if (!section || !widget) return fail(`Widget ${widgetId} was not found.`)
-    if (widget.type !== 'tasks') return fail('That widget is not a task list.')
-
-    const current = itemsOf(widget)
-    const result = change(current, config)
-    if (typeof result === 'string') return fail(result)
-    if (result === current) return ok(config)
-
-    const nextWidget: Widget = { ...widget, props: { ...widget.props, items: result } }
-    const nextSection: Section = { ...section, widgets: section.widgets.map((w) => (w.id === widgetId ? nextWidget : w)) }
-    return ok({ ...config, sections: config.sections.map((s) => (s.id === section.id ? nextSection : s)) })
-  }
-}
+const editTasks = (widgetId: string, change: (items: TaskItem[], config: WorkspaceConfig) => TaskItem[] | string): Command =>
+  editItems(widgetId, 'tasks', 'items', 'a task list', change)
 
 function checkText(text: string): string | null {
   if (text.trim() === '') return 'A task needs some text.'

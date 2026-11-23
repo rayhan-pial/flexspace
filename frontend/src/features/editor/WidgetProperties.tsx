@@ -1,10 +1,10 @@
 import { useState } from 'react'
 import { updateWidget } from '../../domain/workspace/commands'
-import type { WidgetPatch } from '../../domain/workspace/commands'
+import type { Command, WidgetPatch } from '../../domain/workspace/commands'
 import { MAX_LABEL } from '../../domain/workspace/constants'
 import type { Widget } from '../../domain/workspace/types'
 import { CheckboxField, ColorField, IntegerField, NumberField, TextAreaField, TextField } from '../../shared/ui/fields'
-import type { FieldDescriptor } from '../../widgets/types'
+import type { DispatchResult, FieldDescriptor } from '../../widgets/types'
 import { getWidgetDefinition, isKnownWidgetType } from '../workspace/registry'
 import { useEditorStore } from './editorStore'
 
@@ -26,6 +26,11 @@ export default function WidgetProperties({ widget }: { widget: Widget }) {
 
   const definition = getWidgetDefinition(widget.type)
   const props = definition ? definition.parseProps(widget.props) : null
+  const Inspector = definition?.Inspector
+  const dispatch = (command: Command): DispatchResult => {
+    const outcome = apply(command)
+    return outcome.status === 'rejected' ? { ok: false, error: outcome.error } : { ok: true }
+  }
   const { background, text, fontSizePx } = widget.appearance as { background?: string; text?: string; fontSizePx?: number }
 
   function field(descriptor: FieldDescriptor) {
@@ -52,6 +57,8 @@ export default function WidgetProperties({ widget }: { widget: Widget }) {
       {props && definition && definition.fields.length > 0 && (
         <div className="space-y-4">{definition.fields.map(field)}</div>
       )}
+
+      {props && Inspector && <Inspector widgetId={widget.id} props={props} dispatch={dispatch} />}
 
       <fieldset className="space-y-4">
         <legend className="text-xs font-medium uppercase tracking-wide text-slate-500">Appearance</legend>

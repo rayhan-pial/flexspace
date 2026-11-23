@@ -27,7 +27,7 @@ describe('widget registry', () => {
   })
 
   it('has no entry for schema-known types whose renderers ship later, or for unknown types', () => {
-    for (const type of ['gallery', 'analytics', 'calendar', 'kanban']) {
+    for (const type of ['calendar', 'kanban']) {
       expect(getWidgetDefinition(type)).toBeUndefined()
     }
   })

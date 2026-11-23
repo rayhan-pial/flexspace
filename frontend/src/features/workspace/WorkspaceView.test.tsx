@@ -118,13 +118,13 @@ describe('known, pending and unknown widget types', () => {
   it('shows a "not available yet" card for schema-known types without a renderer, keeping their data', () => {
     const parsed = parseWorkspaceConfig({
       schemaVersion: 1, title: 'T',
-      sections: [{ id: 's', kind: 'stack', title: 'S', widgets: [{ id: 'g1', type: 'gallery', props: { items: [{ id: 'i1', assetKey: 'aurora' }] } }] }],
+      sections: [{ id: 's', kind: 'stack', title: 'S', widgets: [{ id: 'c1', type: 'calendar', props: { events: [{ id: 'e1', date: '2026-01-05', title: 'Standup' }] } }] }],
     })
     if (!parsed.ok) throw new Error(parsed.message)
     useEditorStore.getState().load({ ownerId: 'a', workspaceId: 'ws', revision: 1, config: parsed.config })
     render(<WorkspaceView />)
-    expect(screen.getByText(/gallery widget is not available in this build yet/i)).toBeInTheDocument()
-    expect(useEditorStore.getState().draftConfig!.sections[0].widgets[0].props).toEqual({ items: [{ id: 'i1', assetKey: 'aurora', alt: '', caption: '' }] })
+    expect(screen.getByText(/calendar widget is not available in this build yet/i)).toBeInTheDocument()
+    expect(useEditorStore.getState().draftConfig!.sections[0].widgets[0].props).toEqual({ displayMonth: '2026-01', events: [{ id: 'e1', date: '2026-01-05', title: 'Standup' }] })
   })
 
   it('renders the welcome widget from its greeting', () => {

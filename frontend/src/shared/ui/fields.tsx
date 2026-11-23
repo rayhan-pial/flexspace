@@ -166,17 +166,16 @@ export function IntegerField({
 export function NumberField({ label: text, value, onChange }: { label: string; value: number; onChange: (value: number) => void }) {
   const id = useId()
   const errorId = useId()
+  // The text being typed is kept while the field is focused (so "12." can become "12.5"); every
+  // valid number is applied immediately, and leaving the field shows the saved value again.
   const [typed, setTyped] = useState<string | null>(null)
-  const invalid = typed !== null
+  const parsed = typed === null ? null : typed.trim() === '' ? Number.NaN : Number(typed)
+  const invalid = typed !== null && !Number.isFinite(parsed)
 
   function onType(next: string) {
-    const number = Number(next)
-    if (next.trim() !== '' && Number.isFinite(number)) {
-      setTyped(null)
-      onChange(number)
-    } else {
-      setTyped(next)
-    }
+    setTyped(next)
+    const number = next.trim() === '' ? Number.NaN : Number(next)
+    if (Number.isFinite(number)) onChange(number)
   }
 
   return (
@@ -194,6 +193,43 @@ export function NumberField({ label: text, value, onChange }: { label: string; v
         className={input}
       />
       {invalid && <p id={errorId} role="alert" className="mt-1 text-xs text-rose-700">Enter a number.</p>}
+    </div>
+  )
+}
+
+/**
+ * A text field that keeps what you type locally and commits it on Enter or blur (Escape discards).
+ * Use it where a half-edited value must never reach the draft, for example a label that may not be
+ * empty. `onCommit` returns false when the value was refused; the field then shows the saved value.
+ */
+export function CommitTextField({
+  label: text, value, onCommit, maxLength,
+}: { label: string; value: string; onCommit: (value: string) => boolean | void; maxLength?: number }) {
+  const id = useId()
+  const [typed, setTyped] = useState<string | null>(null)
+
+  function commit() {
+    if (typed === null) return
+    onCommit(typed)
+    setTyped(null) // a refused value simply shows the saved one again
+  }
+
+  return (
+    <div>
+      <label htmlFor={id} className={label}>{text}</label>
+      <input
+        id={id}
+        type="text"
+        value={typed ?? value}
+        maxLength={maxLength}
+        onChange={(e) => setTyped(e.target.value)}
+        onBlur={commit}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter') e.currentTarget.blur()
+          if (e.key === 'Escape') setTyped(null)
+        }}
+        className={input}
+      />
     </div>
   )
 }

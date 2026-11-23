@@ -6,10 +6,14 @@ export function minSizeFor(type: string): readonly [w: number, h: number] {
   return Object.hasOwn(MIN_SIZE, type) ? MIN_SIZE[type] : DEFAULT_MIN_SIZE
 }
 
+/** Roomier starting sizes for widgets that show lists of content (never below the type minimum). */
+const PREFERRED_SIZE: Record<string, readonly [w: number, h: number]> = { gallery: [6, 6], analytics: [6, 5], tasks: [4, 6] }
+
 /** Size a newly added widget starts with: comfortable, but never below its minimum. */
 export function defaultSizeFor(type: string): { w: number; h: number } {
   const [minW, minH] = minSizeFor(type)
-  return { w: Math.min(GRID_COLUMNS, Math.max(minW, 4)), h: Math.max(minH, 4) }
+  const [prefW, prefH] = Object.hasOwn(PREFERRED_SIZE, type) ? PREFERRED_SIZE[type] : [4, 4]
+  return { w: Math.min(GRID_COLUMNS, Math.max(minW, prefW)), h: Math.max(minH, prefH) }
 }
 
 export function overlaps(a: GridRect, b: GridRect): boolean {

@@ -30,6 +30,13 @@ export interface WidgetRenderProps<P extends object> {
   dispatch: (command: Command) => DispatchResult
 }
 
+/** What a widget's inspector section receives (list editing for gallery and analytics). */
+export interface WidgetInspectorProps<P extends object> {
+  widgetId: string
+  props: P
+  dispatch: (command: Command) => DispatchResult
+}
+
 /** A code-owned widget module. Configuration only ever selects one by its `type` key. */
 export interface WidgetDefinition<P extends object> {
   type: KnownWidgetType
@@ -37,4 +44,6 @@ export interface WidgetDefinition<P extends object> {
   defaultProps: P
   fields: readonly FieldDescriptor[]
   Component: ComponentType<WidgetRenderProps<P>>
+  /** Extra inspector controls for content that the flat `fields` cannot describe (lists). */
+  Inspector?: ComponentType<WidgetInspectorProps<P>>
 }
