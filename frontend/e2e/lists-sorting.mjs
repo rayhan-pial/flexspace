@@ -43,7 +43,7 @@ async function drag(from, to, { release = true, steps = 25 } = {}) {
 }
 
 async function addWidget(label, title) {
-  await outline.getByRole('button', { name: 'Today' }).click()
+  await outline.getByRole('button', { name: 'Today', exact: true }).click()
   await left.getByRole('tab', { name: 'Library' }).click()
   await left.getByRole('button', { name: `Add ${label}` }).click()
   await settings.getByLabel('Title').fill(title)
@@ -139,7 +139,7 @@ try {
   assert.deepEqual({ photos: await imageCaptions('Photos'), later: await taskTexts('Later') }, beforeTile)
 
   log('the Move buttons do the same through the same command')
-  await outline.getByRole('button', { name: 'Tasks' }).click()
+  await outline.getByRole('button', { name: 'Tasks', exact: true }).click()
   const toMove = (await taskTexts('Tasks'))[0]
   await settings.getByLabel('Task to move').selectOption({ index: 0 })
   await settings.getByRole('button', { name: 'Move to Later task' }).click()

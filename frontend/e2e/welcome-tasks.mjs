@@ -42,7 +42,7 @@ try {
   assert.equal(await status(), 'All changes saved')
 
   log('edit the greeting from Properties')
-  await page.getByRole('list', { name: 'Components' }).getByRole('button', { name: 'Welcome' }).click()
+  await page.getByRole('list', { name: 'Components', exact: true }).getByRole('button', { name: 'Welcome', exact: true }).click()
   await page.getByLabel('Greeting').fill('Good morning, <demo>')
   await welcome.getByText('Good morning, <demo>').waitFor()
 

@@ -1,6 +1,7 @@
 import type { Command } from './commands'
 import { fail, ok } from './commands'
 import { KNOWN_WIDGET_TYPES, MAX_LIST_ITEMS } from './constants'
+import { repackLayout } from './placement'
 import type { NavItem, Widget } from './types'
 
 /*
@@ -110,6 +111,29 @@ export function moveStackWidget(widgetId: string, toSectionId: string, toVisible
       ...config,
       sections: config.sections.map((s) => (Object.hasOwn(moved.lists, s.id) && moved.lists[s.id] !== s.widgets ? { ...s, widgets: [...moved.lists[s.id]] } : s)),
     })
+  }
+}
+
+/**
+ * Reorder the widgets of a grid section semantically (the outline), then repack the visible
+ * rectangles deterministically in the new array order, keeping sizes and leaving hidden rectangles
+ * alone. Widgets only move inside their own grid section. The array is the semantic order (it is
+ * also the order below desktop width), so the narrow layout follows the outline at once. A reorder
+ * that changes nothing returns the same config and does not repack.
+ */
+export function moveGridWidget(widgetId: string, toIndex: number): Command {
+  return (config) => {
+    const section = config.sections.find((s) => s.kind === 'grid' && s.widgets.some((w) => w.id === widgetId))
+    if (!section || !section.layout) return fail(`Widget ${widgetId} is not in a grid section.`)
+
+    const lists = { widgets: section.widgets }
+    const moved = moveBetween(lists, widgetId, 'widgets', toIndex)
+    if (!moved) return fail(`Widget ${widgetId} could not be moved.`)
+    if (moved.lists === lists) return ok(config)
+
+    const widgets = [...moved.lists.widgets]
+    const layout = repackLayout(widgets, section.layout)
+    return ok({ ...config, sections: config.sections.map((s) => (s.id === section.id ? { ...s, widgets, layout } : s)) })
   }
 }
 

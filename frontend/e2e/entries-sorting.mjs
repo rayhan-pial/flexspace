@@ -47,7 +47,7 @@ async function drag(from, to, { release = true, steps = 25 } = {}) {
 }
 
 async function addWidget(label, title) {
-  await outline.getByRole('button', { name: 'Today' }).click()
+  await outline.getByRole('button', { name: 'Today', exact: true }).click()
   await left.getByRole('tab', { name: 'Library' }).click()
   await left.getByRole('button', { name: `Add ${label}` }).click()
   await settings.getByLabel('Title').fill(title)

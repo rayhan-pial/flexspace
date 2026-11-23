@@ -4,6 +4,8 @@ import { useEditorStore } from '../editor/editorStore'
 import { LeftPanel, RightPanel } from '../editor/EditorPanels'
 import EditorToolbar from '../editor/EditorToolbar'
 import { useEffectiveMode } from '../editor/useEffectiveMode'
+import SortProvider from '../sorting/SortProvider'
+import { workspaceAdapter } from '../sorting/workspaceAdapter'
 import WorkspaceView from './WorkspaceView'
 
 /**
@@ -29,6 +31,7 @@ export default function EditorShell() {
   return (
     <>
       <EditorToolbar />
+      <SortProvider adapter={workspaceAdapter}>
       <div className={`mx-auto max-w-[1600px] gap-6 p-6 ${editing ? 'grid lg:grid-cols-[16rem_minmax(0,1fr)_18rem]' : 'block'}`}>
         {editing && <LeftPanel />}
 
@@ -61,6 +64,7 @@ export default function EditorShell() {
 
         {editing && <RightPanel />}
       </div>
+      </SortProvider>
     </>
   )
 }

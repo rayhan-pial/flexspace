@@ -56,3 +56,23 @@ export function compactLayout(rects: readonly GridRect[]): GridRect[] {
 export function spatialOrder(rects: readonly GridRect[]): string[] {
   return [...rects].sort((a, b) => a.y - b.y || a.x - b.x || (a.i < b.i ? -1 : a.i > b.i ? 1 : 0)).map((r) => r.i)
 }
+
+/**
+ * Deterministic repacking after a semantic reorder: visible widgets are taken in array order and
+ * each keeps its size but is placed at the first free row-major position (rows top to bottom,
+ * columns left to right) given those already placed. Hidden widgets reserve no space and keep their
+ * rectangles untouched; the result keeps the layout's own order and one rectangle per widget.
+ */
+export function repackLayout(widgets: ReadonlyArray<{ id: string; hidden: boolean }>, layout: readonly GridRect[]): GridRect[] {
+  const byId = new Map(layout.map((rect) => [rect.i, rect]))
+  const placed: GridRect[] = []
+  const next = new Map<string, GridRect>()
+  for (const widget of widgets) {
+    const rect = byId.get(widget.id)
+    if (widget.hidden || !rect) continue
+    const repacked = { ...rect, ...findFreePosition(placed, rect.w, rect.h) }
+    placed.push(repacked)
+    next.set(widget.id, repacked)
+  }
+  return layout.map((rect) => next.get(rect.i) ?? rect)
+}

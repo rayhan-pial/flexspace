@@ -1,6 +1,6 @@
 import { KNOWN_WIDGET_TYPES, MAX_LIST_ITEMS } from '../../domain/workspace/constants'
 import type { WorkspaceConfig } from '../../domain/workspace/types'
-import { listKeyOf, moveListItem, moveNavItem, moveSection, moveStackWidget, TRANSFERABLE_KINDS } from '../../domain/workspace/reorder'
+import { listKeyOf, moveGridWidget, moveListItem, moveNavItem, moveSection, moveStackWidget, TRANSFERABLE_KINDS } from '../../domain/workspace/reorder'
 import type { ListKind, NavGroup } from '../../domain/workspace/reorder'
 import { useEditorStore } from '../editor/editorStore'
 import type { MoveOutcome, MoveRequest, SortAdapter } from './types'
@@ -11,6 +11,7 @@ import type { MoveOutcome, MoveRequest, SortAdapter } from './types'
  *   nav:primary, nav:secondary   navigation groups          (items of type `nav-item`)
  *   sections:root                the workspace sections     (items of type `section`)
  *   section:<id>:widgets         a stack section's cards    (items of type `widget`)
+ *   outline:<id>                 a grid section's widgets in the outline (items of type `outline-widget`)
  *   widget:<id>:tasks            a Tasks widget's rows      (items of type `task`)
  *   widget:<id>:gallery          a Gallery widget's tiles   (items of type `gallery-item`)
  *   widget:<id>:analytics        an Analytics widget's metric cards   (items of type `metric`)
@@ -29,18 +30,22 @@ export const TASK_ITEM_TYPE = 'task'
 export const GALLERY_ITEM_TYPE = 'gallery-item'
 export const METRIC_ITEM_TYPE = 'metric'
 export const EVENT_ITEM_TYPE = 'event'
+export const OUTLINE_ITEM_TYPE = 'outline-widget'
 
 export const stackContainerId = (sectionId: string) => `section:${sectionId}:widgets`
+export const outlineContainerId = (sectionId: string) => `outline:${sectionId}`
 export const listContainerId = (kind: ListKind, widgetId: string) => `widget:${widgetId}:${kind}`
 
 type Container =
   | { kind: 'nav'; group: NavGroup }
   | { kind: 'sections' }
   | { kind: 'widgets'; sectionId: string }
+  | { kind: 'outline'; sectionId: string }
   | { kind: ListKind; widgetId: string }
 
 const NAV_GROUPS: Record<string, NavGroup> = { [NAV_PRIMARY]: 'primaryItems', [NAV_SECONDARY]: 'secondaryItems' }
 const STACK_RE = /^section:([A-Za-z0-9_-]{1,64}):widgets$/
+const OUTLINE_RE = /^outline:([A-Za-z0-9_-]{1,64})$/
 const LIST_RE = /^widget:([A-Za-z0-9_-]{1,64}):(tasks|gallery|analytics|calendar)$/
 
 const isList = (container: Container): container is Extract<Container, { widgetId: string }> =>
@@ -51,6 +56,8 @@ function parse(containerId: string): Container | null {
   if (containerId === SECTIONS_ROOT) return { kind: 'sections' }
   const stack = STACK_RE.exec(containerId)
   if (stack) return { kind: 'widgets', sectionId: stack[1] }
+  const outline = OUTLINE_RE.exec(containerId)
+  if (outline) return { kind: 'outline', sectionId: outline[1] }
   const list = LIST_RE.exec(containerId)
   return list ? { kind: list[2] as ListKind, widgetId: list[1] } : null
 }
@@ -65,6 +72,11 @@ function itemsOf(draft: WorkspaceConfig, container: Container): string[] | null 
     case 'widgets': {
       const section = draft.sections.find((s) => s.id === container.sectionId)
       return section && section.kind === 'stack' ? section.widgets.filter((w) => !w.hidden).map((w) => w.id) : null
+    }
+    case 'outline': {
+      // The outline lists every widget of a grid section, hidden ones included (they can be reordered too).
+      const section = draft.sections.find((s) => s.id === container.sectionId)
+      return section && section.kind === 'grid' ? section.widgets.map((w) => w.id) : null
     }
     case 'tasks':
     case 'gallery':
@@ -92,6 +104,8 @@ function canMove({ itemId, fromContainerId, toContainerId }: MoveRequest): strin
   if (!readItems(fromContainerId)?.includes(itemId)) return 'That item is no longer there.'
   if (readItems(toContainerId) === null) return 'That item cannot be moved there.'
 
+  if (from.kind === 'outline' && to.kind === 'outline' && from.sectionId !== to.sectionId) return 'Widgets can only be reordered within their own section.'
+
   if (isList(from) && to.kind === from.kind && from.widgetId !== to.widgetId) {
     // Metrics and agenda entries belong to their own widget; only tasks and gallery tiles may transfer.
     if (!TRANSFERABLE_KINDS.includes(from.kind)) return 'These entries can only be reordered within their own widget.'
@@ -118,7 +132,9 @@ function commitMove(request: MoveRequest): MoveOutcome {
         ? moveSection(request.itemId, request.toIndex)
         : to.kind === 'widgets'
           ? moveStackWidget(request.itemId, to.sectionId, request.toIndex)
-          : moveListItem(to.kind, request.itemId, to.widgetId, request.toIndex)
+          : to.kind === 'outline'
+            ? moveGridWidget(request.itemId, request.toIndex)
+            : moveListItem(to.kind, request.itemId, to.widgetId, request.toIndex)
   const result = useEditorStore.getState().apply(command)
   return result.status === 'rejected' ? { status: 'rejected', error: result.error } : { status: result.status }
 }

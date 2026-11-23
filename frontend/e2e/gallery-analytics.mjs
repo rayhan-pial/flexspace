@@ -38,7 +38,7 @@ try {
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Create account' }).click()
   await outline.waitFor()
-  await outline.getByRole('button', { name: 'Today' }).click()
+  await outline.getByRole('button', { name: 'Today', exact: true }).click()
   await left.getByRole('tab', { name: 'Library' }).click()
   await left.getByRole('button', { name: 'Add Gallery' }).click()
   await settings.getByRole('button', { name: 'Add image' }).click()
@@ -49,7 +49,7 @@ try {
 
   log('edit images')
   await left.getByRole('tab', { name: 'Outline' }).click()
-  await outline.getByRole('button', { name: 'Gallery' }).click()
+  await outline.getByRole('button', { name: 'Gallery', exact: true }).click()
   await settings.getByLabel('Picture for image 1').selectOption('mountain')
   await settings.getByLabel('Alt text for image 1').fill('Snowy peak at sunrise')
   await settings.getByLabel('Alt text for image 1').press('Enter')
@@ -67,7 +67,7 @@ try {
   assert.deepEqual(external, [])
 
   log('edit metrics')
-  await outline.getByRole('button', { name: 'Analytics' }).click()
+  await outline.getByRole('button', { name: 'Analytics', exact: true }).click()
   await settings.getByLabel('Label for metric 1').fill('Visits')
   await settings.getByLabel('Label for metric 1').press('Enter')
   await settings.getByLabel('Value for metric 1').fill('1200.5')

@@ -91,7 +91,7 @@ describe('component and section lifecycle', () => {
     await user.click(outline().getByRole('button', { name: 'Welcome card' }))
     await user.click(settings().getByRole('button', { name: 'Hide widget' }))
     expect(canvasCard('w1')).toBeNull()
-    expect(outline().getByRole('button', { name: /Welcome card/ })).toHaveTextContent('hidden')
+    expect(outline().getByRole('button', { name: /^Welcome card/ })).toHaveTextContent('hidden')
     await user.click(settings().getByRole('button', { name: 'Show widget' }))
     expect(canvasCard('w1')).not.toBeNull()
     expect(selectIsDirty(editor())).toBe(false) // back to the saved state

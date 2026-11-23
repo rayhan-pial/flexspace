@@ -53,7 +53,7 @@ try {
   assert.equal(await calendar.locator('p[aria-live]').innerText(), starterMonth)
 
   log('edit the saved display month and an event with the real date input')
-  await outline.getByRole('button', { name: 'Calendar' }).click()
+  await outline.getByRole('button', { name: 'Calendar', exact: true }).click()
   await settings.getByLabel('Display month').selectOption('9')
   await settings.getByLabel('Display year').fill('2027')
   await calendar.getByText('September 2027').waitFor()

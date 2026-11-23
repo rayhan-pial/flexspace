@@ -206,7 +206,7 @@ describe('selection synchronization', () => {
     expect(canvasCard('w1')).toBeNull()
     expect(settings().getByRole('heading', { name: 'Welcome card' })).toBeInTheDocument()
     expect(settings().getByText('Hidden')).toBeInTheDocument()
-    expect(outline().getByRole('button', { name: /Welcome card/ })).toHaveAttribute('aria-current', 'true')
+    expect(outline().getByRole('button', { name: /^Welcome card/ })).toHaveAttribute('aria-current', 'true')
   })
 
   it('removing the selected widget clears the selection, inspector and outline entry', async () => {
@@ -217,7 +217,7 @@ describe('selection synchronization', () => {
     expect(editor().selection).toBeNull()
     expect(settings().queryByRole('heading', { name: 'Welcome card' })).not.toBeInTheDocument()
     expect(settings().getByText(/Select a component/)).toBeInTheDocument()
-    expect(outline().queryByRole('button', { name: /Welcome card/ })).not.toBeInTheDocument()
+    expect(outline().queryByRole('button', { name: /^Welcome card/ })).not.toBeInTheDocument()
     expect(canvasCard('w1')).toBeNull()
   })
 

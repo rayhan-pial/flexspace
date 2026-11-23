@@ -6,7 +6,7 @@ import {
 import type { Section, Widget } from '../../domain/workspace/types'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import MoveButtons from '../sorting/MoveButtons'
-import { SECTIONS_ROOT, stackContainerId, workspaceAdapter } from '../sorting/workspaceAdapter'
+import { outlineContainerId, SECTIONS_ROOT, stackContainerId, workspaceAdapter } from '../sorting/workspaceAdapter'
 import { isKnownWidgetType } from '../workspace/registry'
 import { useEditorStore } from './editorStore'
 
@@ -49,6 +49,13 @@ export function WidgetActions({ widget, section, sections }: { widget: Widget; s
           Remove widget
         </button>
       </div>
+      {section.kind === 'grid' && (
+        <fieldset className="mt-4 space-y-2">
+          <legend className="text-xs font-medium uppercase tracking-wide text-slate-500">Order</legend>
+          <MoveButtons adapter={workspaceAdapter} itemId={widget.id} containerId={outlineContainerId(section.id)} otherContainers={[]} />
+          <p className="text-xs text-slate-500">Changing the order repacks the visible widgets of this section in that order.</p>
+        </fieldset>
+      )}
       {section.kind === 'stack' && (
         <fieldset className="mt-4 space-y-2">
           <legend className="text-xs font-medium uppercase tracking-wide text-slate-500">Order</legend>

@@ -1,12 +1,20 @@
+import type { ReactNode } from 'react'
 import { useEditorStore } from '../editor/editorStore'
 import { useEffectiveMode } from '../editor/useEffectiveMode'
 import SortHandle from '../sorting/SortHandle'
 import SortProvider from '../sorting/SortProvider'
+import { useOptionalSortContext } from '../sorting/sortContext'
 import SortableSection from '../sorting/SortableSection'
 import { SECTION_ITEM_TYPE, SECTIONS_ROOT, workspaceAdapter } from '../sorting/workspaceAdapter'
 import SectionView from './SectionView'
 import { themeVariables } from './theme'
 import SimpleNav from './SimpleNav'
+
+/** The editor shell provides one drag provider for the outline and the canvas; on its own the view brings its own. */
+function WithSorting({ children }: { children: ReactNode }) {
+  const inherited = useOptionalSortContext() !== null
+  return inherited ? <>{children}</> : <SortProvider adapter={workspaceAdapter}>{children}</SortProvider>
+}
 
 /**
  * Walks the draft's ordered sections and renders them (plus the navigation). In Edit the sections
@@ -24,7 +32,7 @@ export default function WorkspaceView() {
   const byId = new Map(visibleSections.map((section) => [section.id, section]))
 
   return (
-    <SortProvider adapter={workspaceAdapter}>
+    <WithSorting>
       <div style={themeVariables(draft.theme)} className={`fs-themed mt-6 flex gap-6 rounded-2xl p-4 ${direction}`}>
         <SimpleNav navigation={draft.navigation} />
         <div className="min-w-0 flex-1">
@@ -59,6 +67,6 @@ export default function WorkspaceView() {
           )}
         </div>
       </div>
-    </SortProvider>
+    </WithSorting>
   )
 }
