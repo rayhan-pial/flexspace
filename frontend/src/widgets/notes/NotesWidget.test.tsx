@@ -5,7 +5,7 @@ import NotesWidget from './NotesWidget'
 
 const setup = (body: string, mode: 'edit' | 'preview' = 'edit', title = 'Meeting notes') => {
   const onChangeProps = vi.fn()
-  render(<NotesWidget title={title} props={{ body }} mode={mode} onChangeProps={onChangeProps} />)
+  render(<NotesWidget widgetId="n1" dispatch={() => ({ ok: true })} title={title} props={{ body }} mode={mode} onChangeProps={onChangeProps} />)
   return { onChangeProps, textarea: screen.getByRole('textbox') as HTMLTextAreaElement }
 }
 
@@ -36,10 +36,10 @@ describe('NotesWidget', () => {
   })
 
   it('shows a live character count in Edit but not in Preview', () => {
-    const { unmount } = render(<NotesWidget title="T" props={{ body: 'hello' }} mode="edit" onChangeProps={() => {}} />)
+    const { unmount } = render(<NotesWidget widgetId="n1" dispatch={() => ({ ok: true })} title="T" props={{ body: 'hello' }} mode="edit" onChangeProps={() => {}} />)
     expect(screen.getByText('5 / 10,000')).toBeInTheDocument()
     unmount()
-    render(<NotesWidget title="T" props={{ body: 'hello' }} mode="preview" onChangeProps={() => {}} />)
+    render(<NotesWidget widgetId="n1" dispatch={() => ({ ok: true })} title="T" props={{ body: 'hello' }} mode="preview" onChangeProps={() => {}} />)
     expect(screen.queryByText(/10,000/)).not.toBeInTheDocument()
   })
 

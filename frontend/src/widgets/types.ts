@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react'
+import type { Command } from '../domain/workspace/commands'
 import type { KnownWidgetType } from '../domain/workspace/types'
 
 export type WidgetMode = 'edit' | 'preview'
@@ -15,12 +16,18 @@ export interface FieldDescriptor {
  * What a widget renderer receives: already-parsed props and explicit callbacks. Renderers never
  * read the editor store, and they never receive raw configuration objects.
  */
+export type DispatchResult = { ok: true } | { ok: false; error: string }
+
 export interface WidgetRenderProps<P extends object> {
+  /** Id of this widget, for addressing it in domain commands. */
+  widgetId: string
   title: string
   props: P
   mode: WidgetMode
   /** Request a props change; the host turns it into a validated domain command. */
   onChangeProps: (patch: Partial<P>) => void
+  /** Run a typed domain command (task add/check/...); the host validates it and reports a refusal. */
+  dispatch: (command: Command) => DispatchResult
 }
 
 /** A code-owned widget module. Configuration only ever selects one by its `type` key. */

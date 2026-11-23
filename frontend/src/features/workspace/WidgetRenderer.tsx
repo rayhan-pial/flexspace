@@ -1,6 +1,8 @@
 import { memo, useCallback, useMemo } from 'react'
 import { updateWidget } from '../../domain/workspace/commands'
+import type { Command } from '../../domain/workspace/commands'
 import type { Widget } from '../../domain/workspace/types'
+import type { DispatchResult } from '../../widgets/types'
 import { useEditorStore } from '../editor/editorStore'
 import { useEffectiveMode } from '../editor/useEffectiveMode'
 import GridHandle from './GridHandle'
@@ -29,6 +31,13 @@ function WidgetRenderer({ widget, inGrid = false }: { widget: Widget; inGrid?: b
     },
     [apply, widgetId],
   )
+  const dispatch = useCallback(
+    (command: Command): DispatchResult => {
+      const outcome = apply(command)
+      return outcome.status === 'rejected' ? { ok: false, error: outcome.error } : { ok: true }
+    },
+    [apply],
+  )
   const onSelect = useCallback(() => select({ kind: 'widget', id: widgetId }), [select, widgetId])
 
   // Not a known type at all: bounded placeholder, no appearance (its data is opaque), data untouched.
@@ -46,7 +55,7 @@ function WidgetRenderer({ widget, inGrid = false }: { widget: Widget; inGrid?: b
   if (!definition) return shell(<PendingWidgetBody label={label} />)
   if (!props) return shell(<InvalidWidgetBody />)
   const { Component } = definition
-  return shell(<Component title={title} props={props} mode={mode} onChangeProps={onChangeProps} />)
+  return shell(<Component widgetId={widget.id} title={title} props={props} mode={mode} onChangeProps={onChangeProps} dispatch={dispatch} />)
 }
 
 export default memo(WidgetRenderer)
