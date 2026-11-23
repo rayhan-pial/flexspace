@@ -50,7 +50,7 @@ export default function InspectorPanel() {
       </dl>
       {target.kind === 'widget' && <WidgetProperties widget={target.widget} />}
       {target.kind === 'navItem' && draft && <NavItemProperties item={target.item} config={draft} />}
-      {target.kind === 'widget' && <WidgetActions widget={target.widget} />}
+      {target.kind === 'widget' && <WidgetActions widget={target.widget} section={target.section} sections={draft?.sections ?? []} />}
       {target.kind === 'section' && <SectionActions section={target.section} />}
 
     </div>

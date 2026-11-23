@@ -5,6 +5,9 @@ import {
 } from '../../domain/workspace/lifecycle'
 import type { Section, Widget } from '../../domain/workspace/types'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
+import MoveButtons from '../sorting/MoveButtons'
+import { SECTIONS_ROOT, stackContainerId, workspaceAdapter } from '../sorting/workspaceAdapter'
+import { isKnownWidgetType } from '../workspace/registry'
 import { useEditorStore } from './editorStore'
 
 const button =
@@ -33,7 +36,7 @@ function ErrorLine({ message }: { message: string | null }) {
 }
 
 /** Hide/show and remove for the selected widget. Remove asks first because it deletes its content. */
-export function WidgetActions({ widget }: { widget: Widget }) {
+export function WidgetActions({ widget, section, sections }: { widget: Widget; section: Section; sections: Section[] }) {
   const { error, run } = useRun()
   const [confirming, setConfirming] = useState(false)
   return (
@@ -46,6 +49,22 @@ export function WidgetActions({ widget }: { widget: Widget }) {
           Remove widget
         </button>
       </div>
+      {section.kind === 'stack' && (
+        <fieldset className="mt-4 space-y-2">
+          <legend className="text-xs font-medium uppercase tracking-wide text-slate-500">Order</legend>
+          <MoveButtons
+            adapter={workspaceAdapter}
+            itemId={widget.id}
+            containerId={stackContainerId(section.id)}
+            // Cards of unknown types stay in their section; known ones may move to any other stack section.
+            otherContainers={
+              isKnownWidgetType(widget.type)
+                ? sections.filter((s) => s.kind === 'stack' && s.id !== section.id).map((s) => ({ id: stackContainerId(s.id), label: s.title || 'Untitled section' }))
+                : []
+            }
+          />
+        </fieldset>
+      )}
       <ErrorLine message={error} />
       {confirming && (
         <ConfirmDialog
@@ -90,6 +109,10 @@ export function SectionActions({ section }: { section: Section }) {
           Remove section
         </button>
       </div>
+      <fieldset className="mt-4 space-y-2">
+        <legend className="text-xs font-medium uppercase tracking-wide text-slate-500">Order</legend>
+        <MoveButtons adapter={workspaceAdapter} itemId={section.id} containerId={SECTIONS_ROOT} otherContainers={[]} />
+      </fieldset>
       <ErrorLine message={error} />
       {confirming && (
         <ConfirmDialog

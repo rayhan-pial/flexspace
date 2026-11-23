@@ -1,6 +1,7 @@
 import type { Command } from './commands'
 import { fail, ok } from './commands'
-import type { NavItem } from './types'
+import { KNOWN_WIDGET_TYPES } from './constants'
+import type { NavItem, Widget } from './types'
 
 /*
  * Pure move primitives shared by every sortable group (navigation now; sections, stack cards, task
@@ -38,6 +39,78 @@ export function moveBetween<T extends { id: string }>(lists: Lists<T>, itemId: s
     return { lists: same ? lists : { ...lists, [fromKey]: placed }, toKey, toIndex: index }
   }
   return { lists: { ...lists, [fromKey]: withoutItem, [toKey]: placed }, toKey, toIndex: index }
+}
+
+/**
+ * Like `moveBetween`, but `toVisibleIndex` counts only items that are not hidden, because a
+ * sortable surface draws only those. The item is inserted just before the visible item currently at
+ * that index (or at the end), so hidden items keep their places in the stored array.
+ */
+export function moveAmongVisible<T extends { id: string; hidden: boolean }>(
+  lists: Lists<T>,
+  itemId: string,
+  toKey: string,
+  toVisibleIndex: number,
+): MoveResult<T> | null {
+  if (!Object.hasOwn(lists, toKey) || !Number.isInteger(toVisibleIndex)) return null
+  const fromKey = Object.keys(lists).find((key) => lists[key].some((item) => item.id === itemId))
+  if (fromKey === undefined) return null
+
+  const destination = fromKey === toKey ? lists[toKey].filter((item) => item.id !== itemId) : lists[toKey]
+  const visible = destination.filter((item) => !item.hidden)
+  const clamped = Math.min(Math.max(toVisibleIndex, 0), visible.length)
+
+  // Moving an item to the visible position it already has changes nothing, even if hidden items sit around it.
+  if (fromKey === toKey) {
+    const item = lists[fromKey].find((entry) => entry.id === itemId)!
+    if (!item.hidden && lists[fromKey].filter((entry) => !entry.hidden).indexOf(item) === clamped) {
+      return { lists, toKey, toIndex: lists[fromKey].indexOf(item) }
+    }
+  }
+
+  const anchor = visible[clamped]
+  const lastVisible = visible.at(-1)
+  // Before the visible item now at that position; past the last one, right after it (hidden trailing items stay last).
+  const fullIndex = anchor ? destination.indexOf(anchor) : lastVisible ? destination.indexOf(lastVisible) + 1 : destination.length
+  return moveBetween(lists, itemId, toKey, fullIndex)
+}
+
+/** Reorder workspace sections (root only: a section can never be nested inside another). */
+export function moveSection(sectionId: string, toVisibleIndex: number): Command {
+  return (config) => {
+    const lists = { root: config.sections }
+    const moved = moveAmongVisible(lists, sectionId, 'root', toVisibleIndex)
+    if (!moved) return fail(`Section ${sectionId} was not found.`)
+    if (moved.lists === lists) return ok(config)
+    return ok({ ...config, sections: [...moved.lists.root] })
+  }
+}
+
+const isSchemaKnown = (type: string): boolean => (KNOWN_WIDGET_TYPES as readonly string[]).includes(type)
+
+/**
+ * Reorder a card inside a stack section, or move it into another stack section (an empty one
+ * included). Cards of unknown types may only be reordered where they are. The card keeps its id and
+ * content and exists exactly once afterwards; grid sections take no part (their layout is spatial).
+ */
+export function moveStackWidget(widgetId: string, toSectionId: string, toVisibleIndex: number): Command {
+  return (config) => {
+    const stacks = config.sections.filter((s) => s.kind === 'stack')
+    const lists: Record<string, readonly Widget[]> = Object.fromEntries(stacks.map((s) => [s.id, s.widgets]))
+    const fromId = stacks.find((s) => s.widgets.some((w) => w.id === widgetId))?.id
+    if (fromId === undefined) return fail(`Widget ${widgetId} is not in a stack section.`)
+    if (!Object.hasOwn(lists, toSectionId)) return fail('Cards can only be moved into stack sections.')
+    const widget = lists[fromId].find((w) => w.id === widgetId)!
+    if (fromId !== toSectionId && !isSchemaKnown(widget.type)) return fail('Unsupported widgets can only be reordered within their own section.')
+
+    const moved = moveAmongVisible(lists, widgetId, toSectionId, toVisibleIndex)
+    if (!moved) return fail(`Widget ${widgetId} could not be moved.`)
+    if (moved.lists === lists) return ok(config)
+    return ok({
+      ...config,
+      sections: config.sections.map((s) => (Object.hasOwn(moved.lists, s.id) && moved.lists[s.id] !== s.widgets ? { ...s, widgets: [...moved.lists[s.id]] } : s)),
+    })
+  }
 }
 
 export type NavGroup = 'primaryItems' | 'secondaryItems'

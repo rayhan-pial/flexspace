@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react'
 import { memo, useCallback, useMemo } from 'react'
 import { updateWidget } from '../../domain/workspace/commands'
 import type { Command } from '../../domain/workspace/commands'
@@ -15,7 +16,7 @@ import { getWidgetDefinition, widgetTypeLabel } from './registry'
  * shell. Widget components get parsed props and a callback; the callback becomes a validated
  * domain command here, so widgets never touch the store themselves.
  */
-function WidgetRenderer({ widget, inGrid = false }: { widget: Widget; inGrid?: boolean }) {
+function WidgetRenderer({ widget, inGrid = false, sortHandle }: { widget: Widget; inGrid?: boolean; sortHandle?: ReactNode }) {
   const mode = useEffectiveMode()
   const selected = useEditorStore((s) => s.selection?.kind === 'widget' && s.selection.id === widget.id)
   const apply = useEditorStore((s) => s.apply)
@@ -41,13 +42,13 @@ function WidgetRenderer({ widget, inGrid = false }: { widget: Widget; inGrid?: b
   const onSelect = useCallback(() => select({ kind: 'widget', id: widgetId }), [select, widgetId])
 
   // No registry entry (an unknown type, which is the only way to get here): bounded placeholder, no appearance (its data is opaque), data untouched.
-  if (!definition) return <UnsupportedWidget widgetId={widget.id} type={widget.type} handle={inGrid && mode === 'edit' ? <GridHandle widgetId={widget.id} title="unsupported widget" /> : undefined} />
+  if (!definition) return <UnsupportedWidget widgetId={widget.id} type={widget.type} handle={mode === 'edit' ? (sortHandle ?? (inGrid ? <GridHandle widgetId={widget.id} title="unsupported widget" /> : undefined)) : undefined} />
 
   const label = widgetTypeLabel(widget.type)
   const title = widget.title || label
   const shell = (body: React.ReactNode) => (
     <WidgetShell widgetId={widget.id} title={title} mode={mode} selected={selected} appearance={widget.appearance} onSelect={onSelect}
-      handle={inGrid ? <GridHandle widgetId={widget.id} title={title} /> : undefined}>
+      handle={sortHandle ?? (inGrid ? <GridHandle widgetId={widget.id} title={title} /> : undefined)}>
       {body}
     </WidgetShell>
   )

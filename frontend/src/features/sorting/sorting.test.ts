@@ -36,7 +36,7 @@ describe('workspace adapter', () => {
   it('reads the current order of each container from the draft, and nothing for unknown ones', () => {
     expect(workspaceAdapter.readItems(NAV_PRIMARY)).toEqual(['a', 'b', 'c'])
     expect(workspaceAdapter.readItems(NAV_SECONDARY)).toEqual([])
-    for (const id of ['nav:other', 'sections:root', 'constructor', '']) expect(workspaceAdapter.readItems(id)).toBeNull()
+    for (const id of ['nav:other', 'sections:other', 'section::widgets', 'section:ghost:widgets', 'section:s1:items', 'constructor', '']) expect(workspaceAdapter.readItems(id)).toBeNull()
   })
 
   it('commits a move as one atomic domain command, including into the empty group', () => {

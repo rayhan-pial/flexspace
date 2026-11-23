@@ -207,7 +207,7 @@ describe('Notes through the registry', () => {
 
   it('stays editable in Preview, hides the character counter and builder affordances', async () => {
     renderView()
-    editor().setMode('preview')
+    act(() => editor().setMode('preview'))
     const user = userEvent.setup()
     const textarea = await screen.findByLabelText('Meeting notes text')
     await user.type(textarea, 'x')
