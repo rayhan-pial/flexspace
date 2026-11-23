@@ -31,3 +31,24 @@ export function findFreePosition(occupied: readonly GridRect[], w: number, h: nu
   }
   return { x: 0, y: bottom }
 }
+
+/**
+ * Vertical compaction of a complete set of rectangles: each one, in (y, x, id) order, moves up to
+ * the first row where it overlaps nothing already placed. Sizes and columns never change, the
+ * result never overlaps (given a non-overlapping input), and running it twice changes nothing.
+ */
+export function compactLayout(rects: readonly GridRect[]): GridRect[] {
+  const ordered = [...rects].sort((a, b) => a.y - b.y || a.x - b.x || (a.i < b.i ? -1 : a.i > b.i ? 1 : 0))
+  const placed: GridRect[] = []
+  for (const rect of ordered) {
+    let y = 0
+    while (placed.some((other) => overlaps(other, { ...rect, y }))) y += 1
+    placed.push({ ...rect, y })
+  }
+  return placed
+}
+
+/** Widget ids in semantic order: the ids of `visible` rectangles sorted by (y, x, id). */
+export function spatialOrder(rects: readonly GridRect[]): string[] {
+  return [...rects].sort((a, b) => a.y - b.y || a.x - b.x || (a.i < b.i ? -1 : a.i > b.i ? 1 : 0)).map((r) => r.i)
+}

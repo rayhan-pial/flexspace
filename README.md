@@ -2,7 +2,7 @@
 
 React + TypeScript + Vite frontend and FastAPI + SQLAlchemy + SQLite backend. Planning docs are in [docs/](docs/); progress is tracked in [docs/tasks.md](docs/tasks.md).
 
-**Current status:** FS-001 (scaffold), FS-002 (config v1 contract) and FS-003 (database) FS-004 (credentials and registration service) FS-005 (session auth and CSRF) FS-006 (workspace read/save API) and FS-007 (template API) complete. The backend (milestone M2) is feature-complete. FS-008 adds the frontend sign-in/registration screens and protected workspace loading. FS-009 adds the editor domain state (saved baseline vs draft, commands, save lifecycle). FS-010 connects explicit Save/Cancel to the API with conflict handling, unsaved-change guards and session-expiry recovery; you can already rename your workspace, Save it, log out and see it again after logging in. FS-011 adds the registry renderer: your workspace's sections and widgets are drawn from the saved JSON, Notes widgets are editable and persist, and widgets the app does not know are kept safely. FS-012 adds the editor shell: an Edit/Preview switch, a component outline, panels for properties/theme/templates (placeholders for now), and selection that stays in sync between the outline and the canvas. Editing needs a window at least 1024 px wide; narrower windows show a Preview. FS-013 adds component and section lifecycle: add any of the six widget types from the Library, hide/show and remove widgets, and add, rename, hide/show or remove sections (removing a section clears navigation items that pointed at it). Cancel undoes all of it until you Save. FS-014 adds the Properties inspector (titles, note text, per-widget colours and font size), a Theme tab (colours, font family and size applied live) and navigation settings (placement top/left/right, plus each link's label, target and icon). Drag/resize editing is still to come.
+**Current status:** FS-001 (scaffold), FS-002 (config v1 contract) and FS-003 (database) FS-004 (credentials and registration service) FS-005 (session auth and CSRF) FS-006 (workspace read/save API) and FS-007 (template API) complete. The backend (milestone M2) is feature-complete. FS-008 adds the frontend sign-in/registration screens and protected workspace loading. FS-009 adds the editor domain state (saved baseline vs draft, commands, save lifecycle). FS-010 connects explicit Save/Cancel to the API with conflict handling, unsaved-change guards and session-expiry recovery; you can already rename your workspace, Save it, log out and see it again after logging in. FS-011 adds the registry renderer: your workspace's sections and widgets are drawn from the saved JSON, Notes widgets are editable and persist, and widgets the app does not know are kept safely. FS-012 adds the editor shell: an Edit/Preview switch, a component outline, panels for properties/theme/templates (placeholders for now), and selection that stays in sync between the outline and the canvas. Editing needs a window at least 1024 px wide; narrower windows show a Preview. FS-013 adds component and section lifecycle: add any of the six widget types from the Library, hide/show and remove widgets, and add, rename, hide/show or remove sections (removing a section clears navigation items that pointed at it). Cancel undoes all of it until you Save. FS-014 adds the Properties inspector (titles, note text, per-widget colours and font size), a Theme tab (colours, font family and size applied live) and navigation settings (placement top/left/right, plus each link's label, target and icon). FS-015 adds drag and resize: in Edit mode on a desktop-width window, drag a widget by its grip handle and resize it from its bottom-right corner (or focus the handle and use the arrow keys; Shift+arrow resizes). Moves persist with Save.
 
 ## Prerequisites
 
@@ -50,6 +50,24 @@ npm test
 npm run typecheck
 npm run lint
 npm run build
+```
+
+### Real-browser check (grid drag and resize)
+
+`npm run test:browser` drives a real Chromium-family browser through the grid gestures, Save and reload. It registers a throwaway account, so use a scratch database, and it needs the API and the dev server running:
+
+```powershell
+# Terminal 1 - API with a scratch database
+cd backend
+$env:FLEXSPACE_DATABASE_URL = 'sqlite:///./e2e.db'; $env:FLEXSPACE_COOKIE_SECURE = 'false'
+.venv\Scripts\python scripts\init_db.py
+.venv\Scripts\python -m uvicorn app.main:app
+
+# Terminal 2 - SPA
+cd frontend; npm run dev
+
+# Terminal 3 - the browser test (defaults to Edge; set E2E_BROWSER to another Chrome/Edge executable)
+cd frontend; npm run test:browser
 ```
 
 ## Config contract

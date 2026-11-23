@@ -1,4 +1,6 @@
 @import 'tailwindcss';
+@import 'react-grid-layout/css/styles.css';
+@import 'react-resizable/css/styles.css';
 
 :root {
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
@@ -40,4 +42,14 @@ body {
     grid-column: var(--col, auto) / span var(--span, 12);
     grid-row: var(--row, auto) / span var(--rows, 4);
   }
+}
+
+/* React Grid Layout (Edit mode, desktop): drag placeholder and resize grip in the editor's accent colour. */
+.react-grid-item.react-grid-placeholder {
+  background: #6366f1;
+  border-radius: 1rem;
+  opacity: 0.18;
+}
+.react-grid-item > .react-resizable-handle {
+  opacity: 0.6;
 }

@@ -11,6 +11,8 @@ interface Props {
   /** Validated appearance of a known widget; pass `{}` for unknown types (their data is opaque). */
   appearance: Record<string, unknown>
   onSelect: () => void
+  /** Grid move/resize handle, shown in Edit on grid sections only. */
+  handle?: ReactNode
   children: ReactNode
 }
 
@@ -19,7 +21,7 @@ interface Props {
  * FS-015. Clicking anywhere in the card (including its own controls) selects it; Enter/Space
  * select only when the card itself has focus, so typing inside a widget never re-selects.
  */
-export default function WidgetShell({ widgetId, title, mode, selected, appearance, onSelect, children }: Props) {
+export default function WidgetShell({ widgetId, title, mode, selected, appearance, onSelect, handle, children }: Props) {
   const headingId = useId()
   const editing = mode === 'edit'
 
@@ -43,7 +45,10 @@ export default function WidgetShell({ widgetId, title, mode, selected, appearanc
         editing && selected ? 'ring-2 ring-indigo-500' : 'ring-slate-200'
       }`}
     >
-      <h3 id={headingId} className="mb-2 shrink-0 text-sm font-semibold tracking-wide">{title}</h3>
+      <div className="mb-2 flex shrink-0 items-center gap-1">
+        {editing && handle}
+        <h3 id={headingId} className="min-w-0 truncate text-sm font-semibold tracking-wide">{title}</h3>
+      </div>
       <div className="min-h-0 flex-1">{children}</div>
     </article>
   )

@@ -3,6 +3,7 @@ import { updateWidget } from '../../domain/workspace/commands'
 import type { Widget } from '../../domain/workspace/types'
 import { useEditorStore } from '../editor/editorStore'
 import { useEffectiveMode } from '../editor/useEffectiveMode'
+import GridHandle from './GridHandle'
 import { InvalidWidgetBody, PendingWidgetBody, UnsupportedWidget } from './WidgetPlaceholders'
 import WidgetShell from './WidgetShell'
 import { getWidgetDefinition, isKnownWidgetType, widgetTypeLabel } from './registry'
@@ -12,7 +13,7 @@ import { getWidgetDefinition, isKnownWidgetType, widgetTypeLabel } from './regis
  * shell. Widget components get parsed props and a callback; the callback becomes a validated
  * domain command here, so widgets never touch the store themselves.
  */
-function WidgetRenderer({ widget }: { widget: Widget }) {
+function WidgetRenderer({ widget, inGrid = false }: { widget: Widget; inGrid?: boolean }) {
   const mode = useEffectiveMode()
   const selected = useEditorStore((s) => s.selection?.kind === 'widget' && s.selection.id === widget.id)
   const apply = useEditorStore((s) => s.apply)
@@ -31,12 +32,13 @@ function WidgetRenderer({ widget }: { widget: Widget }) {
   const onSelect = useCallback(() => select({ kind: 'widget', id: widgetId }), [select, widgetId])
 
   // Not a known type at all: bounded placeholder, no appearance (its data is opaque), data untouched.
-  if (!isKnownWidgetType(widget.type)) return <UnsupportedWidget widgetId={widget.id} type={widget.type} />
+  if (!isKnownWidgetType(widget.type)) return <UnsupportedWidget widgetId={widget.id} type={widget.type} handle={inGrid && mode === 'edit' ? <GridHandle widgetId={widget.id} title="unsupported widget" /> : undefined} />
 
   const label = widgetTypeLabel(widget.type)
   const title = widget.title || label
   const shell = (body: React.ReactNode) => (
-    <WidgetShell widgetId={widget.id} title={title} mode={mode} selected={selected} appearance={widget.appearance} onSelect={onSelect}>
+    <WidgetShell widgetId={widget.id} title={title} mode={mode} selected={selected} appearance={widget.appearance} onSelect={onSelect}
+      handle={inGrid ? <GridHandle widgetId={widget.id} title={title} /> : undefined}>
       {body}
     </WidgetShell>
   )

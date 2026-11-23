@@ -9,7 +9,8 @@
     "lint": "oxlint",
     "preview": "vite preview",
     "test": "vitest run",
-    "typecheck": "tsc -b"
+    "typecheck": "tsc -b",
+    "test:browser": "node e2e/grid-gesture.mjs"
   },
   "dependencies": {
     "@dnd-kit/react": "^0.5.3",
@@ -31,6 +32,7 @@
     "@vitejs/plugin-react": "^6.1.2",
     "jsdom": "^31.0.1",
     "oxlint": "^1.90.0",
+    "playwright-core": "^1.65.1",
     "tailwindcss": "^4.3.5",
     "typescript": "~7.0.2",
     "vite": "^8.3.6",

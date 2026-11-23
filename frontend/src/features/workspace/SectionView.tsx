@@ -1,6 +1,6 @@
-import type { CSSProperties } from 'react'
 import { useId } from 'react'
-import type { GridRect, Section } from '../../domain/workspace/types'
+import type { Section } from '../../domain/workspace/types'
+import GridSection from './GridSection'
 import WidgetRenderer from './WidgetRenderer'
 
 /**
@@ -11,7 +11,6 @@ import WidgetRenderer from './WidgetRenderer'
 export default function SectionView({ section }: { section: Section }) {
   const headingId = useId()
   const visible = section.widgets.filter((widget) => !widget.hidden)
-  const rects = new Map<string, GridRect>((section.layout ?? []).map((rect) => [rect.i, rect]))
 
   return (
     <section data-section-id={section.id} aria-labelledby={headingId} tabIndex={-1} className="scroll-mt-4 focus:outline-none">
@@ -37,21 +36,7 @@ export default function SectionView({ section }: { section: Section }) {
         </div>
       )}
 
-      {visible.length > 0 && section.kind === 'grid' && (
-        <div className="fs-grid">
-          {visible.map((widget) => {
-            const rect = rects.get(widget.id)
-            const style = rect
-              ? ({ '--col': rect.x + 1, '--span': rect.w, '--row': rect.y + 1, '--rows': rect.h } as CSSProperties)
-              : undefined
-            return (
-              <div key={widget.id} className="fs-grid-item min-w-0" style={style}>
-                <WidgetRenderer widget={widget} />
-              </div>
-            )
-          })}
-        </div>
-      )}
+      {visible.length > 0 && section.kind === 'grid' && <GridSection section={section} widgets={visible} />}
     </section>
   )
 }
