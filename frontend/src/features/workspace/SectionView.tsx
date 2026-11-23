@@ -21,7 +21,9 @@ export default function SectionView({ section }: { section: Section }) {
 
       {visible.length === 0 && (
         <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
-          This section has no visible widgets yet.
+          {section.widgets.length === 0
+            ? 'This section is empty. Add a component from the Library in Edit mode.'
+            : 'All widgets in this section are hidden. Show them from the outline in Edit mode.'}
         </p>
       )}
 

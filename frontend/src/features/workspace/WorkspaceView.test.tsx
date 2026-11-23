@@ -100,7 +100,7 @@ describe('rendering the draft', () => {
   it('gives an empty section a useful message', () => {
     renderView()
     const section = document.querySelector('[data-section-id="s-empty"]') as HTMLElement
-    expect(within(section).getByText('This section has no visible widgets yet.')).toBeInTheDocument()
+    expect(within(section).getByText(/This section is empty/)).toBeInTheDocument()
   })
 
   it('places grid widgets from the saved layout and leaves stack widgets unplaced', () => {

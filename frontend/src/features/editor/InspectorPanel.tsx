@@ -1,5 +1,6 @@
 import { isKnownWidgetType, widgetTypeLabel } from '../workspace/registry'
 import { useEditorStore } from './editorStore'
+import { SectionActions, WidgetActions } from './LifecycleActions'
 import { resolveSelection } from './selection'
 
 /**
@@ -45,7 +46,9 @@ export default function InspectorPanel() {
           </div>
         ))}
       </dl>
-      <p className="mt-4 text-xs text-slate-500">Editable properties will appear here.</p>
+      {target.kind === 'widget' && <WidgetActions widget={target.widget} />}
+      {target.kind === 'section' && <SectionActions section={target.section} />}
+      <p className="mt-4 text-xs text-slate-500">More editable properties will appear here.</p>
     </div>
   )
 }

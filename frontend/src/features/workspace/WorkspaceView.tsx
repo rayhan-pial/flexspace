@@ -17,6 +17,13 @@ export default function WorkspaceView() {
         {draft.sections.filter((section) => !section.hidden).map((section) => (
           <SectionView key={section.id} section={section} />
         ))}
+        {draft.sections.every((section) => section.hidden) && (
+          <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+            {draft.sections.length === 0
+              ? 'This workspace has no sections yet. Add one from the outline in Edit mode.'
+              : 'All sections are hidden. Show them from the outline in Edit mode.'}
+          </p>
+        )}
       </div>
     </div>
   )

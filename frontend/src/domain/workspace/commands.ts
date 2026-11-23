@@ -26,7 +26,6 @@ export function setTheme(patch: Partial<Theme>): Command {
 
 export interface WidgetPatch {
   title?: string
-  hidden?: boolean
   /** Merged into the existing appearance; a key set to `undefined` is removed. */
   appearance?: Record<string, unknown>
   /** Merged (shallowly) into the existing props. */
@@ -51,7 +50,6 @@ export function updateWidget(widgetId: string, patch: WidgetPatch): Command {
     const next: Widget = {
       ...widget,
       ...(patch.title !== undefined && { title: patch.title }),
-      ...(patch.hidden !== undefined && { hidden: patch.hidden }),
       ...(patch.appearance && { appearance: merge(widget.appearance, patch.appearance) }),
       ...(patch.props && { props: merge(widget.props, patch.props) }),
     }

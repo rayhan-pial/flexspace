@@ -1,6 +1,8 @@
 import Tabs from '../../shared/ui/Tabs'
+import AddSection from './AddSection'
 import ComponentOutline from './ComponentOutline'
 import InspectorPanel from './InspectorPanel'
+import LibraryPanel from './LibraryPanel'
 
 function Slot({ children }: { children: string }) {
   return <p className="text-sm text-slate-500">{children}</p>
@@ -13,8 +15,17 @@ export function LeftPanel() {
       <Tabs
         label="Components"
         tabs={[
-          { id: 'outline', label: 'Outline', content: <ComponentOutline /> },
-          { id: 'library', label: 'Library', content: <Slot>The component library will appear here.</Slot> },
+          {
+            id: 'outline',
+            label: 'Outline',
+            content: (
+              <>
+                <ComponentOutline />
+                <AddSection />
+              </>
+            ),
+          },
+          { id: 'library', label: 'Library', content: <LibraryPanel /> },
         ]}
       />
     </aside>

@@ -43,7 +43,7 @@ describe('commands', () => {
     const config = sample()
     expect(() => setWorkspaceTitle('Changed')(config)).not.toThrow()
     expect(() => setTheme({ primary: '#112233' })(config)).not.toThrow()
-    expect(() => updateWidget('w1', { title: 'T', hidden: true, props: { body: 'x' }, appearance: { text: '#000000' } })(config)).not.toThrow()
+    expect(() => updateWidget('w1', { title: 'T', props: { body: 'x' }, appearance: { text: '#000000' } })(config)).not.toThrow()
     expect(config.title).toBe('Sample')
   })
 

@@ -2,8 +2,7 @@ import { act, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../app/App'
-import type { Command } from '../../domain/workspace/commands'
-import { updateWidget } from '../../domain/workspace/commands'
+import { removeWidget, setWidgetHidden } from '../../domain/workspace/lifecycle'
 import { installFetch } from '../../test/fakeApi'
 import { createFakeServer } from '../../test/fakeServer'
 import type { FakeServer } from '../../test/fakeServer'
@@ -61,18 +60,6 @@ const canvasCard = (id: string) => document.querySelector(`[data-widget-id="${id
 const settings = () => within(screen.getByRole('complementary', { name: 'Settings panel' }))
 const hasPanels = () => !!screen.queryByRole('complementary', { name: 'Components panel' }) || !!screen.queryByRole('complementary', { name: 'Settings panel' })
 
-const removeWidget = (id: string): Command => (c) => ({
-  ok: true,
-  config: {
-    ...c,
-    sections: c.sections.map((s) => ({
-      ...s,
-      widgets: s.widgets.filter((w) => w.id !== id),
-      ...(s.layout && { layout: s.layout.filter((r) => r.i !== id) }),
-    })),
-  },
-})
-
 describe('Edit mode on desktop', () => {
   it('shows the toolbar, both builder panels and the canvas', async () => {
     await open()
@@ -90,7 +77,7 @@ describe('Edit mode on desktop', () => {
     const left = within(screen.getByRole('complementary', { name: 'Components panel' }))
     expect(left.getByRole('tab', { name: 'Outline' })).toHaveAttribute('aria-selected', 'true')
     await user.click(left.getByRole('tab', { name: 'Library' }))
-    expect(left.getByText('The component library will appear here.')).toBeInTheDocument()
+    expect(left.getByRole('list', { name: 'Component library' })).toBeInTheDocument()
     expect(settings().getByRole('tab', { name: 'Properties' })).toHaveAttribute('aria-selected', 'true')
     await user.click(settings().getByRole('tab', { name: 'Theme' }))
     expect(settings().getByText('Colors and fonts will appear here.')).toBeInTheDocument()
@@ -215,7 +202,7 @@ describe('selection synchronization', () => {
   it('hiding the selected widget keeps it selected; the inspector reports it hidden', async () => {
     const user = await open()
     await user.click(outline().getByRole('button', { name: 'Welcome card' }))
-    act(() => { editor().apply(updateWidget('w1', { hidden: true })) })
+    act(() => { editor().apply(setWidgetHidden('w1', true)) })
     expect(canvasCard('w1')).toBeNull()
     expect(settings().getByRole('heading', { name: 'Welcome card' })).toBeInTheDocument()
     expect(settings().getByText('Hidden')).toBeInTheDocument()

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { Command } from '../../domain/workspace/commands'
 import { updateWidget } from '../../domain/workspace/commands'
+import { setWidgetHidden } from '../../domain/workspace/lifecycle'
 import { parseWorkspaceConfig } from '../../domain/workspace/parse'
 import type { WorkspaceConfig } from '../../domain/workspace/types'
 import { useEditorStore } from './editorStore'
@@ -119,7 +120,7 @@ describe('selection in the editor store', () => {
     editor().select({ kind: 'widget', id: 'w1' })
     editor().apply(removeWidget('w2'))
     expect(editor().selection).toEqual({ kind: 'widget', id: 'w1' })
-    editor().apply(updateWidget('w1', { hidden: true }))
+    editor().apply(setWidgetHidden('w1', true))
     expect(editor().selection).toEqual({ kind: 'widget', id: 'w1' }) // hidden stays selectable to show it again
     editor().apply(updateWidget('w1', { props: { body: 'changed' } }))
     expect(editor().selection).toEqual({ kind: 'widget', id: 'w1' })
@@ -128,7 +129,7 @@ describe('selection in the editor store', () => {
   it('a rejected or no-op command leaves the selection alone', () => {
     editor().select({ kind: 'widget', id: 'w1' })
     expect(editor().apply(updateWidget('nope', { title: 'x' })).status).toBe('rejected')
-    expect(editor().apply(updateWidget('w1', { hidden: false })).status).toBe('noop')
+    expect(editor().apply(setWidgetHidden('w1', false)).status).toBe('noop')
     expect(editor().selection).toEqual({ kind: 'widget', id: 'w1' })
   })
 
