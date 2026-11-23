@@ -10,7 +10,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "typecheck": "tsc -b",
-    "test:browser": "node e2e/grid-gesture.mjs && node e2e/welcome-tasks.mjs && node e2e/gallery-analytics.mjs && node e2e/calendar.mjs && node e2e/nav-sorting.mjs && node e2e/sections-sorting.mjs && node e2e/lists-sorting.mjs && node e2e/entries-sorting.mjs && node e2e/outline-grid.mjs && node e2e/templates.mjs && node e2e/custom-templates.mjs && node e2e/responsive.mjs && node e2e/accessibility.mjs && node e2e/undo-redo.mjs"
+    "test:browser": "node e2e/grid-gesture.mjs && node e2e/welcome-tasks.mjs && node e2e/gallery-analytics.mjs && node e2e/calendar.mjs && node e2e/nav-sorting.mjs && node e2e/sections-sorting.mjs && node e2e/lists-sorting.mjs && node e2e/entries-sorting.mjs && node e2e/outline-grid.mjs && node e2e/templates.mjs && node e2e/custom-templates.mjs && node e2e/responsive.mjs && node e2e/accessibility.mjs && node e2e/undo-redo.mjs && node e2e/acceptance.mjs"
   },
   "dependencies": {
     "@dnd-kit/dom": "^0.5.3",

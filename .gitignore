@@ -21,3 +21,7 @@ Thumbs.db
 *.db-wal
 *.db-shm
 *.db-journal
+
+# Real-browser suite failure screenshot
+e2e-failure.png
+frontend/e2e-failure.png
