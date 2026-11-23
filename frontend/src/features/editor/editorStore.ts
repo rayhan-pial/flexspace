@@ -3,6 +3,10 @@ import type { Command } from '../../domain/workspace/commands'
 import { deepEqual, deepFreeze } from '../../domain/workspace/immutable'
 import { parseWorkspaceConfig } from '../../domain/workspace/parse'
 import type { WorkspaceConfig } from '../../domain/workspace/types'
+import { resolveSelection } from './selection'
+import type { Selection } from './selection'
+
+export type { Selection }
 
 /*
  * Editor domain state (docs/architecture.md section 6). The saved baseline and the draft are the
@@ -11,7 +15,6 @@ import type { WorkspaceConfig } from '../../domain/workspace/types'
  */
 
 export type Mode = 'edit' | 'preview'
-export type Selection = { kind: 'section' | 'widget' | 'navItem'; id: string }
 export type GestureKind = 'grid' | 'sort'
 
 export type SaveFailure =
@@ -125,12 +128,18 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       if (!deepEqual(parsed.config, result.config)) {
         return { status: 'rejected', error: 'The change produced a non-canonical configuration.' }
       }
-      set({ draftConfig: deepFreeze(result.config) })
+      const next = deepFreeze(result.config)
+      // A command may remove what is selected; never keep a selection that points at nothing.
+      const { selection } = get()
+      set({ draftConfig: next, selection: resolveSelection(next, selection) ? selection : null })
       return { status: 'applied' }
     },
 
     setMode: (mode) => set({ mode }),
-    select: (selection) => set({ selection }),
+    select(selection) {
+      // Selecting something that does not exist in the draft is the same as selecting nothing.
+      set({ selection: resolveSelection(get().draftConfig, selection) ? selection : null })
+    },
 
     beginGesture(kind) {
       if (get().interaction.gesture) return false

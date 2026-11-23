@@ -2,6 +2,7 @@ import { memo, useCallback, useMemo } from 'react'
 import { updateWidget } from '../../domain/workspace/commands'
 import type { Widget } from '../../domain/workspace/types'
 import { useEditorStore } from '../editor/editorStore'
+import { useEffectiveMode } from '../editor/useEffectiveMode'
 import { InvalidWidgetBody, PendingWidgetBody, UnsupportedWidget } from './WidgetPlaceholders'
 import WidgetShell from './WidgetShell'
 import { getWidgetDefinition, isKnownWidgetType, widgetTypeLabel } from './registry'
@@ -12,7 +13,7 @@ import { getWidgetDefinition, isKnownWidgetType, widgetTypeLabel } from './regis
  * domain command here, so widgets never touch the store themselves.
  */
 function WidgetRenderer({ widget }: { widget: Widget }) {
-  const mode = useEditorStore((s) => s.mode)
+  const mode = useEffectiveMode()
   const selected = useEditorStore((s) => s.selection?.kind === 'widget' && s.selection.id === widget.id)
   const apply = useEditorStore((s) => s.apply)
   const select = useEditorStore((s) => s.select)

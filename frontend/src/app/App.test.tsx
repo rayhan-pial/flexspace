@@ -42,7 +42,7 @@ describe('signed out', () => {
     await fillAndSubmit('a@example.com', PASSWORD, 'Sign in')
     expect(await screen.findByRole('heading', { name: 'Ada workspace' })).toBeInTheDocument()
     expect(screen.getByText('Saved revision 4')).toBeInTheDocument()
-    expect(screen.getByText('Today')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Today', level: 2 })).toBeInTheDocument()
     expect(screen.getByTestId('current-user')).toHaveTextContent('a@example.com')
   })
 

@@ -1,20 +1,26 @@
 import { useState } from 'react'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import { selectIsDirty, useEditorStore } from './editorStore'
+import { useEffectiveMode, useIsDesktop } from './useEffectiveMode'
 import { reloadLatest, saveDraft } from './workspaceSync'
 
 const button =
   'rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50'
 
 /**
- * Dirty/saving/error status plus explicit Save and Cancel. Cancel and Reload latest discard the
- * draft, so each asks first. A conflict never replaces the draft on its own.
+ * Editor toolbar: mode switch, dirty/saving status, and (in Edit) explicit Save and Cancel.
+ * Preview keeps an "Edit workspace" entry point and tells the user where to Save or Cancel.
+ * Below desktop width editing is unavailable: the page is a Preview with an explanation.
+ * Switching modes only changes how the same draft is presented; nothing is sent or discarded.
  */
-export default function SaveBar() {
+export default function EditorToolbar() {
   const dirty = useEditorStore(selectIsDirty)
   const saveStatus = useEditorStore((s) => s.saveStatus)
   const cancel = useEditorStore((s) => s.cancel)
+  const setMode = useEditorStore((s) => s.setMode)
   const dismissSaveError = useEditorStore((s) => s.dismissSaveError)
+  const isDesktop = useIsDesktop()
+  const mode = useEffectiveMode()
 
   const [confirm, setConfirm] = useState<'cancel' | 'reload' | null>(null)
   const [reloadError, setReloadError] = useState<string | null>(null)
@@ -30,36 +36,58 @@ export default function SaveBar() {
 
   let status = 'All changes saved'
   if (saving) status = 'Saving…'
-  else if (dirty) status = 'Unsaved changes'
+  else if (dirty && mode === 'edit') status = 'Unsaved changes'
+  else if (dirty && isDesktop) status = 'Unsaved changes. Switch to Edit to save or cancel them.'
+  else if (dirty) status = 'Unsaved changes. Open this workspace on a larger screen to save or cancel them.'
 
   return (
     <div className="border-b border-slate-200 bg-white px-6 py-2">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+      <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3">
         <p role="status" aria-live="polite" className={`text-sm ${dirty && !saving ? 'font-medium text-amber-700' : 'text-slate-600'}`}>
           {status}
         </p>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            disabled={!dirty || saving}
-            onClick={() => (dirty ? setConfirm('cancel') : undefined)}
-            className={`${button} border border-slate-300 text-slate-700 hover:bg-slate-100`}
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            disabled={!dirty || saving}
-            onClick={() => void saveDraft()}
-            className={`${button} bg-indigo-600 text-white hover:bg-indigo-500`}
-          >
-            Save
-          </button>
+
+        <div className="flex flex-wrap items-center gap-2">
+          {isDesktop && mode === 'edit' && (
+            <>
+              <button type="button" onClick={() => setMode('preview')} className={`${button} border border-slate-300 text-slate-700 hover:bg-slate-100`}>
+                Preview
+              </button>
+              <button
+                type="button"
+                disabled={!dirty || saving}
+                onClick={() => setConfirm('cancel')}
+                className={`${button} border border-slate-300 text-slate-700 hover:bg-slate-100`}
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={!dirty || saving}
+                onClick={() => void saveDraft()}
+                className={`${button} bg-indigo-600 text-white hover:bg-indigo-500`}
+              >
+                Save
+              </button>
+            </>
+          )}
+          {isDesktop && mode === 'preview' && (
+            <button type="button" onClick={() => setMode('edit')} className={`${button} bg-indigo-600 text-white hover:bg-indigo-500`}>
+              Edit workspace
+            </button>
+          )}
         </div>
       </div>
 
+      {!isDesktop && (
+        <p role="note" className="mx-auto mt-2 max-w-[1600px] rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">
+          Editing layout and properties needs a screen at least 1024 px wide. You are viewing your workspace in preview, and you can still
+          read it and use its notes.
+        </p>
+      )}
+
       {saveStatus.state === 'error' && !conflict && saveStatus.kind !== 'unauthenticated' && (
-        <div role="alert" className="mx-auto mt-2 flex max-w-6xl items-start justify-between gap-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">
+        <div role="alert" className="mx-auto mt-2 flex max-w-[1600px] items-start justify-between gap-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">
           <span>{saveStatus.message}</span>
           <button type="button" onClick={dismissSaveError} className="shrink-0 font-medium underline focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">
             Dismiss
@@ -68,7 +96,7 @@ export default function SaveBar() {
       )}
 
       {conflict && (
-        <div role="alert" className="mx-auto mt-2 max-w-6xl rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
+        <div role="alert" className="mx-auto mt-2 max-w-[1600px] rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
           <p className="font-medium">{conflict.message}</p>
           <p className="mt-1">
             The saved workspace is now at revision {conflict.currentRevision}. Your changes were not saved and are still here.
@@ -85,7 +113,7 @@ export default function SaveBar() {
       )}
 
       {reloadError && (
-        <p role="alert" className="mx-auto mt-2 max-w-6xl rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">
+        <p role="alert" className="mx-auto mt-2 max-w-[1600px] rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">
           {reloadError}
         </p>
       )}
