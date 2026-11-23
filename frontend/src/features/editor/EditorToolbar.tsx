@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
-import { selectIsDirty, useEditorStore } from './editorStore'
+import { selectCanRedo, selectCanUndo, selectIsDirty, useEditorStore } from './editorStore'
 import { useEffectiveMode, useIsDesktop } from './useEffectiveMode'
 import { reloadLatest, saveDraft } from './workspaceSync'
 
@@ -19,6 +19,11 @@ export default function EditorToolbar() {
   const cancel = useEditorStore((s) => s.cancel)
   const setMode = useEditorStore((s) => s.setMode)
   const dismissSaveError = useEditorStore((s) => s.dismissSaveError)
+  const canUndo = useEditorStore(selectCanUndo)
+  const canRedo = useEditorStore(selectCanRedo)
+  const undo = useEditorStore((s) => s.undo)
+  const redo = useEditorStore((s) => s.redo)
+  const historyNote = useEditorStore((s) => s.history.note)
   const isDesktop = useIsDesktop()
   const mode = useEffectiveMode()
 
@@ -46,10 +51,17 @@ export default function EditorToolbar() {
         <p role="status" aria-label="Save status" aria-live="polite" className={`text-sm ${dirty && !saving ? 'font-medium text-amber-700' : 'text-slate-600'}`}>
           {status}
         </p>
+        <p role="status" aria-label="History status" aria-live="polite" className="sr-only">{historyNote}</p>
 
         <div className="flex flex-wrap items-center gap-2">
           {isDesktop && mode === 'edit' && (
             <>
+              <button type="button" disabled={!canUndo} onClick={() => undo()} title="Undo (Ctrl+Z)" className={`${button} border border-slate-300 text-slate-700 hover:bg-slate-100`}>
+                Undo
+              </button>
+              <button type="button" disabled={!canRedo} onClick={() => redo()} title="Redo (Ctrl+Shift+Z)" className={`${button} border border-slate-300 text-slate-700 hover:bg-slate-100`}>
+                Redo
+              </button>
               <button type="button" onClick={() => setMode('preview')} className={`${button} border border-slate-300 text-slate-700 hover:bg-slate-100`}>
                 Preview
               </button>

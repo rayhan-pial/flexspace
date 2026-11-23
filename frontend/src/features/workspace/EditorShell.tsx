@@ -3,6 +3,7 @@ import { setWorkspaceTitle } from '../../domain/workspace/commands'
 import { useEditorStore } from '../editor/editorStore'
 import { LeftPanel, RightPanel } from '../editor/EditorPanels'
 import EditorToolbar from '../editor/EditorToolbar'
+import { useEditSessions, useHistoryShortcuts } from '../editor/useHistoryControls'
 import { useEffectiveMode } from '../editor/useEffectiveMode'
 import SortProvider from '../sorting/SortProvider'
 import { workspaceAdapter } from '../sorting/workspaceAdapter'
@@ -19,6 +20,8 @@ export default function EditorShell() {
   const mode = useEffectiveMode()
   const [titleError, setTitleError] = useState<string | null>(null)
   const titleId = useId()
+  useEditSessions()
+  useHistoryShortcuts(mode === 'edit')
   if (!draft) return null
 
   const editing = mode === 'edit'

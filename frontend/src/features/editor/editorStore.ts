@@ -40,6 +40,27 @@ export interface LoadInput {
   config: WorkspaceConfig
 }
 
+/** Undo/Redo keeps at most this many earlier drafts (docs/architecture.md section 6). */
+export const HISTORY_LIMIT = 30
+
+/**
+ * Optional bounded history of drafts (never persisted, never sent anywhere). `past` and `future` hold
+ * frozen drafts, which share structure with the live one, so keeping 30 is cheap. A *session* groups
+ * the many small commands of one text edit or one colour drag into a single step.
+ */
+export interface History {
+  readonly past: readonly WorkspaceConfig[]
+  readonly future: readonly WorkspaceConfig[]
+  /** Set while a text or colour edit is under way; its commands share one history step. */
+  readonly session: number | null
+  /** Whether the open session has already recorded its step. */
+  readonly recorded: boolean
+  /** What the last Undo or Redo did, in words, for the status line and screen readers. */
+  readonly note: string
+}
+
+const NO_HISTORY: History = { past: [], future: [], session: null, recorded: false, note: '' }
+
 export interface EditorState {
   /** Bumped by every load/reset. Async save results from an older epoch are ignored. */
   epoch: number
@@ -53,6 +74,7 @@ export interface EditorState {
   /** Transient gesture state; a Save is refused while one is active. */
   interaction: { gesture: GestureKind | null }
   saveStatus: SaveStatus
+  history: History
   /**
    * True while the session has expired but the owner's draft is kept in memory awaiting a
    * re-login. A frozen editor accepts no mutations, saves or cancels.
@@ -75,6 +97,12 @@ export interface EditorState {
   freeze: () => void
   unfreeze: () => void
   cancel: () => boolean
+  /** Group the commands that follow into one history step until `endEditSession`. */
+  beginEditSession: () => void
+  endEditSession: () => void
+  /** Step back or forward through earlier drafts. Draft only: nothing is sent and the baseline is untouched. */
+  undo: () => boolean
+  redo: () => boolean
 }
 
 const EMPTY = {
@@ -87,11 +115,18 @@ const EMPTY = {
   selection: null,
   interaction: { gesture: null },
   saveStatus: { state: 'idle' } as SaveStatus,
+  history: NO_HISTORY,
   frozen: false,
 }
 
 export const useEditorStore = create<EditorState>()((set, get) => {
   const owns = (ticket: SaveTicket) => get().epoch === ticket.epoch && get().ownerId === ticket.ownerId
+  let sessions = 0
+  /** Undo and Redo need an editable, idle draft: not frozen, and not in the middle of a drag. */
+  const canStep = () => {
+    const { draftConfig, frozen, interaction } = get()
+    return draftConfig !== null && !frozen && !interaction.gesture
+  }
 
   return {
     epoch: 0,
@@ -130,8 +165,20 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       }
       const next = deepFreeze(result.config)
       // A command may remove what is selected; never keep a selection that points at nothing.
-      const { selection } = get()
-      set({ draftConfig: next, selection: resolveSelection(next, selection) ? selection : null })
+      const { selection, history } = get()
+      // One step per command, except that a text edit or colour drag in progress records only its first.
+      const record = !(history.session !== null && history.recorded)
+      set({
+        draftConfig: next,
+        selection: resolveSelection(next, selection) ? selection : null,
+        history: {
+          past: record ? [...history.past, draftConfig].slice(-HISTORY_LIMIT) : history.past,
+          future: [], // a new change ends the redo trail
+          session: history.session,
+          recorded: history.session !== null,
+          note: '',
+        },
+      })
       return { status: 'applied' }
     },
 
@@ -204,11 +251,50 @@ export const useEditorStore = create<EditorState>()((set, get) => {
         selection: null,
         interaction: { gesture: null },
         saveStatus: { state: 'idle' },
+        history: NO_HISTORY,
+      })
+      return true
+    },
+
+    beginEditSession() {
+      const { history } = get()
+      if (history.session !== null) return
+      set({ history: { ...history, session: ++sessions, recorded: false } })
+    },
+    endEditSession() {
+      const { history } = get()
+      if (history.session !== null) set({ history: { ...history, session: null, recorded: false } })
+    },
+
+    undo() {
+      const { draftConfig, history, selection } = get()
+      if (!canStep() || !draftConfig || history.past.length === 0) return false
+      const previous = history.past[history.past.length - 1]
+      set({
+        draftConfig: previous,
+        selection: resolveSelection(previous, selection) ? selection : null,
+        history: { past: history.past.slice(0, -1), future: [...history.future, draftConfig], session: null, recorded: false, note: 'Undid the last change.' },
+      })
+      return true
+    },
+    redo() {
+      const { draftConfig, history, selection } = get()
+      if (!canStep() || !draftConfig || history.future.length === 0) return false
+      const next = history.future[history.future.length - 1]
+      set({
+        draftConfig: next,
+        selection: resolveSelection(next, selection) ? selection : null,
+        history: { past: [...history.past, draftConfig], future: history.future.slice(0, -1), session: null, recorded: false, note: 'Redid the change.' },
       })
       return true
     },
   }
 })
+
+export const selectCanUndo = (state: Pick<EditorState, 'history' | 'frozen' | 'interaction'>): boolean =>
+  state.history.past.length > 0 && !state.frozen && !state.interaction.gesture
+export const selectCanRedo = (state: Pick<EditorState, 'history' | 'frozen' | 'interaction'>): boolean =>
+  state.history.future.length > 0 && !state.frozen && !state.interaction.gesture
 
 let lastDirty: { saved: unknown; draft: unknown; result: boolean } | null = null
 
