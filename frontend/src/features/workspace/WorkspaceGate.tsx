@@ -21,14 +21,14 @@ export default function WorkspaceGate() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <header className="flex items-center justify-between border-b border-slate-200 bg-white px-6 py-3">
-        <span className="font-semibold tracking-tight text-slate-900">FlexSpace</span>
-        <div className="flex items-center gap-4 text-sm">
-          <span className="text-slate-600" data-testid="current-user">{user?.email}</span>
+      <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
+        <span className="shrink-0 font-semibold tracking-tight text-slate-900">FlexSpace</span>
+        <div className="flex min-w-0 items-center gap-3 text-sm sm:gap-4">
+          <span className="min-w-0 truncate text-slate-600" title={user?.email} data-testid="current-user">{user?.email}</span>
           <button
             type="button"
             onClick={() => (dirty ? setConfirmLogout(true) : void logout())}
-            className="rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
+            className="shrink-0 rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
           >
             Log out
           </button>

@@ -1,10 +1,14 @@
 import { GripVertical } from 'lucide-react'
+import { useMediaQuery } from '../../shared/hooks/useMediaQuery'
 import type { NavItem, Navigation } from '../../domain/workspace/types'
 import { useEditorStore } from '../editor/editorStore'
 import { useEffectiveMode } from '../editor/useEffectiveMode'
 import SortableSection from '../sorting/SortableSection'
 import { NAV_ITEM_TYPE, NAV_PRIMARY, NAV_SECONDARY } from '../sorting/workspaceAdapter'
 import NavIcon from './NavIcon'
+
+/** From this width Edit mode has room for a navigation column beside the canvas. */
+export const EDIT_SIDE_NAV_QUERY = '(min-width: 1400px)'
 
 function scrollToSection(sectionId: string) {
   const target = document.querySelector<HTMLElement>(`[data-section-id="${sectionId}"]`)
@@ -47,6 +51,8 @@ function NavLink({ item, editing }: { item: NavItem; editing: boolean }) {
 export default function SimpleNav({ navigation }: { navigation: Navigation }) {
   const editing = useEffectiveMode() === 'edit'
   const vertical = navigation.placement !== 'top'
+  // Edit mode surrounds the canvas with two panels, so a side column only fits on very wide screens.
+  const wide = useMediaQuery(EDIT_SIDE_NAV_QUERY, true)
   const groups = [
     { id: NAV_PRIMARY, label: 'Primary', items: navigation.primaryItems },
     { id: NAV_SECONDARY, label: 'Secondary', items: navigation.secondaryItems },
@@ -54,7 +60,8 @@ export default function SimpleNav({ navigation }: { navigation: Navigation }) {
   const visibleGroups = editing ? groups : groups.filter((group) => group.items.length > 0)
   if (visibleGroups.length === 0) return null
 
-  const navClass = `flex gap-4 ${vertical ? 'flex-wrap lg:w-48 lg:shrink-0 lg:flex-col' : 'flex-wrap'}`
+  const sideClass = editing ? 'flex-wrap min-[1400px]:w-48 min-[1400px]:shrink-0 min-[1400px]:flex-col' : 'flex-wrap lg:w-48 lg:shrink-0 lg:flex-col'
+  const navClass = `flex gap-4 ${vertical ? sideClass : 'flex-wrap'}`
 
   if (!editing) {
     return (
@@ -82,7 +89,7 @@ export default function SimpleNav({ navigation }: { navigation: Navigation }) {
             containerId={group.id}
             itemType={NAV_ITEM_TYPE}
             items={group.items.map((item) => item.id)}
-            orientation={vertical ? 'vertical' : 'horizontal'}
+            orientation={vertical && wide ? 'vertical' : 'horizontal'}
             label={`${group.label} navigation`}
             emptyLabel={`Drop an item here to add it to ${group.label.toLowerCase()}`}
             renderItem={(id, { handleRef }) => {

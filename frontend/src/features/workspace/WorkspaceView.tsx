@@ -27,7 +27,12 @@ export default function WorkspaceView() {
   if (!draft) return null
 
   const placement = draft.navigation.placement
-  const direction = placement === 'top' ? 'flex-col' : placement === 'left' ? 'flex-col lg:flex-row' : 'flex-col lg:flex-row-reverse'
+  const direction =
+    placement === 'top'
+      ? 'flex-col'
+      : editing
+        ? placement === 'left' ? 'flex-col min-[1400px]:flex-row' : 'flex-col min-[1400px]:flex-row-reverse'
+        : placement === 'left' ? 'flex-col lg:flex-row' : 'flex-col lg:flex-row-reverse'
   const visibleSections = draft.sections.filter((section) => !section.hidden)
   const byId = new Map(visibleSections.map((section) => [section.id, section]))
 

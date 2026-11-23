@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { movedByButton } from './announce'
 import type { MoveOutcome, SortAdapter } from './types'
 
 const button =
@@ -20,6 +21,7 @@ interface Props {
  */
 export default function MoveButtons({ adapter, itemId, containerId, otherContainers, subject }: Props) {
   const [error, setError] = useState<string | null>(null)
+  const [status, setStatus] = useState('')
   const items = adapter.readItems(containerId) ?? []
   const index = items.indexOf(itemId)
 
@@ -28,6 +30,10 @@ export default function MoveButtons({ adapter, itemId, containerId, otherContain
   function move(toContainerId: string, toIndex: number) {
     const outcome: MoveOutcome = adapter.commitMove({ itemId, fromContainerId: containerId, toContainerId, toIndex })
     setError(outcome.status === 'rejected' ? outcome.error : null)
+    if (outcome.status === 'applied') {
+      const after = adapter.readItems(toContainerId) ?? []
+      setStatus(movedByButton(after.indexOf(itemId), after.length))
+    }
   }
 
   return (
@@ -41,6 +47,7 @@ export default function MoveButtons({ adapter, itemId, containerId, otherContain
           </button>
         ))}
       </div>
+      <p role="status" aria-live="polite" className="sr-only">{status}</p>
       {error && <p role="alert" className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">{error}</p>}
     </div>
   )

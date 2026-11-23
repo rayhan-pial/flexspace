@@ -284,3 +284,75 @@ describe('placement', () => {
     expect(within(list).getAllByRole('listitem')).toHaveLength(3)
   })
 })
+
+describe('spoken status for screen readers', () => {
+  /** A drag source as dnd-kit reports it, with the grip that names it. */
+  const named = (id: string, containerId: string, label: string) => {
+    const handle = document.createElement('span')
+    handle.setAttribute('aria-label', `Reorder ${label}`)
+    return { ...item(id, containerId), handle }
+  }
+  const spoken = () => screen.getByRole('status', { name: 'Sorting status' }).textContent
+  const alpha = () => named('n1', 'nav:primary', 'Alpha')
+
+  it('names the item by its label, never by an internal id', () => {
+    start(alpha())
+    expect(spoken()).toBe('Picked up Alpha.')
+    expect(spoken()).not.toMatch(/n1/)
+  })
+
+  it('says where the item is now, in which list, as it moves', () => {
+    start(alpha())
+    hover(alpha(), item('n3', 'nav:primary'))
+    expect(spoken()).toBe('Alpha: position 3 of 3 in Primary navigation.')
+    hover(alpha(), container('nav:secondary'))
+    expect(spoken()).toBe('Alpha: position 1 of 1 in Secondary navigation.')
+  })
+
+  it('confirms a drop with its final position', () => {
+    start(alpha())
+    hover(alpha(), item('n3', 'nav:primary'))
+    end(alpha(), item('n3', 'nav:primary'))
+    expect(spoken()).toBe('Dropped Alpha at position 3 of 3 in Primary navigation.')
+  })
+
+  it('says so when a drag is cancelled, dropped outside, or ends where it began', () => {
+    start(alpha())
+    hover(alpha(), item('n3', 'nav:primary'))
+    end(alpha(), item('n3', 'nav:primary'), true)
+    expect(spoken()).toBe('Cancelled. Alpha stays where it was.')
+
+    start(alpha())
+    hover(alpha(), item('n3', 'nav:primary'))
+    end(alpha(), null)
+    expect(spoken()).toBe('Dropped Alpha outside any list, so nothing moved.')
+
+    start(alpha())
+    end(alpha(), item('n1', 'nav:primary'))
+    expect(spoken()).toBe('Dropped Alpha in its original place.')
+  })
+
+  it('keeps reporting the position when the item is moved back to where it started', () => {
+    start(alpha())
+    hover(alpha(), item('n3', 'nav:primary'))
+    hover(alpha(), item('n2', 'nav:primary')) // Beta is first while Alpha is previewed last
+    expect(spoken()).toBe('Alpha: position 1 of 3 in Primary navigation.')
+  })
+
+  it('lives in an assertive status region that is hidden visually but read out', () => {
+    const region = screen.getByRole('status', { name: 'Sorting status' })
+    expect(region).toHaveAttribute('aria-live', 'assertive')
+    expect(region).toHaveClass('sr-only')
+  })
+})
+
+describe('Move buttons speak the result', () => {
+  it('announces the new position after a move', async () => {
+    act(() => editor().select({ kind: 'navItem', id: 'n1' }))
+    const found = editor().draftConfig!.navigation.primaryItems.find((i) => i.id === 'n1')!
+    render(<NavItemProperties item={found} config={editor().draftConfig!} />)
+    await userEvent.setup().click(within(document.body).getAllByRole('button', { name: 'Move down' }).at(-1)!)
+    const regions = within(document.body).getAllByRole('status').map((r) => r.textContent)
+    expect(regions).toContain('Moved to position 2 of 3.')
+  })
+})

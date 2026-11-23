@@ -267,12 +267,16 @@ describe('temporary navigation', () => {
   })
 
   it.each([
-    ['top', 'flex-col'],
-    ['left', 'lg:flex-row'],
-    ['right', 'lg:flex-row-reverse'],
-  ] as const)('honours the saved %s placement', (placement, cls) => {
+    ['top', 'flex-col', 'flex-col'],
+    ['left', 'lg:flex-row', 'min-[1400px]:flex-row'],
+    ['right', 'lg:flex-row-reverse', 'min-[1400px]:flex-row-reverse'],
+  ] as const)('honours the saved %s placement (beside the canvas from lg in Preview, from 1400px in Edit where panels take room)', (placement, preview, edit) => {
     const { container } = renderView(placement)
-    expect((container.firstElementChild as HTMLElement).className).toContain(cls)
+    expect((container.firstElementChild as HTMLElement).className).toContain(edit)
+    expect((container.firstElementChild as HTMLElement).className).not.toContain('lg:flex-row')
+    act(() => useEditorStore.getState().setMode('preview'))
+    expect((container.firstElementChild as HTMLElement).className).toContain(preview)
+    expect((container.firstElementChild as HTMLElement).className).not.toContain('min-[1400px]')
   })
 
   it('renders nothing when there are no navigation items', () => {

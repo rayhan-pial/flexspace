@@ -32,10 +32,8 @@ export default function EditorShell() {
     <>
       <EditorToolbar />
       <SortProvider adapter={workspaceAdapter}>
-      <div className={`mx-auto max-w-[1600px] gap-6 p-6 ${editing ? 'grid lg:grid-cols-[16rem_minmax(0,1fr)_18rem]' : 'block'}`}>
-        {editing && <LeftPanel />}
-
-        <main className="min-w-0">
+      <div className={`mx-auto max-w-[1600px] gap-4 p-4 sm:gap-6 sm:p-6 ${editing ? 'grid lg:grid-cols-[minmax(0,1fr)_17rem] xl:grid-cols-[15rem_minmax(0,1fr)_17rem]' : 'block'}`}>
+        <main className="min-w-0 lg:col-start-1 lg:row-start-1 xl:col-start-2">
           <section aria-labelledby="workspace-title" className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-200">
             <h1 id="workspace-title" className="text-2xl font-semibold tracking-tight text-slate-900">
               {draft.title || 'Untitled workspace'}
@@ -62,7 +60,14 @@ export default function EditorShell() {
           <WorkspaceView />
         </main>
 
-        {editing && <RightPanel />}
+        {/* One column beside the canvas from 1024px (scrolling on its own, so Properties stay in reach);
+            from 1280px it dissolves so each panel takes its own side. */}
+        {editing && (
+          <div className="flex min-w-0 flex-col gap-4 lg:sticky lg:top-4 lg:col-start-2 lg:row-start-1 lg:max-h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto xl:contents">
+            <LeftPanel className="xl:col-start-1 xl:row-start-1" />
+            <RightPanel className="xl:col-start-3 xl:row-start-1" />
+          </div>
+        )}
       </div>
       </SortProvider>
     </>

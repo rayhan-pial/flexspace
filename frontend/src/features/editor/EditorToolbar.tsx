@@ -41,7 +41,7 @@ export default function EditorToolbar() {
   else if (dirty) status = 'Unsaved changes. Open this workspace on a larger screen to save or cancel them.'
 
   return (
-    <div className="border-b border-slate-200 bg-white px-6 py-2">
+    <div className="border-b border-slate-200 bg-white px-4 py-2 sm:px-6">
       <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3">
         <p role="status" aria-label="Save status" aria-live="polite" className={`text-sm ${dirty && !saving ? 'font-medium text-amber-700' : 'text-slate-600'}`}>
           {status}
