@@ -1,6 +1,6 @@
 import { KNOWN_WIDGET_TYPES, MAX_LIST_ITEMS } from '../../domain/workspace/constants'
 import type { WorkspaceConfig } from '../../domain/workspace/types'
-import { moveListItem, moveNavItem, moveSection, moveStackWidget } from '../../domain/workspace/reorder'
+import { listKeyOf, moveListItem, moveNavItem, moveSection, moveStackWidget, TRANSFERABLE_KINDS } from '../../domain/workspace/reorder'
 import type { ListKind, NavGroup } from '../../domain/workspace/reorder'
 import { useEditorStore } from '../editor/editorStore'
 import type { MoveOutcome, MoveRequest, SortAdapter } from './types'
@@ -13,6 +13,8 @@ import type { MoveOutcome, MoveRequest, SortAdapter } from './types'
  *   section:<id>:widgets         a stack section's cards    (items of type `widget`)
  *   widget:<id>:tasks            a Tasks widget's rows      (items of type `task`)
  *   widget:<id>:gallery          a Gallery widget's tiles   (items of type `gallery-item`)
+ *   widget:<id>:analytics        an Analytics widget's metric cards   (items of type `metric`)
+ *   widget:<id>:calendar         a Calendar widget's agenda           (items of type `event`)
  * Items only move between containers of the same kind, which is what keeps a card from becoming a
  * navigation item or a nested section. Later tasks (task rows, gallery tiles, ...) add kinds here.
  */
@@ -25,6 +27,8 @@ export const SECTION_ITEM_TYPE = 'section'
 export const WIDGET_ITEM_TYPE = 'widget'
 export const TASK_ITEM_TYPE = 'task'
 export const GALLERY_ITEM_TYPE = 'gallery-item'
+export const METRIC_ITEM_TYPE = 'metric'
+export const EVENT_ITEM_TYPE = 'event'
 
 export const stackContainerId = (sectionId: string) => `section:${sectionId}:widgets`
 export const listContainerId = (kind: ListKind, widgetId: string) => `widget:${widgetId}:${kind}`
@@ -37,7 +41,10 @@ type Container =
 
 const NAV_GROUPS: Record<string, NavGroup> = { [NAV_PRIMARY]: 'primaryItems', [NAV_SECONDARY]: 'secondaryItems' }
 const STACK_RE = /^section:([A-Za-z0-9_-]{1,64}):widgets$/
-const LIST_RE = /^widget:([A-Za-z0-9_-]{1,64}):(tasks|gallery)$/
+const LIST_RE = /^widget:([A-Za-z0-9_-]{1,64}):(tasks|gallery|analytics|calendar)$/
+
+const isList = (container: Container): container is Extract<Container, { widgetId: string }> =>
+  container.kind === 'tasks' || container.kind === 'gallery' || container.kind === 'analytics' || container.kind === 'calendar'
 
 function parse(containerId: string): Container | null {
   if (Object.hasOwn(NAV_GROUPS, containerId)) return { kind: 'nav', group: NAV_GROUPS[containerId] }
@@ -60,9 +67,12 @@ function itemsOf(draft: WorkspaceConfig, container: Container): string[] | null 
       return section && section.kind === 'stack' ? section.widgets.filter((w) => !w.hidden).map((w) => w.id) : null
     }
     case 'tasks':
-    case 'gallery': {
+    case 'gallery':
+    case 'analytics':
+    case 'calendar': {
       const widget = draft.sections.flatMap((s) => s.widgets).find((w) => w.id === container.widgetId && w.type === container.kind)
-      return widget && Array.isArray(widget.props.items) ? (widget.props.items as Array<{ id: string }>).map((item) => item.id) : null
+      const entries = widget?.props[listKeyOf(container.kind)]
+      return Array.isArray(entries) ? (entries as Array<{ id: string }>).map((item) => item.id) : null
     }
   }
 }
@@ -82,8 +92,10 @@ function canMove({ itemId, fromContainerId, toContainerId }: MoveRequest): strin
   if (!readItems(fromContainerId)?.includes(itemId)) return 'That item is no longer there.'
   if (readItems(toContainerId) === null) return 'That item cannot be moved there.'
 
-  // A list that already holds the maximum number of items takes no more from another widget.
-  if ((from.kind === 'tasks' || from.kind === 'gallery') && to.kind === from.kind && from.widgetId !== to.widgetId) {
+  if (isList(from) && to.kind === from.kind && from.widgetId !== to.widgetId) {
+    // Metrics and agenda entries belong to their own widget; only tasks and gallery tiles may transfer.
+    if (!TRANSFERABLE_KINDS.includes(from.kind)) return 'These entries can only be reordered within their own widget.'
+    // A list that already holds the maximum number of items takes no more from another widget.
     if ((readItems(toContainerId)?.length ?? 0) >= MAX_LIST_ITEMS) return `That list already holds ${MAX_LIST_ITEMS} items.`
   }
 
@@ -118,8 +130,9 @@ export function lookupListItem<T extends { id: string }>(kind: ListKind, itemId:
   const draft = useEditorStore.getState().draftConfig
   for (const section of draft?.sections ?? []) {
     for (const widget of section.widgets) {
-      if (widget.type !== kind || !Array.isArray(widget.props.items)) continue
-      const found = (widget.props.items as T[]).find((item) => item.id === itemId)
+      const entries = widget.props[listKeyOf(kind)]
+      if (widget.type !== kind || !Array.isArray(entries)) continue
+      const found = (entries as T[]).find((item) => item.id === itemId)
       if (found) return found
     }
   }
@@ -128,6 +141,7 @@ export function lookupListItem<T extends { id: string }>(kind: ListKind, itemId:
 
 /** Other widgets of the same type that an item may be moved into, as destination containers for Move buttons. */
 export function transferTargets(kind: ListKind, excludeWidgetId: string): Array<{ id: string; label: string }> {
+  if (!TRANSFERABLE_KINDS.includes(kind)) return [] // metrics and agenda entries never leave their widget
   const draft = useEditorStore.getState().draftConfig
   return (draft?.sections ?? []).flatMap((section) =>
     section.widgets

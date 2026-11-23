@@ -6,6 +6,8 @@ import { MAX_LABEL, MAX_LIST_ITEMS } from '../../domain/workspace/constants'
 import { newId } from '../../domain/workspace/ids'
 import type { AnalyticsProps } from '../../domain/workspace/types'
 import { CommitTextField, NumberField } from '../../shared/ui/fields'
+import MoveButtons from '../../features/sorting/MoveButtons'
+import { listContainerId, workspaceAdapter } from '../../features/sorting/workspaceAdapter'
 import type { WidgetInspectorProps } from '../types'
 
 /** Add, rename, re-value and remove the metrics of the selected analytics widget. */
@@ -42,6 +44,7 @@ export default function AnalyticsInspector({ widgetId, props, dispatch }: Widget
                 </button>
               </div>
               <NumberField label={`Value for ${name}`} value={metric.value} onChange={(value) => run(updateMetric(widgetId, metric.id, { value }))} />
+              <MoveButtons adapter={workspaceAdapter} itemId={metric.id} containerId={listContainerId('analytics', widgetId)} otherContainers={[]} subject={name} />
             </li>
           )
         })}

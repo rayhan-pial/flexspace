@@ -1,10 +1,25 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
+import type { ReactNode } from 'react'
 import { useState } from 'react'
 import { formatDate, monthOf, monthTitle, monthWeeks, shiftMonth } from '../../domain/workspace/dates'
-import type { CalendarProps } from '../../domain/workspace/types'
+import type { CalendarEvent, CalendarProps } from '../../domain/workspace/types'
+import SortHandle from '../../features/sorting/SortHandle'
+import SortableSection from '../../features/sorting/SortableSection'
+import { useOptionalSortContext } from '../../features/sorting/sortContext'
+import { EVENT_ITEM_TYPE, listContainerId } from '../../features/sorting/workspaceAdapter'
 import type { WidgetRenderProps } from '../types'
 
 const WEEKDAYS = [['Sun', 'Sunday'], ['Mon', 'Monday'], ['Tue', 'Tuesday'], ['Wed', 'Wednesday'], ['Thu', 'Thursday'], ['Fri', 'Friday'], ['Sat', 'Saturday']] as const
+
+function AgendaEntry({ event, handle }: { event: CalendarEvent; handle?: ReactNode }) {
+  return (
+    <div className="flex items-baseline gap-2 text-sm">
+      {handle}
+      <time dateTime={event.date} className="shrink-0 text-xs tabular-nums opacity-70">{formatDate(event.date)}</time>
+      <span className="min-w-0 break-words">{event.title}</span>
+    </div>
+  )
+}
 
 const navButton =
   'rounded p-1 hover:bg-black/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-40'
@@ -15,7 +30,8 @@ const navButton =
  * never writes to the draft (so it cannot dirty the workspace) and it resets whenever the saved
  * display month changes. Events and the display month are edited from the inspector.
  */
-export default function CalendarWidget({ title, props, mode }: WidgetRenderProps<CalendarProps>) {
+export default function CalendarWidget({ widgetId, title, props, mode }: WidgetRenderProps<CalendarProps>) {
+  const hasSorting = useOptionalSortContext() !== null
   const [browse, setBrowse] = useState<{ from: string; month: string } | null>(null)
   const shown = browse && browse.from === props.displayMonth ? browse.month : props.displayMonth
   const previous = shiftMonth(shown, -1)
@@ -78,14 +94,29 @@ export default function CalendarWidget({ title, props, mode }: WidgetRenderProps
 
       <div>
         <p className="text-xs font-semibold uppercase tracking-wide opacity-70">Agenda</p>
-        {props.events.length === 0 ? (
+        {mode === 'edit' && hasSorting ? (
+          // The agenda is the editable, reorderable group: it follows the saved array, not the dates.
+          // Entries can be reordered here but never moved to another calendar.
+          <SortableSection
+            containerId={listContainerId('calendar', widgetId)}
+            itemType={EVENT_ITEM_TYPE}
+            items={props.events.map((event) => event.id)}
+            orientation="vertical"
+            label={`${title || 'Calendar'} agenda`}
+            emptyLabel="No events yet. Select this widget and add some in Properties."
+            className="mt-1 gap-1"
+            renderItem={(id, { handleRef }) => {
+              const event = props.events.find((entry) => entry.id === id)
+              return event ? <AgendaEntry event={event} handle={<SortHandle handleRef={handleRef} label={`Reorder event ${event.title}`} />} /> : null
+            }}
+          />
+        ) : props.events.length === 0 ? (
           <p className="mt-1 text-sm opacity-70">{mode === 'edit' ? 'No events yet. Select this widget and add some in Properties.' : 'No events yet.'}</p>
         ) : (
           <ul aria-label={`${title || 'Calendar'} agenda`} className="mt-1 space-y-1">
             {props.events.map((event) => (
-              <li key={event.id} className="flex items-baseline gap-2 text-sm">
-                <time dateTime={event.date} className="shrink-0 text-xs tabular-nums opacity-70">{formatDate(event.date)}</time>
-                <span className="min-w-0 break-words">{event.title}</span>
+              <li key={event.id}>
+                <AgendaEntry event={event} />
               </li>
             ))}
           </ul>

@@ -11,14 +11,14 @@ export type Preview = Record<string, string[]>
 /** What the pointer is over: another sortable item, or a container (this is how an empty one is targeted). */
 export type TargetFacts = { kind: 'item'; id: string; containerId: string } | { kind: 'container'; containerId: string }
 
-export interface SourceFacts { id: string; containerId: string; itemType?: string }
+export interface SourceFacts { id: string; containerId: string }
 
 /** Extract plain facts from dnd-kit's drag source and target, so everything below stays testable. */
 export function dragFacts(source: unknown, target: unknown): { source: SourceFacts | null; target: TargetFacts | null } {
   const src = source as { id: string | number; data?: Partial<SortableData> } | null
   const tgt = target as { id: string | number; data?: Partial<SortableData & ContainerData> } | null
   const sourceFacts =
-    src && src.data?.containerId !== undefined ? { id: String(src.id), containerId: src.data.containerId, itemType: src.data.itemType } : null
+    src && src.data?.containerId !== undefined ? { id: String(src.id), containerId: src.data.containerId } : null
   let targetFacts: TargetFacts | null = null
   if (tgt?.data?.kind === 'container' && tgt.data.containerId !== undefined) targetFacts = { kind: 'container', containerId: tgt.data.containerId }
   else if (tgt?.data?.containerId !== undefined) targetFacts = { kind: 'item', id: String(tgt.id), containerId: tgt.data.containerId }

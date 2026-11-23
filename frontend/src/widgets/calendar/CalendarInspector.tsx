@@ -7,6 +7,8 @@ import { isDate, joinMonth, MAX_YEAR, MIN_YEAR, MONTH_NAMES, splitMonth } from '
 import { newId } from '../../domain/workspace/ids'
 import type { CalendarProps } from '../../domain/workspace/types'
 import { CommitTextField, IntegerField, SelectField } from '../../shared/ui/fields'
+import MoveButtons from '../../features/sorting/MoveButtons'
+import { listContainerId, workspaceAdapter } from '../../features/sorting/workspaceAdapter'
 import type { WidgetInspectorProps } from '../types'
 
 const MONTH_OPTIONS = MONTH_NAMES.map((name, index) => ({ value: String(index + 1), label: name }))
@@ -63,6 +65,7 @@ export default function CalendarInspector({ widgetId, props, dispatch }: WidgetI
                 </button>
               </div>
               <CommitTextField label={`Title for ${name}`} value={event.title} maxLength={MAX_LABEL} onCommit={(title) => run(updateEvent(widgetId, event.id, { title }))} />
+              <MoveButtons adapter={workspaceAdapter} itemId={event.id} containerId={listContainerId('calendar', widgetId)} otherContainers={[]} subject={name} />
             </li>
           )
         })}

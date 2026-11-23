@@ -121,7 +121,7 @@ describe('SortProvider', () => {
   it('a pointer over a container that takes a different kind of item is an outside drop', () => {
     // Only the section container has bounds around the pointer; navigation containers are elsewhere.
     vi.spyOn(Element.prototype, 'getBoundingClientRect').mockImplementation(function (this: Element) {
-      const near = this.getAttribute('data-item-type') === 'section'
+      const near = (this.getAttribute('data-container-id') ?? '').startsWith('sections:')
       return { left: near ? 0 : 1000, right: near ? 500 : 1100, top: 0, bottom: 500, width: 100, height: 100, x: 0, y: 0, toJSON: () => ({}) }
     })
     start(item('n2', 'nav:primary'))

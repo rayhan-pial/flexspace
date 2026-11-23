@@ -84,7 +84,6 @@ export default function SortableSection({ containerId, items, itemType, orientat
       ref={ref}
       aria-label={label}
       data-container-id={containerId}
-      data-item-type={itemType}
       className={`${orientation === 'horizontal' ? 'flex flex-row flex-wrap gap-1' : orientation === 'vertical' ? 'flex flex-col gap-1' : 'grid'} ${isDropTarget ? 'rounded-lg ring-2 ring-indigo-300' : ''} ${className ?? ''}`}
     >
       {shown.map((id, index) => (

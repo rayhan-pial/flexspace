@@ -155,7 +155,7 @@ describe('dragFacts', () => {
   it('reads sources, items and containers from dnd-kit data, and nothing from anything else', () => {
     const item = { id: 'a', data: { itemId: 'a', containerId: 'c:one', itemType: 't' } }
     const container = { id: 'c:two', data: { kind: 'container', containerId: 'c:two', itemType: 't' } }
-    expect(dragFacts(item, item)).toEqual({ source: { id: 'a', containerId: 'c:one', itemType: 't' }, target: { kind: 'item', id: 'a', containerId: 'c:one' } })
+    expect(dragFacts(item, item)).toEqual({ source: { id: 'a', containerId: 'c:one' }, target: { kind: 'item', id: 'a', containerId: 'c:one' } })
     expect(dragFacts(item, container).target).toEqual({ kind: 'container', containerId: 'c:two' })
     expect(dragFacts(null, null)).toEqual({ source: null, target: null })
     expect(dragFacts({ id: 'z', data: {} }, { id: 'y' })).toEqual({ source: null, target: null })

@@ -61,10 +61,12 @@ export default function SortProvider({ adapter, children }: { adapter: SortAdapt
       <DragDropProvider
         onDragStart={(event) => {
           origin.current = dragFacts(event.operation.source, null).source
-          // Only containers that take this kind of item count as "somewhere to drop": ending over a
-          // gallery with a task in hand is dropping outside, not a drop on a target.
-          const itemType = origin.current?.itemType
-          startBounds.current = [...document.querySelectorAll('[data-container-id]')].filter((el) => !itemType || el.getAttribute('data-item-type') === itemType).map((el) => {
+          // Only containers this item could actually be dropped into count as "somewhere to drop":
+          // ending over another widget's metrics or over a full list is dropping outside, not on a target.
+          const dragged = origin.current
+          startBounds.current = [...document.querySelectorAll('[data-container-id]')]
+            .filter((el) => !dragged || adapter.canMove({ itemId: dragged.id, fromContainerId: dragged.containerId, toContainerId: el.getAttribute('data-container-id') ?? '', toIndex: 0 }) === null)
+            .map((el) => {
             const { left, right, top, bottom } = el.getBoundingClientRect()
             return { left, right, top, bottom }
           })
@@ -82,9 +84,13 @@ export default function SortProvider({ adapter, children }: { adapter: SortAdapt
           const { source: current, target } = dragFacts(event.operation.source, event.operation.target)
           const source = current && origin.current?.id === current.id ? origin.current : current
           const placement = source ? previewPlacement(previewRef.current, source.id) : null
-          // The target alone is unreliable at the very end (the item was just re-rendered into its
-          // new container), so "outside" is decided by the pointer against the start-of-drag bounds.
-          const overTarget = target !== null || pointInside(event.operation.position?.current, startBounds.current)
+          // A target only counts if its container would accept the item (another calendar reports an
+          // agenda entry as a target too, because the types match). The target alone is also unreliable
+          // at the very end (the item was just re-rendered into its new container), so otherwise
+          // "outside" is decided by the pointer against the start-of-drag bounds.
+          const targetAccepts =
+            target !== null && source !== null && (target.containerId === source.containerId || adapter.canMove({ itemId: source.id, fromContainerId: source.containerId, toContainerId: target.containerId, toIndex: 0 }) === null)
+          const overTarget = targetAccepts || pointInside(event.operation.position?.current, startBounds.current)
           origin.current = null
           finishDrag()
 

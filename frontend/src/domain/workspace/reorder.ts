@@ -113,24 +113,35 @@ export function moveStackWidget(widgetId: string, toSectionId: string, toVisible
   }
 }
 
-/** Repeatable groups whose items can move between widgets of the same type. */
-export type ListKind = 'tasks' | 'gallery'
+/** Repeatable groups inside a widget that can be reordered: the props key that holds each one's items. */
+export type ListKind = 'tasks' | 'gallery' | 'analytics' | 'calendar'
+const LIST_KEY: Record<ListKind, string> = { tasks: 'items', gallery: 'items', analytics: 'metrics', calendar: 'events' }
+export const listKeyOf = (kind: ListKind): string => LIST_KEY[kind]
 
 /**
- * Reorder an item inside a Tasks or Gallery widget, or move it into another widget of the same type
- * (an empty one included). Items keep their ids and content, so each exists exactly once afterwards;
- * a destination that already holds the maximum number of items refuses the move. Items never cross
- * types: a task id is simply not found among the gallery widgets, so nothing happens.
+ * Only task rows and gallery tiles may move to another widget of their type. Metrics and agenda
+ * entries are scoped to their own widget: they can be reordered there and nowhere else.
+ */
+export const TRANSFERABLE_KINDS: readonly ListKind[] = ['tasks', 'gallery']
+
+/**
+ * Reorder an item inside a Tasks, Gallery, Analytics or Calendar widget; for the kinds in
+ * TRANSFERABLE_KINDS also move it into another widget of the same type (an empty one included).
+ * Items keep their ids and content, so each exists exactly once afterwards; a destination that
+ * already holds the maximum number of items refuses the move. Items never cross types: a task id
+ * is simply not found among the gallery widgets, so nothing happens.
  */
 export function moveListItem(kind: ListKind, itemId: string, toWidgetId: string, toIndex: number): Command {
   return (config) => {
     const widgets = config.sections.flatMap((s) => s.widgets).filter((w) => w.type === kind)
-    const itemsOf = (w: Widget): Array<{ id: string }> => (Array.isArray(w.props.items) ? (w.props.items as Array<{ id: string }>) : [])
+    const key = LIST_KEY[kind]
+    const itemsOf = (w: Widget): Array<{ id: string }> => (Array.isArray(w.props[key]) ? (w.props[key] as Array<{ id: string }>) : [])
     const lists: Record<string, readonly { id: string }[]> = Object.fromEntries(widgets.map((w) => [w.id, itemsOf(w)]))
 
     const fromId = widgets.find((w) => itemsOf(w).some((item) => item.id === itemId))?.id
     if (fromId === undefined) return fail(`Item ${itemId} was not found in any ${kind} widget.`)
     if (!Object.hasOwn(lists, toWidgetId)) return fail(`Items can only be moved into another ${kind} widget.`)
+    if (fromId !== toWidgetId && !TRANSFERABLE_KINDS.includes(kind)) return fail(`Entries of a ${kind} widget can only be reordered within their own widget.`)
     if (fromId !== toWidgetId && lists[toWidgetId].length >= MAX_LIST_ITEMS) return fail(`That list already holds ${MAX_LIST_ITEMS} items.`)
 
     const moved = moveBetween(lists, itemId, toWidgetId, toIndex)
@@ -143,7 +154,7 @@ export function moveListItem(kind: ListKind, itemId: string, toWidgetId: string,
           ? {
               ...s,
               widgets: s.widgets.map((w) =>
-                Object.hasOwn(moved.lists, w.id) && moved.lists[w.id] !== lists[w.id] ? { ...w, props: { ...w.props, items: [...moved.lists[w.id]] } } : w,
+                Object.hasOwn(moved.lists, w.id) && moved.lists[w.id] !== lists[w.id] ? { ...w, props: { ...w.props, [key]: [...moved.lists[w.id]] } } : w,
               ),
             }
           : s,
