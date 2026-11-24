@@ -1,11 +1,10 @@
 import { useState } from 'react'
+import Button from '../../shared/ui/Button'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
+import StatusBadge from '../../shared/ui/StatusBadge'
 import { selectCanRedo, selectCanUndo, selectIsDirty, useEditorStore } from './editorStore'
 import { useEffectiveMode, useIsDesktop } from './useEffectiveMode'
 import { reloadLatest, saveDraft } from './workspaceSync'
-
-const button =
-  'rounded-lg px-3 py-1.5 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50'
 
 /**
  * Editor toolbar: mode switch, dirty/saving status, and (in Edit) explicit Save and Cancel.
@@ -46,47 +45,25 @@ export default function EditorToolbar() {
   else if (dirty) status = 'Unsaved changes. Open this workspace on a larger screen to save or cancel them.'
 
   return (
-    <div className="border-b border-slate-200 bg-white px-4 py-2 sm:px-6">
+    <div className="border-b border-ui-border bg-ui-surface px-4 py-2 sm:px-6">
       <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3">
-        <p role="status" aria-label="Save status" aria-live="polite" className={`text-sm ${dirty && !saving ? 'font-medium text-amber-700' : 'text-slate-600'}`}>
-          {status}
+        <p role="status" aria-label="Save status" aria-live="polite">
+          <StatusBadge tone={saving ? 'neutral' : dirty ? 'warning' : 'success'}>{status}</StatusBadge>
         </p>
         <p role="status" aria-label="History status" aria-live="polite" className="sr-only">{historyNote}</p>
 
         <div className="flex flex-wrap items-center gap-2">
           {isDesktop && mode === 'edit' && (
             <>
-              <button type="button" disabled={!canUndo} onClick={() => undo()} title="Undo (Ctrl+Z)" className={`${button} border border-slate-300 text-slate-700 hover:bg-slate-100`}>
-                Undo
-              </button>
-              <button type="button" disabled={!canRedo} onClick={() => redo()} title="Redo (Ctrl+Shift+Z)" className={`${button} border border-slate-300 text-slate-700 hover:bg-slate-100`}>
-                Redo
-              </button>
-              <button type="button" onClick={() => setMode('preview')} className={`${button} border border-slate-300 text-slate-700 hover:bg-slate-100`}>
-                Preview
-              </button>
-              <button
-                type="button"
-                disabled={!dirty || saving}
-                onClick={() => setConfirm('cancel')}
-                className={`${button} border border-slate-300 text-slate-700 hover:bg-slate-100`}
-              >
-                Cancel
-              </button>
-              <button
-                type="button"
-                disabled={!dirty || saving}
-                onClick={() => void saveDraft()}
-                className={`${button} bg-indigo-600 text-white hover:bg-indigo-500`}
-              >
-                Save
-              </button>
+              <Button disabled={!canUndo} onClick={() => undo()} title="Undo (Ctrl+Z)">Undo</Button>
+              <Button disabled={!canRedo} onClick={() => redo()} title="Redo (Ctrl+Shift+Z)">Redo</Button>
+              <Button onClick={() => setMode('preview')}>Preview</Button>
+              <Button disabled={!dirty || saving} onClick={() => setConfirm('cancel')}>Cancel</Button>
+              <Button variant="primary" disabled={!dirty || saving} onClick={() => void saveDraft()}>Save</Button>
             </>
           )}
           {isDesktop && mode === 'preview' && (
-            <button type="button" onClick={() => setMode('edit')} className={`${button} bg-indigo-600 text-white hover:bg-indigo-500`}>
-              Edit workspace
-            </button>
+            <Button variant="primary" onClick={() => setMode('edit')}>Edit workspace</Button>
           )}
         </div>
       </div>
@@ -101,7 +78,7 @@ export default function EditorToolbar() {
       {saveStatus.state === 'error' && !conflict && saveStatus.kind !== 'unauthenticated' && (
         <div role="alert" className="mx-auto mt-2 flex max-w-[1600px] items-start justify-between gap-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">
           <span>{saveStatus.message}</span>
-          <button type="button" onClick={dismissSaveError} className="shrink-0 font-medium underline focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500">
+          <button type="button" onClick={dismissSaveError} className="ui-focus shrink-0 font-medium underline">
             Dismiss
           </button>
         </div>
@@ -114,12 +91,10 @@ export default function EditorToolbar() {
             The saved workspace is now at revision {conflict.currentRevision}. Your changes were not saved and are still here.
           </p>
           <div className="mt-2 flex gap-2">
-            <button type="button" onClick={dismissSaveError} className={`${button} border border-amber-300 bg-white text-amber-900 hover:bg-amber-100`}>
-              Keep editing
-            </button>
-            <button type="button" disabled={saving} onClick={() => (dirty ? setConfirm('reload') : void reload())} className={`${button} bg-amber-700 text-white hover:bg-amber-600`}>
+            <Button onClick={dismissSaveError}>Keep editing</Button>
+            <Button variant="primary" disabled={saving} onClick={() => (dirty ? setConfirm('reload') : void reload())}>
               Reload latest
-            </button>
+            </Button>
           </div>
         </div>
       )}

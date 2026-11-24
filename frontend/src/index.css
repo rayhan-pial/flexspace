@@ -2,8 +2,62 @@
 @import 'react-grid-layout/css/styles.css';
 @import 'react-resizable/css/styles.css';
 
+/*
+ * Editor chrome tokens (--ui-*). They style the application (toolbar, panels, dialogs, controls) and
+ * never change with the user's workspace theme, which lives only in --fs-* inside .fs-themed.
+ */
 :root {
   font-family: system-ui, 'Segoe UI', Roboto, sans-serif;
+
+  --ui-bg: #f8fafc;
+  --ui-surface: #ffffff;
+  --ui-surface-subtle: #f1f5f9;
+  --ui-primary: #4f46e5;
+  --ui-primary-hover: #4338ca;
+  --ui-selected: #eef2ff;
+  --ui-selected-text: #3730a3;
+  --ui-text: #0f172a;
+  --ui-text-secondary: #64748b;
+  --ui-border: #e2e8f0;
+  --ui-control-border: #7c8ba1;
+  --ui-danger: #b91c1c;
+  --ui-danger-hover: #991b1b;
+  --ui-success: #166534;
+  --ui-warning: #92400e;
+  --ui-radius-control: 8px;
+  --ui-radius-card: 12px;
+  --ui-radius-dialog: 16px;
+  --ui-shadow-surface: 0 1px 3px rgb(15 23 42 / 0.06);
+  --ui-shadow-dialog: 0 16px 48px rgb(15 23 42 / 0.16);
+}
+
+@theme inline {
+  --color-ui-bg: var(--ui-bg);
+  --color-ui-surface: var(--ui-surface);
+  --color-ui-subtle: var(--ui-surface-subtle);
+  --color-ui-primary: var(--ui-primary);
+  --color-ui-primary-hover: var(--ui-primary-hover);
+  --color-ui-selected: var(--ui-selected);
+  --color-ui-selected-text: var(--ui-selected-text);
+  --color-ui-text: var(--ui-text);
+  --color-ui-muted: var(--ui-text-secondary);
+  --color-ui-border: var(--ui-border);
+  --color-ui-control: var(--ui-control-border);
+  --color-ui-danger: var(--ui-danger);
+  --color-ui-danger-hover: var(--ui-danger-hover);
+  --color-ui-success: var(--ui-success);
+  --color-ui-warning: var(--ui-warning);
+  --radius-ui-control: var(--ui-radius-control);
+  --radius-ui-card: var(--ui-radius-card);
+  --radius-ui-dialog: var(--ui-radius-dialog);
+  --shadow-ui-surface: var(--ui-shadow-surface);
+  --shadow-ui-dialog: var(--ui-shadow-dialog);
+}
+
+/* One focus treatment for every editor control: 2px indigo outline, 2px offset. */
+.ui-focus:focus-visible {
+  outline: 2px solid var(--ui-primary);
+  outline-offset: 2px;
 }
 
 /* The workspace theme. Values arrive as validated custom properties set by features/workspace/theme.ts. */
@@ -16,8 +70,8 @@
 
 body {
   margin: 0;
-  background: #f8fafc;
-  color: #0f172a;
+  background: var(--ui-bg);
+  color: var(--ui-text);
 }
 
 /*
@@ -46,7 +100,7 @@ body {
 
 /* React Grid Layout (Edit mode, desktop): drag placeholder and resize grip in the editor's accent colour. */
 .react-grid-item.react-grid-placeholder {
-  background: #6366f1;
+  background: var(--ui-primary);
   border-radius: 1rem;
   opacity: 0.18;
 }

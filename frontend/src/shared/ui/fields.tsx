@@ -8,10 +8,11 @@ import { HexColorPicker } from 'react-colorful'
  */
 
 const input =
-  'mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 aria-[invalid=true]:border-rose-500'
-const label = 'block text-sm font-medium text-slate-700'
+  'ui-focus mt-1 block w-full rounded-ui-control border border-ui-control bg-ui-surface px-3 py-1.5 text-sm text-ui-text placeholder:text-ui-muted focus:border-ui-primary aria-[invalid=true]:border-ui-danger aria-[invalid=true]:bg-red-50 disabled:cursor-not-allowed disabled:bg-ui-subtle disabled:opacity-60 [@media(pointer:coarse)]:min-h-11'
+const label = 'block text-sm font-medium text-ui-text'
 const small =
-  'rounded-lg border border-slate-300 px-2 py-1 text-xs font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500'
+  'ui-focus rounded-ui-control border border-ui-control bg-ui-surface px-2 py-1 text-xs font-medium text-ui-text hover:bg-ui-subtle [@media(pointer:coarse)]:min-h-11'
+const errorText = 'mt-1 text-xs font-medium text-ui-danger'
 
 export function TextField({ label: text, value, onChange, maxLength }: { label: string; value: string; onChange: (value: string) => void; maxLength?: number }) {
   const id = useId()
@@ -53,8 +54,8 @@ export function CheckboxField({ label: text, checked, onChange }: { label: strin
   const id = useId()
   return (
     <div className="flex items-center gap-2">
-      <input id={id} type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="size-4 rounded border-slate-300" />
-      <label htmlFor={id} className="text-sm text-slate-700">{text}</label>
+      <input id={id} type="checkbox" checked={checked} onChange={(e) => onChange(e.target.checked)} className="ui-focus size-4 rounded border-ui-control accent-ui-primary" />
+      <label htmlFor={id} className="text-sm text-ui-text">{text}</label>
     </div>
   )
 }
@@ -88,7 +89,7 @@ export function ColorField({
     <div>
       <label htmlFor={id} className={label}>{text}</label>
       <div className="mt-1 flex items-center gap-2">
-        <span aria-hidden="true" className="size-8 shrink-0 rounded-lg ring-1 ring-slate-300" style={{ backgroundColor: HEX.test(value ?? '') ? value : 'transparent' }} />
+        <span aria-hidden="true" className="size-8 shrink-0 rounded-ui-control ring-1 ring-ui-control" style={{ backgroundColor: HEX.test(value ?? '') ? value : 'transparent' }} />
         <input
           id={id}
           type="text"
@@ -102,7 +103,7 @@ export function ColorField({
           className={`${input} mt-0 font-mono`}
         />
       </div>
-      {invalid && <p id={errorId} role="alert" className="mt-1 text-xs text-rose-700">Use a colour like #1a2b3c (six hex digits).</p>}
+      {invalid && <p id={errorId} role="alert" className={errorText}>Use a colour like #1a2b3c (six hex digits).</p>}
       <div className="mt-1 flex gap-2">
         <button type="button" aria-expanded={picking} onClick={() => setPicking((open) => !open)} className={small}>
           {picking ? `Close ${text.toLowerCase()} picker` : `Pick ${text.toLowerCase()}`}
@@ -154,7 +155,7 @@ export function IntegerField({
         onBlur={() => setTyped(null)}
         className={input}
       />
-      {invalid && <p id={errorId} role="alert" className="mt-1 text-xs text-rose-700">Enter a whole number from {min} to {max}.</p>}
+      {invalid && <p id={errorId} role="alert" className={errorText}>Enter a whole number from {min} to {max}.</p>}
       {onReset && value !== undefined && (
         <button type="button" onClick={onReset} className={`${small} mt-1`}>Use theme default</button>
       )}
@@ -192,7 +193,7 @@ export function NumberField({ label: text, value, onChange }: { label: string; v
         onBlur={() => setTyped(null)}
         className={input}
       />
-      {invalid && <p id={errorId} role="alert" className="mt-1 text-xs text-rose-700">Enter a number.</p>}
+      {invalid && <p id={errorId} role="alert" className={errorText}>Enter a number.</p>}
     </div>
   )
 }

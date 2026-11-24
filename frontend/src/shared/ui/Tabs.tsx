@@ -29,7 +29,7 @@ export default function Tabs({ label, tabs }: { label: string; tabs: TabDefiniti
 
   return (
     <div>
-      <div role="tablist" aria-label={label} className="flex gap-1 border-b border-slate-200">
+      <div role="tablist" aria-label={label} className="flex gap-1 border-b border-ui-border">
         {tabs.map((tab, index) => {
           const selected = tab.id === active
           return (
@@ -43,8 +43,8 @@ export default function Tabs({ label, tabs }: { label: string; tabs: TabDefiniti
               tabIndex={selected ? 0 : -1}
               onClick={() => setActive(tab.id)}
               onKeyDown={(event) => onKeyDown(event, index)}
-              className={`-mb-px rounded-t-lg border-b-2 px-3 py-2 text-sm font-medium focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                selected ? 'border-indigo-600 text-indigo-700' : 'border-transparent text-slate-600 hover:text-slate-900'
+              className={`ui-focus -mb-px rounded-t-ui-control border-b-2 px-3 py-2 text-sm font-medium [@media(pointer:coarse)]:min-h-11 ${
+                selected ? 'border-ui-primary text-ui-selected-text' : 'border-transparent text-ui-muted hover:text-ui-text'
               }`}
             >
               {tab.label}

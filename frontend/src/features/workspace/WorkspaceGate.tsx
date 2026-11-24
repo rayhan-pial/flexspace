@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import Button from '../../shared/ui/Button'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import { useSessionStore } from '../auth/sessionStore'
 import { selectIsDirty, useEditorStore } from '../editor/editorStore'
@@ -20,18 +21,12 @@ export default function WorkspaceGate() {
   useUnsavedChangesGuard()
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="flex items-center justify-between gap-3 border-b border-slate-200 bg-white px-4 py-3 sm:px-6">
-        <span className="shrink-0 font-semibold tracking-tight text-slate-900">FlexSpace</span>
+    <div className="min-h-screen bg-ui-bg text-ui-text">
+      <header className="flex items-center justify-between gap-3 border-b border-ui-border bg-ui-surface px-4 py-3 sm:px-6">
+        <span className="shrink-0 text-lg font-semibold tracking-tight text-ui-text">FlexSpace</span>
         <div className="flex min-w-0 items-center gap-3 text-sm sm:gap-4">
-          <span className="min-w-0 truncate text-slate-600" title={user?.email} data-testid="current-user">{user?.email}</span>
-          <button
-            type="button"
-            onClick={() => (dirty ? setConfirmLogout(true) : void logout())}
-            className="shrink-0 rounded-lg border border-slate-300 px-3 py-1.5 font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-          >
-            Log out
-          </button>
+          <span className="min-w-0 truncate text-ui-muted" title={user?.email} data-testid="current-user">{user?.email}</span>
+          <Button className="shrink-0" onClick={() => (dirty ? setConfirmLogout(true) : void logout())}>Log out</Button>
         </div>
       </header>
 
