@@ -1,5 +1,7 @@
+import Button from '../../shared/ui/Button'
 import { isKnownWidgetType, widgetTypeLabel } from '../workspace/registry'
 import { useEditorStore } from './editorStore'
+import { useInspectorView } from './inspectorView'
 import NavItemProperties from './NavItemProperties'
 import WidgetProperties from './WidgetProperties'
 import { SectionActions, WidgetActions } from './LifecycleActions'
@@ -13,9 +15,15 @@ export default function InspectorPanel() {
   const draft = useEditorStore((s) => s.draftConfig)
   const selection = useEditorStore((s) => s.selection)
   const target = resolveSelection(draft, selection)
+  const { setView } = useInspectorView()
 
   if (!target) {
-    return <p className="text-sm text-slate-500">Select a component on the canvas or in the outline to see its properties.</p>
+    return (
+      <div className="space-y-3">
+        <p className="text-sm text-ui-muted">Select a component on the canvas or in the outline to see its properties.</p>
+        <Button onClick={() => setView('outline')}>Open outline</Button>
+      </div>
+    )
   }
 
   const rows: Array<[string, string]> = []
@@ -39,12 +47,12 @@ export default function InspectorPanel() {
 
   return (
     <div aria-live="polite">
-      <h3 className="text-sm font-semibold text-slate-900">{heading}</h3>
+      <h3 className="text-sm font-semibold text-ui-text">{heading}</h3>
       <dl className="mt-3 space-y-2 text-sm">
         {rows.map(([name, value]) => (
           <div key={name} className="flex justify-between gap-3">
-            <dt className="text-slate-500">{name}</dt>
-            <dd className="text-right text-slate-900">{value}</dd>
+            <dt className="text-ui-muted">{name}</dt>
+            <dd className="text-right text-ui-text">{value}</dd>
           </div>
         ))}
       </dl>

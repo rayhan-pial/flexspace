@@ -6,6 +6,7 @@ import type { GalleryItem, Metric } from '../../domain/workspace/types'
 import { installFetch } from '../../test/fakeApi'
 import { createFakeServer } from '../../test/fakeServer'
 import type { FakeServer } from '../../test/fakeServer'
+import { goTo, inspector } from '../../test/shell'
 import { stubViewport } from '../../test/viewport'
 import { useSessionStore } from '../auth/sessionStore'
 import { selectIsDirty, useEditorStore } from '../editor/editorStore'
@@ -50,7 +51,7 @@ async function open() {
   return userEvent.setup()
 }
 
-const settings = () => within(screen.getByRole('complementary', { name: 'Settings panel' }))
+const settings = inspector
 const card = (id: string) => within(document.querySelector(`[data-widget-id="${id}"]`) as HTMLElement)
 const props = (id: string) => editor().draftConfig!.sections[0].widgets.find((w) => w.id === id)!.props
 const images = () => props('w-gallery').items as GalleryItem[]
@@ -58,7 +59,9 @@ const metrics = () => props('w-analytics').metrics as Metric[]
 const widths = () => [...document.querySelectorAll('[data-widget-id="w-analytics"] [data-bar]')].map((el) => (el as HTMLElement).style.width)
 
 async function select(user: ReturnType<typeof userEvent.setup>, name: string) {
+  await goTo(user, 'Outline')
   await user.click(within(screen.getByRole('list', { name: 'Components' })).getByRole('button', { name }))
+  await goTo(user, 'My workspace')
 }
 const saved = () => waitFor(() => expect(screen.getByText('All changes saved')).toBeInTheDocument())
 

@@ -5,6 +5,7 @@
 // Same prerequisites as grid-gesture.mjs. Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
+import { goTo, inspector } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -22,9 +23,8 @@ const log = (message) => {
   console.log(`- ${message}`)
 }
 
-const outline = (p) => p.getByRole('list', { name: 'Components' })
-const settings = (p) => p.getByRole('complementary', { name: 'Settings panel' })
-const components = (p) => p.getByRole('complementary', { name: 'Components panel' })
+const settings = (p) => inspector(p)
+const components = (p) => inspector(p)
 const status = (p) => p.getByRole('status', { name: 'Save status' }).innerText()
 const sectionTitles = (p) => p.locator('[data-section-id] > div > h2').allInnerTexts()
 const note = (p) => p.locator('[data-widget-id="w-notes"] textarea') // a stable pick: sections are reordered during the run
@@ -43,16 +43,16 @@ async function register(p, email) {
   await p.getByLabel('Email').fill(email)
   await p.getByLabel('Password').fill(PASSWORD)
   await p.getByRole('button', { name: 'Create account' }).click()
-  await outline(p).waitFor()
+  await inspector(p).waitFor()
 }
 async function login(p, email) {
   await p.getByLabel('Email').fill(email)
   await p.getByLabel('Password').fill(PASSWORD)
   await p.getByRole('button', { name: 'Sign in', exact: true }).click()
-  await outline(p).waitFor()
+  await inspector(p).waitFor()
 }
 async function applyTemplate(p, name, confirmReplace = true) {
-  await settings(p).getByRole('tab', { name: 'Templates' }).click()
+  await goTo(p, 'Templates')
   await settings(p).getByRole('radio', { name: new RegExp(name) }).check()
   await settings(p).getByRole('button', { name: `Apply ${name}` }).click()
   const dialog = p.getByRole('alertdialog')
@@ -78,16 +78,16 @@ try {
 
   log('2. add a widget, edit text and note content, change colours and fonts, switch navigation placement')
   const widgetsBefore = await page.locator('[data-widget-id]').count()
-  await components(page).getByRole('tab', { name: 'Library' }).click()
+  await goTo(page, 'Components')
   await components(page).getByRole('button', { name: /^Add Calendar/ }).click()
   assert.equal(await page.locator('[data-widget-id]').count(), widgetsBefore + 1)
   const noteText = `Demo note ${stamp}`
   await note(page).fill(noteText)
-  await settings(page).getByRole('tab', { name: 'Theme' }).click()
+  await goTo(page, 'Appearance')
   await settings(page).getByLabel('Primary color').fill('#0e7490')
   await settings(page).getByLabel('Base font size (px)').fill('18')
   await settings(page).getByLabel('Font family').selectOption({ index: 1 })
-  await components(page).getByRole('tab', { name: 'Outline' }).click()
+  await goTo(page, 'Outline')
   for (const placement of ['top', 'left', 'right']) await components(page).getByLabel('Navigation placement').selectOption(placement)
   assert.equal(await status(page), 'Unsaved changes')
 
@@ -101,14 +101,14 @@ try {
   assert.deepEqual(await sectionTitles(page), ['Reference', 'Today'])
   const nav = page.getByRole('navigation', { name: 'Workspace' })
   await nav.getByRole('button', { name: 'Reference', exact: true }).click() // selects the item in Edit
-  await settings(page).getByRole('tab', { name: 'Properties' }).click()
+  await goTo(page, 'My workspace')
   await settings(page).getByRole('button', { name: 'Move to Secondary' }).click()
   assert.equal(await nav.getByRole('list', { name: 'Secondary navigation' }).getByRole('button', { name: 'Reference', exact: true }).count(), 1)
 
   log('4. hide and show a widget, remove another, switch Preview and Edit: the draft stays intact')
   const stamped = await page.evaluate(() => [...document.querySelectorAll('[data-widget-id]')].map((e) => e.getAttribute('data-widget-id')))
   await page.locator('[data-widget-id]').nth(1).click({ position: { x: 4, y: 4 } })
-  await settings(page).getByRole('tab', { name: 'Properties' }).click()
+  await goTo(page, 'My workspace')
   await settings(page).getByRole('button', { name: 'Hide widget' }).click()
   assert.equal(await page.locator('[data-widget-id]').count(), stamped.length - 1)
   assert.equal(await settings(page).getByRole('button', { name: 'Show widget' }).count(), 1, 'a hidden widget stays selected and can be shown again')
@@ -145,18 +145,18 @@ try {
   assert.equal(await status(page), 'All changes saved')
 
   log('6. change the theme and Cancel; reload: the saved version remains')
-  await settings(page).getByRole('tab', { name: 'Theme' }).click()
+  await goTo(page, 'Appearance')
   await settings(page).getByLabel('Primary color').fill('#be123c')
   assert.equal(await status(page), 'Unsaved changes')
   await cancelChanges(page)
   await page.reload()
-  await outline(page).waitFor()
+  await inspector(page).waitFor()
   assert.equal((await api(page, '/workspace')).body.config.theme.primary, '#0e7490')
-  await settings(page).getByRole('tab', { name: 'Theme' }).click()
+  await goTo(page, 'Appearance')
   assert.equal(await settings(page).getByLabel('Primary color').inputValue(), '#0e7490')
 
   log('7. save a private custom template; apply Creative and Cancel; apply Analytics and Save; restore default and Cancel')
-  await settings(page).getByRole('tab', { name: 'Templates' }).click()
+  await goTo(page, 'Templates')
   await settings(page).getByLabel('Template name').fill('Demo design')
   await settings(page).getByRole('button', { name: 'Save current design as template' }).click()
   await settings(page).getByText(/Saved "Demo design"/).waitFor()
@@ -192,9 +192,9 @@ try {
   log('8b. two tabs: the stale save receives a conflict and never overwrites the first')
   const tab2 = await context.newPage()
   await tab2.goto(baseUrl)
-  await outline(tab2).waitFor()
+  await inspector(tab2).waitFor()
   assert.equal((await api(tab2, '/workspace')).body.revision, analyticsSaved.revision)
-  await settings(page).getByRole('tab', { name: 'Properties' }).click()
+  await goTo(page, 'My workspace')
   await page.getByLabel('Workspace title').fill('Saved from tab one')
   await saveAndWait(page)
   await tab2.getByLabel('Workspace title').fill('Stale edit from tab two')
@@ -225,7 +225,7 @@ try {
   }, { baseRevision: current.revision, config: withUnknown, token: csrf })
   assert.equal(put, 200)
   await page.reload()
-  await outline(page).waitFor()
+  await inspector(page).waitFor()
   assert.equal(await page.locator('[data-unsupported="true"]').count(), 1)
   assert.match(await page.locator('[data-unsupported="true"]').innerText(), /sparkline/)
   await page.getByLabel('Workspace title').fill('Edited with an unknown widget present')
@@ -244,7 +244,7 @@ try {
   assert.equal(await page.getByRole('button', { name: 'Edit workspace' }).count(), 0)
   await page.unroute('**/api/workspace')
   await page.reload()
-  await outline(page).waitFor()
+  await inspector(page).waitFor()
   assert.equal((await api(page, '/workspace')).body.config.title, 'Edited with an unknown widget present', 'nothing was replaced')
 
   console.log('\nOK: real browser demonstration acceptance run passes')

@@ -5,6 +5,7 @@ import App from '../../app/App'
 import { installFetch } from '../../test/fakeApi'
 import { createFakeServer } from '../../test/fakeServer'
 import type { FakeServer } from '../../test/fakeServer'
+import { goTo, inspector } from '../../test/shell'
 import { stubViewport } from '../../test/viewport'
 import { useSessionStore } from '../auth/sessionStore'
 import { selectIsDirty, useEditorStore } from '../editor/editorStore'
@@ -55,14 +56,19 @@ async function open() {
 }
 
 const outline = () => within(screen.getByRole('list', { name: 'Components' }))
-const left = () => within(screen.getByRole('complementary', { name: 'Components panel' }))
-const settings = () => within(screen.getByRole('complementary', { name: 'Settings panel' }))
+const left = inspector
+const settings = inspector
 const card = (id: string) => document.querySelector(`[data-widget-id="${id}"]`) as HTMLElement
 const themed = () => document.querySelector('.fs-themed') as HTMLElement
 const note = () => editor().draftConfig!.sections[0].widgets[0]
 
-async function selectNotes(user: ReturnType<typeof userEvent.setup>) {
+type User = ReturnType<typeof userEvent.setup>
+
+// Select through the outline (which keeps the Outline view), then open the Properties.
+async function selectNotes(user: User) {
+  await goTo(user, 'Outline')
   await user.click(outline().getByRole('button', { name: 'Meeting notes' }))
+  await goTo(user, 'My workspace')
 }
 
 describe('widget properties', () => {
@@ -136,7 +142,9 @@ describe('widget properties', () => {
 
   it('an unsupported widget exposes no editable fields', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: 'Unsupported: kanban' }))
+    await goTo(user, 'My workspace')
     expect(settings().getByText('Unsupported (kanban)')).toBeInTheDocument()
     expect(settings().queryByLabelText('Title')).not.toBeInTheDocument()
     expect(settings().queryByLabelText('Background')).not.toBeInTheDocument()
@@ -162,7 +170,7 @@ describe('widget properties', () => {
 describe('theme', () => {
   it('colours, font family and size apply live through validated CSS variables', async () => {
     const user = await open()
-    await user.click(settings().getByRole('tab', { name: 'Theme' }))
+    await goTo(user, 'Appearance')
     await user.clear(settings().getByLabelText('Primary color'))
     await user.type(settings().getByLabelText('Primary color'), '#aa0000')
     await user.clear(settings().getByLabelText('Page background'))
@@ -181,7 +189,7 @@ describe('theme', () => {
 
   it('invalid theme values are flagged and do not change the draft or the page', async () => {
     const user = await open()
-    await user.click(settings().getByRole('tab', { name: 'Theme' }))
+    await goTo(user, 'Appearance')
     const before = editor().draftConfig
     await user.clear(settings().getByLabelText('Text color'))
     await user.type(settings().getByLabelText('Text color'), 'blue')
@@ -193,17 +201,17 @@ describe('theme', () => {
     expect(editor().draftConfig).toBe(before)
   })
 
-  it('opening panels and switching tabs does not dirty the draft', async () => {
+  it('opening inspector views does not dirty the draft', async () => {
     const user = await open()
-    await user.click(settings().getByRole('tab', { name: 'Theme' }))
-    await user.click(settings().getByRole('tab', { name: 'Properties' }))
-    await user.click(left().getByRole('tab', { name: 'Library' }))
+    await goTo(user, 'Appearance')
+    await goTo(user, 'My workspace')
+    await goTo(user, 'Components')
     expect(selectIsDirty(editor())).toBe(false)
   })
 
   it('Cancel restores the theme and Save persists it', async () => {
     const user = await open()
-    await user.click(settings().getByRole('tab', { name: 'Theme' }))
+    await goTo(user, 'Appearance')
     await user.selectOptions(settings().getByLabelText('Font family'), 'serif')
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     await user.click(screen.getByRole('button', { name: 'Discard changes' }))
@@ -220,6 +228,7 @@ describe('theme', () => {
 describe('navigation', () => {
   it('changing placement moves the one nav model without duplicating or losing items', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     const items = editor().draftConfig!.navigation
     const nav = () => screen.getByRole('navigation', { name: 'Workspace' })
     expect(within(nav()).getAllByRole('button', { name: /^(Overview|Reference)$/ })).toHaveLength(2)
@@ -236,8 +245,10 @@ describe('navigation', () => {
 
   it('edits a nav item label, target and icon, reflected on the canvas navigation', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(within(screen.getByRole('list', { name: 'Secondary navigation items' })).getByRole('button', { name: 'Reference' }))
     expect(editor().selection).toEqual({ kind: 'navItem', id: 'nav-2' })
+    await goTo(user, 'My workspace')
     await user.clear(settings().getByLabelText('Label'))
     await user.type(settings().getByLabelText('Label'), 'Docs')
     await user.selectOptions(settings().getByLabelText('Goes to'), 's-main')
@@ -253,6 +264,7 @@ describe('navigation', () => {
 
   it('placement and nav edits persist on Save and are reversed by Cancel', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.selectOptions(left().getByLabelText('Navigation placement'), 'top')
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     await user.click(screen.getByRole('button', { name: 'Discard changes' }))

@@ -4,6 +4,7 @@
 // grid-gesture.mjs. Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
+import { goTo, inspector } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -22,7 +23,7 @@ page.on('request', (request) => {
   if (request.url().includes('/api/') && request.method() !== 'GET') writes.push(`${request.method()} ${new URL(request.url()).pathname}`)
 })
 
-const settings = page.getByRole('complementary', { name: 'Settings panel' })
+const settings = inspector(page)
 const undo = page.getByRole('button', { name: 'Undo', exact: true })
 const redo = page.getByRole('button', { name: 'Redo', exact: true })
 const status = () => page.getByRole('status', { name: 'Save status' }).innerText()
@@ -37,7 +38,8 @@ try {
   await page.getByLabel('Email').fill(`e2e${Date.now()}${Math.floor(Math.random() * 1e6)}@example.com`)
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Create account' }).click()
-  await page.getByRole('list', { name: 'Components' }).waitFor()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   assert.ok(await undo.isDisabled())
   assert.ok(await redo.isDisabled())
   writes.length = 0
@@ -58,7 +60,7 @@ try {
   await undo.click()
 
   log('one drag of the colour picker is one step')
-  await settings.getByRole('tab', { name: 'Theme' }).click()
+  await goTo(page, 'Appearance')
   const swatchBefore = await page.evaluate(() => getComputedStyle(document.querySelector('.fs-themed')).getPropertyValue('--fs-primary'))
   await settings.getByRole('button', { name: /^Pick/ }).first().click()
   const area = page.locator('.react-colorful__saturation').first()
@@ -100,7 +102,7 @@ try {
 
   log('applying a template is one step; Undo brings back the very same widgets')
   const before = await ids()
-  await settings.getByRole('tab', { name: 'Templates' }).click()
+  await goTo(page, 'Templates')
   await settings.getByRole('radio', { name: /Creative/ }).check()
   await settings.getByRole('button', { name: 'Apply Creative' }).click()
   const confirm = page.getByRole('alertdialog')
@@ -136,7 +138,8 @@ try {
 
   log('after a reload there is no history either')
   await page.reload()
-  await page.getByRole('list', { name: 'Components' }).waitFor()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   assert.ok(await undo.isDisabled())
 
   console.log('\nOK: real browser undo and redo pass')

@@ -2,6 +2,7 @@
 // Not part of `npm test`. Same prerequisites as grid-gesture.mjs. Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
+import { goTo, inspector } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -46,7 +47,8 @@ try {
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Create account' }).click()
-  await page.getByRole('list', { name: 'Components' }).waitFor()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   assert.deepEqual(await sectionTitles(), ['Today', 'Reference'])
   const [todayId, referenceId] = await sectionIds()
   const todayCards = await cardsIn(todayId)
@@ -55,7 +57,7 @@ try {
   assert.equal(referenceCards.length, 1)
 
   log('add an empty stack section')
-  await page.getByRole('complementary', { name: 'Components panel' }).getByRole('button', { name: 'Stack' }).click()
+  await inspector(page).getByRole('button', { name: 'Stack' }).click()
   await page.getByText(/This section is empty.*drag a card here/i).waitFor()
   const [, , newId] = await sectionIds()
   assert.deepEqual(await sectionTitles(), ['Today', 'Reference', 'New section'])
@@ -107,7 +109,7 @@ try {
 
   log('the Move buttons move the card back through the same command')
   await page.locator(`[data-widget-id="${cardId}"]`).click()
-  const settings = page.getByRole('complementary', { name: 'Settings panel' })
+  const settings = inspector(page)
   await settings.getByRole('button', { name: 'Move to Reference' }).click()
   assert.deepEqual(await cardsIn(referenceId), [cardId])
   assert.deepEqual(await cardsIn(newId), [])
@@ -118,7 +120,8 @@ try {
   await page.getByRole('button', { name: 'Save' }).click()
   await page.getByText('All changes saved').waitFor()
   await page.reload()
-  await page.getByRole('list', { name: 'Components' }).waitFor()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   assert.deepEqual(await sectionTitles(), expectedSections)
   assert.deepEqual({ today: await cardsIn(todayId), reference: await cardsIn(referenceId), fresh: await cardsIn(newId) }, expectedCards)
   assert.equal(await status(), 'All changes saved')

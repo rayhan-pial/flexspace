@@ -2,6 +2,7 @@
 // Not part of `npm test`. Same prerequisites as grid-gesture.mjs. Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
+import { goTo, inspector } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -47,7 +48,8 @@ try {
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Create account' }).click()
-  await page.getByRole('list', { name: 'Components' }).waitFor()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   const start = await order()
   assert.deepEqual(start, { primary: ['Today', 'Reference'], secondary: [] })
   assert.equal(await status(), 'All changes saved')
@@ -120,7 +122,7 @@ try {
 
   log('the Move buttons do the same thing through the same command')
   await nav.getByRole('button', { name: /^Today$/ }).click()
-  const settings = page.getByRole('complementary', { name: 'Settings panel' })
+  const settings = inspector(page)
   const onPrimary = (await order()).primary.includes('Today')
   if (onPrimary) await settings.getByRole('button', { name: 'Move to Secondary' }).click()
   else await settings.getByRole('button', { name: 'Move to Primary' }).click()
@@ -129,7 +131,8 @@ try {
   await settings.getByRole('button', { name: /^Move (up|down)$/ }).first().isVisible()
 
   log('top placement: the groups lay out horizontally and drag reorders there too')
-  await page.getByRole('complementary', { name: 'Components panel' }).getByLabel('Navigation placement').selectOption('top')
+  await goTo(page, 'Outline')
+  await inspector(page).getByLabel('Navigation placement').selectOption('top')
   await page.waitForTimeout(300)
   // put both items in Primary for a clean horizontal reorder
   if (!(await order()).primary.includes('Today')) {
@@ -150,7 +153,8 @@ try {
   await page.getByRole('button', { name: 'Save' }).click()
   await page.getByText('All changes saved').waitFor()
   await page.reload()
-  await page.getByRole('list', { name: 'Components' }).waitFor()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   assert.deepEqual(await order(), expected)
   assert.equal(await status(), 'All changes saved')
 

@@ -7,6 +7,7 @@
 // It registers a throwaway account, so point the API at a scratch database.
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
+import { goTo, inspector } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -44,13 +45,15 @@ try {
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill('correct horse battery staple')
   await page.getByRole('button', { name: 'Create account' }).click()
-  await page.getByRole('list', { name: 'Components' }).waitFor()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   assert.equal(await page.locator('.react-grid-item:not(.react-grid-placeholder)').count(), 4, 'the real library renders the four grid widgets')
   assert.equal(await status(), 'All changes saved')
 
   log('mount, panel/tab changes, navigation placement and window resize do not dirty the workspace')
-  await page.getByRole('tab', { name: 'Theme' }).click()
-  await page.getByRole('tab', { name: 'Properties' }).click()
+  await goTo(page, 'Appearance')
+  await goTo(page, 'My workspace')
+  await goTo(page, 'Outline')
   await page.getByLabel('Navigation placement').selectOption('top')
   await page.getByLabel('Navigation placement').selectOption('left')
   await page.setViewportSize({ width: 1180, height: 1800 })
@@ -106,11 +109,13 @@ try {
   assert.equal(blocked.y, moved.y)
 
   log('Save, reload, and the geometry persists')
+  await goTo(page, 'Outline')
   const beforeSave = { tasks: await box('w-tasks'), notes: await box('w-notes'), order: await outlineOrder() }
   await page.getByRole('button', { name: 'Save' }).click()
   await page.getByText('All changes saved').waitFor()
   await page.reload()
-  await page.getByRole('list', { name: 'Components' }).waitFor()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   await page.waitForTimeout(500)
   const afterReload = { tasks: await box('w-tasks'), notes: await box('w-notes'), order: await outlineOrder() }
   assert.deepEqual(afterReload.order, beforeSave.order)

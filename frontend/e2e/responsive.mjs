@@ -4,6 +4,7 @@
 // Run: npm run test:browser      Set E2E_REPORT=1 to print every measurement.
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
+import { goTo, inspector } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -19,11 +20,11 @@ const log = (message) => {
   console.log(`- ${message}`)
 }
 
-const settings = page.getByRole('complementary', { name: 'Settings panel' })
-const components = page.getByRole('complementary', { name: 'Components panel' })
+const settings = inspector(page)
+const components = inspector(page)
 
 async function applyTemplate(name) {
-  await settings.getByRole('tab', { name: 'Templates' }).click()
+  await goTo(page, 'Templates')
   await settings.getByRole('radio', { name: new RegExp(name) }).check()
   await settings.getByRole('button', { name: `Apply ${name}` }).click()
   const confirm = page.getByRole('alertdialog')
@@ -32,7 +33,7 @@ async function applyTemplate(name) {
 }
 
 async function setPlacement(label) {
-  await components.getByRole('tab', { name: 'Outline' }).click()
+  await goTo(page, 'Outline')
   await components.getByLabel('Navigation placement').selectOption({ label })
 }
 
@@ -70,7 +71,8 @@ try {
   await page.getByLabel('Email').fill(`e2e${Date.now()}${Math.floor(Math.random() * 1e6)}@example.com`)
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Create account' }).click()
-  await page.getByRole('list', { name: 'Components' }).waitFor()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
 
   const cases = [
     ['Productivity', 'Top bar'],
@@ -108,22 +110,35 @@ try {
     }
   }
 
-  log('at 1024px the properties of a long workspace stay in reach: the panel column scrolls on its own')
+  log('the rail and the inspector have the specified widths at 1024, 1280 and 1440 px')
+  const widthsAt = async (width) => {
+    await page.setViewportSize({ width, height: 900 })
+    await page.waitForTimeout(1000) // the grid re-measures asynchronously after a resize
+    const rail = await page.locator('aside:has(nav[aria-label="Editor navigation"])').boundingBox()
+    const panel = await inspector(page).boundingBox()
+    return { rail: Math.round(rail.width), inspector: Math.round(panel.width) }
+  }
+  assert.deepEqual(await widthsAt(1024), { rail: 64, inspector: 280 })
+  assert.deepEqual(await widthsAt(1280), { rail: 64, inspector: 304 })
+  assert.deepEqual(await widthsAt(1440), { rail: 192, inspector: 304 })
+
+  log('at 1024px the inspector of a long workspace stays in reach: it scrolls on its own and stays in view')
   await page.setViewportSize({ width: 1024, height: 700 })
-  await page.waitForTimeout(300)
+  await page.waitForTimeout(1000)
   const column = await page.evaluate(() => {
-    const aside = document.querySelector('aside[aria-label="Settings panel"]')
-    const wrapper = aside.parentElement
-    const s = getComputedStyle(wrapper)
-    return { position: s.position, overflowY: s.overflowY, height: Math.round(wrapper.getBoundingClientRect().height) }
+    const aside = document.querySelector('aside[aria-label="Inspector"]')
+    const s = getComputedStyle(aside)
+    return { position: s.position, overflowY: s.overflowY, height: Math.round(aside.getBoundingClientRect().height) }
   })
   assert.equal(column.position, 'sticky')
   assert.equal(column.overflowY, 'auto')
-  assert.ok(column.height <= 700, `the panel column fits the window (${column.height}px)`)
+  assert.ok(column.height <= 700, `the inspector fits the window (${column.height}px)`)
   await page.evaluate(() => window.scrollTo(0, 600))
   await page.waitForTimeout(200)
-  const reachable = await page.evaluate(() => Math.round(document.querySelector('aside[aria-label="Settings panel"]').parentElement.getBoundingClientRect().top))
-  assert.ok(reachable >= 0 && reachable <= 24, `panels stay at the top of the window while the canvas scrolls (${reachable}px)`)
+  const reachable = await page.evaluate(() => Math.round(document.querySelector('aside[aria-label="Inspector"]').getBoundingClientRect().top))
+  assert.ok(reachable >= 0 && reachable <= 24, `the inspector stays at the top of the window while the canvas scrolls (${reachable}px)`)
+  const side = await measure()
+  assert.equal(side.pageOverflow, 0, `no sideways scrolling with the inspector open (${side.pageOverflow}px)`)
 
   console.log('\nOK: real browser responsive layout passes')
 } catch (error) {

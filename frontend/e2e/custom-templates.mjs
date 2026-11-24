@@ -4,6 +4,7 @@
 // Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
+import { goTo, inspector } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -16,8 +17,7 @@ const log = (message) => {
   console.log(`- ${message}`)
 }
 
-const outline = (page) => page.getByRole('list', { name: 'Components' })
-const settings = (page) => page.getByRole('complementary', { name: 'Settings panel' })
+const settings = (p) => inspector(p)
 const sectionTitles = (page) => page.locator('[data-section-id] > div > h2').allInnerTexts()
 const widgetIds = (page) => page.evaluate(() => [...document.querySelectorAll('[data-widget-id]')].map((e) => e.getAttribute('data-widget-id')))
 const api = (page, path) => page.evaluate(async (p) => {
@@ -31,11 +31,11 @@ async function register(page) {
   await page.getByLabel('Email').fill(`e2e${Date.now()}${Math.floor(Math.random() * 1e6)}@example.com`)
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Create account' }).click()
-  await outline(page).waitFor()
+  await inspector(page).waitFor()
 }
 
 async function openTemplates(page) {
-  await settings(page).getByRole('tab', { name: 'Templates' }).click()
+  await goTo(page, 'Templates')
   await settings(page).getByText(/Start from a ready-made design/).waitFor()
 }
 
@@ -62,7 +62,7 @@ try {
 
   log('after a reload the snapshot is listed under Your templates, and the saved workspace is still Productivity')
   await a.reload()
-  await outline(a).waitFor()
+  await inspector(a).waitFor()
   assert.deepEqual(await sectionTitles(a), ['Today', 'Reference'])
   await openTemplates(a)
   await settings(a).getByRole('radio', { name: /Studio copy/ }).waitFor()

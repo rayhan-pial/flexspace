@@ -5,6 +5,7 @@ import App from '../../app/App'
 import { installFetch } from '../../test/fakeApi'
 import { createFakeServer } from '../../test/fakeServer'
 import type { FakeServer } from '../../test/fakeServer'
+import { goTo, inspector } from '../../test/shell'
 import { stubViewport } from '../../test/viewport'
 import { useSessionStore } from '../auth/sessionStore'
 import { selectIsDirty, useEditorStore } from '../editor/editorStore'
@@ -55,8 +56,8 @@ async function open() {
 }
 
 const outline = () => within(screen.getByRole('list', { name: 'Components' }))
-const left = () => within(screen.getByRole('complementary', { name: 'Components panel' }))
-const settings = () => within(screen.getByRole('complementary', { name: 'Settings panel' }))
+const left = inspector
+const settings = inspector
 const dialog = () => within(screen.getByRole('alertdialog'))
 const canvasCard = (id: string) => document.querySelector(`[data-widget-id="${id}"]`) as HTMLElement | null
 const widgetsOf = (sectionId: string) => editor().draftConfig!.sections.find((s) => s.id === sectionId)!.widgets
@@ -64,8 +65,9 @@ const widgetsOf = (sectionId: string) => editor().draftConfig!.sections.find((s)
 describe('component and section lifecycle', () => {
   it('adds every widget type from the Library, selects the new widget and lists it in the outline', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: 'Overview' }))
-    await user.click(left().getByRole('tab', { name: 'Library' }))
+    await goTo(user, 'Components')
     expect(left().getByText('Overview', { selector: 'strong' })).toBeInTheDocument()
     for (const label of ['Welcome', 'Tasks', 'Notes', 'Gallery', 'Analytics', 'Calendar']) {
       await user.click(left().getByRole('button', { name: `Add ${label}` }))
@@ -74,24 +76,28 @@ describe('component and section lifecycle', () => {
     expect(added.map((w) => w.type)).toEqual(['welcome', 'tasks', 'notes', 'gallery', 'analytics', 'calendar'])
     expect(editor().selection).toEqual({ kind: 'widget', id: added[5].id })
     expect(editor().draftConfig!.sections[0].layout).toHaveLength(9)
-    await user.click(left().getByRole('tab', { name: 'Outline' }))
+    await goTo(user, 'Outline')
     expect(outline().getByRole('button', { name: 'Calendar' })).toHaveAttribute('aria-current', 'true')
     expect(selectIsDirty(editor())).toBe(true)
   })
 
   it('shows known widgets whose renderer is not built yet as a card rather than failing', async () => {
     const user = await open()
-    await user.click(left().getByRole('tab', { name: 'Library' }))
+    await goTo(user, 'Components')
     await user.click(left().getByRole('button', { name: 'Add Gallery' }))
     expect(canvasCard(editor().selection!.id)).not.toBeNull()
   })
 
   it('hides and shows a widget from the inspector; it stays in the outline while hidden', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: 'Welcome card' }))
+    await goTo(user, 'My workspace')
     await user.click(settings().getByRole('button', { name: 'Hide widget' }))
     expect(canvasCard('w1')).toBeNull()
+    await goTo(user, 'Outline')
     expect(outline().getByRole('button', { name: /^Welcome card/ })).toHaveTextContent('hidden')
+    await goTo(user, 'My workspace')
     await user.click(settings().getByRole('button', { name: 'Show widget' }))
     expect(canvasCard('w1')).not.toBeNull()
     expect(selectIsDirty(editor())).toBe(false) // back to the saved state
@@ -99,7 +105,9 @@ describe('component and section lifecycle', () => {
 
   it('removes a widget only after confirmation and cleans its geometry', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: 'Welcome card' }))
+    await goTo(user, 'My workspace')
     await user.click(settings().getByRole('button', { name: 'Remove widget' }))
     await user.click(dialog().getByRole('button', { name: 'Keep editing' }))
     expect(widgetsOf('s-main').map((w) => w.id)).toContain('w1')
@@ -113,24 +121,32 @@ describe('component and section lifecycle', () => {
 
   it('adds, renames, hides and removes sections; removing one nulls navigation targets', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(left().getByRole('button', { name: 'Stack' }))
     const added = editor().draftConfig!.sections.at(-1)!
     expect(added).toMatchObject({ kind: 'stack', title: 'New section', widgets: [] })
     expect(editor().selection).toEqual({ kind: 'section', id: added.id })
     expect(screen.getByText(/This section is empty/)).toBeInTheDocument() // useful empty state
 
+    await goTo(user, 'My workspace')
     const title = settings().getByLabelText('Section title')
     await user.clear(title)
     await user.type(title, 'Plans')
+    await goTo(user, 'Outline')
     expect(outline().getByRole('button', { name: 'Plans' })).toBeInTheDocument()
     expect(screen.getByRole('heading', { name: 'Plans', level: 2 })).toBeInTheDocument()
 
+    await goTo(user, 'My workspace')
     await user.click(settings().getByRole('button', { name: 'Hide section' }))
     expect(screen.queryByRole('heading', { name: 'Plans', level: 2 })).not.toBeInTheDocument()
+    await goTo(user, 'Outline')
     expect(outline().getByRole('button', { name: /Plans/ })).toHaveTextContent('hidden')
+    await goTo(user, 'My workspace')
     await user.click(settings().getByRole('button', { name: 'Show section' }))
 
+    await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: 'Overview' }))
+    await goTo(user, 'My workspace')
     await user.click(settings().getByRole('button', { name: 'Remove section' }))
     await user.click(dialog().getByRole('button', { name: 'Remove section' }))
     expect(editor().draftConfig!.sections.map((s) => s.id)).not.toContain('s-main')
@@ -142,22 +158,26 @@ describe('component and section lifecycle', () => {
   it('shows empty-workspace messages when every section is gone', async () => {
     const user = await open()
     for (const name of ['Overview', 'Reference', 'Secret section']) {
+      await goTo(user, 'Outline')
       await user.click(outline().getByRole('button', { name: new RegExp(`^${name}`) }))
+      await goTo(user, 'My workspace')
       await user.click(settings().getByRole('button', { name: 'Remove section' }))
       await user.click(dialog().getByRole('button', { name: 'Remove section' }))
     }
     expect(screen.getByText(/This workspace has no sections yet. Add one/)).toBeInTheDocument()
-    await user.click(left().getByRole('tab', { name: 'Library' }))
+    await goTo(user, 'Components')
     expect(left().getByText(/Add a section in the Outline tab first/)).toBeInTheDocument()
   })
 
   it('Cancel reverses all lifecycle actions and Save persists them', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: 'Overview' }))
-    await user.click(left().getByRole('tab', { name: 'Library' }))
+    await goTo(user, 'Components')
     await user.click(left().getByRole('button', { name: 'Add Tasks' }))
+    await goTo(user, 'My workspace')
     await user.click(settings().getByRole('button', { name: 'Hide widget' }))
-    await user.click(left().getByRole('tab', { name: 'Outline' }))
+    await goTo(user, 'Outline')
     await user.click(left().getByRole('button', { name: 'Dashboard grid' }))
     expect(selectIsDirty(editor())).toBe(true)
 
@@ -168,7 +188,7 @@ describe('component and section lifecycle', () => {
     expect(widgetsOf('s-main')).toHaveLength(3)
 
     await user.click(outline().getByRole('button', { name: 'Overview' }))
-    await user.click(left().getByRole('tab', { name: 'Library' }))
+    await goTo(user, 'Components')
     await user.click(left().getByRole('button', { name: 'Add Tasks' }))
     await user.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(screen.getByText('All changes saved')).toBeInTheDocument())

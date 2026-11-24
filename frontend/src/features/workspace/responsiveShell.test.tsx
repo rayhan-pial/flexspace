@@ -20,21 +20,27 @@ beforeEach(() => {
 })
 
 describe('editor shell layout', () => {
-  it('puts both panels in one column that scrolls on its own below 1280px, and dissolves it above', () => {
+  it('has one inspector column that scrolls on its own beside the canvas', () => {
     render(<EditorShell />)
-    const left = screen.getByRole('complementary', { name: 'Components panel' })
-    const right = screen.getByRole('complementary', { name: 'Settings panel' })
-    expect(left.parentElement).toBe(right.parentElement)
-    const column = left.parentElement as HTMLElement
-    for (const cls of ['lg:sticky', 'lg:overflow-y-auto', 'lg:max-h-[calc(100vh-2rem)]', 'xl:contents']) expect(column.className).toContain(cls)
-    // from xl each panel keeps in view and scrolls by itself
-    for (const panel of [left, right]) for (const cls of ['xl:sticky', 'xl:overflow-y-auto', 'xl:max-h-[calc(100vh-2rem)]', 'min-w-0']) expect(panel.className).toContain(cls)
+    const inspector = screen.getByRole('complementary', { name: 'Inspector' })
+    for (const cls of ['lg:sticky', 'lg:overflow-y-auto', 'lg:max-h-[calc(100vh-2rem)]', 'min-w-0']) expect(inspector.className).toContain(cls)
+    const grid = inspector.parentElement?.parentElement as HTMLElement
+    for (const cls of ['lg:grid-cols-[minmax(0,1fr)_17.5rem]', 'xl:grid-cols-[minmax(0,1fr)_19rem]']) expect(grid.className).toContain(cls)
+    expect(screen.queryByRole('complementary', { name: 'Components panel' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: 'Settings panel' })).not.toBeInTheDocument()
   })
 
-  it('has no panels in Preview', () => {
+  it('has a 64px icon rail that becomes 192px from 1440px', () => {
+    render(<EditorShell />)
+    const rail = screen.getByRole('navigation', { name: 'Editor navigation' }).closest('aside') as HTMLElement
+    for (const cls of ['w-16', 'min-[1440px]:w-48', 'sticky']) expect(rail.className).toContain(cls)
+  })
+
+  it('has no rail or inspector in Preview', () => {
     useEditorStore.getState().setMode('preview')
     render(<EditorShell />)
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
+    expect(screen.queryByRole('navigation', { name: 'Editor navigation' })).not.toBeInTheDocument()
   })
 })
 

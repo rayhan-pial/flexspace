@@ -8,6 +8,7 @@ import type { FakeServer } from '../../test/fakeServer'
 import { stubViewport } from '../../test/viewport'
 import { useSessionStore } from '../auth/sessionStore'
 import { selectIsDirty, useEditorStore } from '../editor/editorStore'
+import { goTo, inspector } from '../../test/shell'
 
 const editor = () => useEditorStore.getState()
 
@@ -41,10 +42,10 @@ async function open() {
   await screen.findByLabelText('Meeting notes text')
   return userEvent.setup()
 }
-const settings = () => within(screen.getByRole('complementary', { name: 'Settings panel' }))
+const settings = inspector
 
 async function openTemplates(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(settings().getByRole('tab', { name: 'Templates' }))
+  await goTo(user, 'Templates')
   await settings().findByText(/Start from a ready-made design/)
 }
 const sectionTitles = () => editor().draftConfig!.sections.map((s) => s.title)
@@ -63,7 +64,7 @@ const saveStatus = () => screen.getByRole('status', { name: 'Save status' })
 describe('listing and previewing', () => {
   it('shows a loading state, then the three ready-made designs with their descriptions', async () => {
     const user = await open()
-    await user.click(settings().getByRole('tab', { name: 'Templates' }))
+    await goTo(user, 'Templates')
     await settings().findByRole('radio', { name: /Productivity/ })
     expect(settings().getAllByRole('radio').map((r) => r.closest('label')!.textContent)).toEqual([
       expect.stringContaining('Productivity'), expect.stringContaining('Analytics'), expect.stringContaining('Creative'),
@@ -254,7 +255,7 @@ describe('guards and failures', () => {
   it('shows an error and a retry when the list cannot be loaded', async () => {
     server.templateHook = () => apiError(500, 'server_error', 'Boom')
     const user = await open()
-    await user.click(settings().getByRole('tab', { name: 'Templates' }))
+    await goTo(user, 'Templates')
     expect(await settings().findByRole('alert')).toHaveTextContent(/the templates couldn't be loaded/)
     server.templateHook = undefined
     await user.click(settings().getByRole('button', { name: 'Try again' }))
@@ -265,7 +266,7 @@ describe('guards and failures', () => {
   it('says so when there are no templates at all', async () => {
     server.templates.length = 0
     const user = await open()
-    await user.click(settings().getByRole('tab', { name: 'Templates' }))
+    await goTo(user, 'Templates')
     expect(await settings().findByText('There are no templates to choose from yet.')).toBeInTheDocument()
     expect(settings().queryByRole('button', { name: 'Restore default' })).not.toBeInTheDocument()
   })
@@ -307,7 +308,8 @@ describe('guards and failures', () => {
   it('an expired session while loading hands over to re-authentication instead of showing a broken panel', async () => {
     server.templateHook = () => apiError(401, 'unauthenticated', 'Sign in')
     const user = await open()
-    await user.click(settings().getByRole('tab', { name: 'Templates' }))
+    // Not goTo(): the inspector it returns is gone once the session hands over to re-authentication.
+    await user.click(within(screen.getByRole('navigation', { name: 'Editor navigation' })).getByRole('button', { name: 'Templates' }))
     await waitFor(() => expect(useSessionStore.getState().status).toBe('reauth'))
   })
 })
@@ -316,7 +318,7 @@ describe('where the panel is available', () => {
   it('belongs to Edit mode: Preview has no templates panel', async () => {
     const user = await open()
     await user.click(screen.getByRole('button', { name: 'Preview' }))
-    expect(screen.queryByRole('tab', { name: 'Templates' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: 'Templates' })).not.toBeInTheDocument()
     expect(screen.queryByRole('radio')).not.toBeInTheDocument()
   })
 })

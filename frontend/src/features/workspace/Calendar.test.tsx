@@ -6,6 +6,7 @@ import type { CalendarEvent } from '../../domain/workspace/types'
 import { installFetch } from '../../test/fakeApi'
 import { createFakeServer } from '../../test/fakeServer'
 import type { FakeServer } from '../../test/fakeServer'
+import { goTo, inspector } from '../../test/shell'
 import { stubViewport } from '../../test/viewport'
 import CalendarWidget from '../../widgets/calendar/CalendarWidget'
 import { useSessionStore } from '../auth/sessionStore'
@@ -61,7 +62,7 @@ async function open() {
   return userEvent.setup()
 }
 
-const settings = () => within(screen.getByRole('complementary', { name: 'Settings panel' }))
+const settings = inspector
 const card = () => within(document.querySelector('[data-widget-id="w-cal"]') as HTMLElement)
 const events = () => editor().draftConfig!.sections[0].widgets[0].props.events as CalendarEvent[]
 const displayMonth = () => editor().draftConfig!.sections[0].widgets[0].props.displayMonth
@@ -69,7 +70,9 @@ const agenda = () => card().getAllByRole('listitem').map((li) => li.textContent)
 const saved = () => waitFor(() => expect(screen.getByText('All changes saved')).toBeInTheDocument())
 
 async function selectCalendar(user: ReturnType<typeof userEvent.setup>) {
+  await goTo(user, 'Outline')
   await user.click(within(screen.getByRole('list', { name: 'Components' })).getByRole('button', { name: 'Schedule' }))
+  await goTo(user, 'My workspace')
 }
 
 async function logOutAndIn(user: ReturnType<typeof userEvent.setup>) {

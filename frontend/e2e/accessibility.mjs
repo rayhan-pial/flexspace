@@ -5,6 +5,7 @@
 // Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
+import { goTo, inspector } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -18,8 +19,7 @@ const log = (message) => {
   console.log(`- ${message}`)
 }
 
-const settings = page.getByRole('complementary', { name: 'Settings panel' })
-const components = page.getByRole('complementary', { name: 'Components panel' })
+const settings = inspector(page)
 const sectionTitles = () => page.locator('[data-section-id] > div > h2').allInnerTexts()
 const spoken = () => page.getByRole('status', { name: 'Sorting status' }).first().innerText()
 
@@ -75,16 +75,16 @@ try {
   await page.getByLabel('Email').fill(`e2e${Date.now()}${Math.floor(Math.random() * 1e6)}@example.com`)
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Create account' }).click()
-  await page.getByRole('list', { name: 'Components' }).waitFor()
+  await inspector(page).waitFor()
 
-  log('every control in the toolbar, outline, library, properties, theme and templates shows visible focus')
+  log('the rail lists the five editor destinations, and every control in the rail, toolbar and each inspector view shows visible focus')
+  const rail = page.getByRole('navigation', { name: 'Editor navigation' })
+  assert.deepEqual(await rail.getByRole('button').evaluateAll((els) => els.map((el) => el.getAttribute('title'))), ['My workspace', 'Outline', 'Components', 'Templates', 'Appearance'])
   let total = 0
-  total += await focusAudit('outline')
-  await components.getByRole('tab', { name: 'Library' }).click()
-  total += await focusAudit('library')
-  for (const tab of ['Theme', 'Templates', 'Properties']) {
-    await settings.getByRole('tab', { name: tab }).click()
-    total += await focusAudit(tab)
+  for (const view of ['My workspace', 'Outline', 'Components', 'Templates', 'Appearance']) {
+    await goTo(page, view)
+    assert.equal(await rail.getByRole('button', { name: view, exact: true }).getAttribute('aria-current'), 'true', `${view} is marked as the current destination`)
+    total += await focusAudit(view)
   }
   await page.getByRole('button', { name: 'Preview', exact: true }).click()
   total += await focusAudit('preview')
@@ -120,17 +120,17 @@ try {
 
   log('the Move buttons announce where the item went')
   await page.locator('[data-widget-id]').nth(1).click({ position: { x: 4, y: 4 } }) // Reference now comes first and holds a single widget
-  await settings.getByRole('tab', { name: 'Properties' }).click()
+  await goTo(page, 'My workspace')
   const down = settings.locator('button:not([disabled])').filter({ hasText: /^Move down/ }).first()
   await down.waitFor()
   await down.click()
   await page.getByRole('status').filter({ hasText: /^Moved to position \d+ of \d+\.$/ }).first().waitFor()
 
-  log('the side panels scroll on their own and stay in view while the page scrolls')
+  log('the inspector scrolls on its own and stays in view while the page scrolls')
   await page.setViewportSize({ width: 1440, height: 500 })
   await page.waitForTimeout(300)
   const panel = await page.evaluate(() => {
-    const aside = document.querySelector('aside[aria-label="Settings panel"]')
+    const aside = document.querySelector('aside[aria-label="Inspector"]')
     const s = getComputedStyle(aside)
     return { position: s.position, overflowY: s.overflowY, maxHeight: aside.getBoundingClientRect().height }
   })
@@ -139,7 +139,7 @@ try {
   assert.ok(panel.maxHeight <= 500, `the panel fits the window (${panel.maxHeight}px)`)
   await page.evaluate(() => window.scrollTo(0, 400))
   await page.waitForTimeout(200)
-  const top = await page.evaluate(() => Math.round(document.querySelector('aside[aria-label="Settings panel"]').getBoundingClientRect().top))
+  const top = await page.evaluate(() => Math.round(document.querySelector('aside[aria-label="Inspector"]').getBoundingClientRect().top))
   assert.ok(top >= 0 && top <= 24, `the panel stays at the top of the window while scrolling (${top}px)`)
   await page.setViewportSize({ width: 1440, height: 1000 })
 

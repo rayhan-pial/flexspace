@@ -3,6 +3,7 @@
 // Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
+import { goTo, inspector } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -58,6 +59,8 @@ try {
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Create account' }).click()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   await outline.waitFor()
   assert.deepEqual(await outlineOrder(), ['Welcome', 'Tasks', 'Notes', 'Calendar'])
   const original = await allBoxes()
@@ -171,6 +174,8 @@ try {
   await page.getByRole('button', { name: 'Save' }).click()
   await page.getByText('All changes saved').waitFor()
   await page.reload()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   await outline.waitFor()
   assert.deepEqual({ boxes: await allBoxes(), outline: await outlineOrder(), sections: await sectionTitles(), tasks: await taskTexts(), dom: await domOrder() }, expected)
   await clean('reloading the saved workspace')

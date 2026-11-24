@@ -2,6 +2,7 @@
 // Same prerequisites as grid-gesture.mjs (API + dev server running, scratch database). Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
+import { goTo, inspector } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -27,7 +28,8 @@ try {
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Create account' }).click()
-  await page.getByRole('list', { name: 'Components' }).waitFor()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   const starter = await taskTexts()
   assert.ok(starter.length >= 2, `starter tasks render (${starter.join(' | ')})`)
   assert.equal(await status(), 'All changes saved')
@@ -42,7 +44,9 @@ try {
   assert.equal(await status(), 'All changes saved')
 
   log('edit the greeting from Properties')
+  await goTo(page, 'Outline')
   await page.getByRole('list', { name: 'Components', exact: true }).getByRole('button', { name: 'Welcome', exact: true }).click()
+  await goTo(page, 'My workspace')
   await page.getByLabel('Greeting').fill('Good morning, <demo>')
   await welcome.getByText('Good morning, <demo>').waitFor()
 
@@ -74,7 +78,8 @@ try {
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
-  await page.getByRole('list', { name: 'Components' }).waitFor()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   assert.deepEqual(await taskTexts(), expected)
   assert.deepEqual(await tasks.getByRole('checkbox').evaluateAll((els) => els.map((e) => e.checked)), doneState)
   await welcome.getByText('Good morning, <demo>').waitFor()

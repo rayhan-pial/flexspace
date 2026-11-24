@@ -4,6 +4,7 @@ import type { Command, WidgetPatch } from '../../domain/workspace/commands'
 import { MAX_LABEL } from '../../domain/workspace/constants'
 import type { Widget } from '../../domain/workspace/types'
 import { CheckboxField, ColorField, IntegerField, NumberField, TextAreaField, TextField } from '../../shared/ui/fields'
+import Group from '../../shared/ui/Group'
 import type { DispatchResult, FieldDescriptor } from '../../widgets/types'
 import { getWidgetDefinition, isKnownWidgetType } from '../workspace/registry'
 import { useEditorStore } from './editorStore'
@@ -51,23 +52,24 @@ export default function WidgetProperties({ widget }: { widget: Widget }) {
   }
 
   return (
-    <div className="mt-4 space-y-4 border-t border-slate-200 pt-3">
-      <TextField label="Title" value={widget.title} maxLength={MAX_LABEL} onChange={(title) => change({ title })} />
+    <>
+      <Group title="Content">
+        <TextField label="Title" value={widget.title} maxLength={MAX_LABEL} onChange={(title) => change({ title })} />
 
-      {props && definition && definition.fields.length > 0 && (
-        <div className="space-y-4">{definition.fields.map(field)}</div>
-      )}
+        {props && definition && definition.fields.length > 0 && (
+          <div className="space-y-4">{definition.fields.map(field)}</div>
+        )}
 
-      {props && Inspector && <Inspector widgetId={widget.id} props={props} dispatch={dispatch} />}
+        {props && Inspector && <Inspector widgetId={widget.id} props={props} dispatch={dispatch} />}
+      </Group>
 
-      <fieldset className="space-y-4">
-        <legend className="text-xs font-medium uppercase tracking-wide text-slate-500">Appearance</legend>
+      <Group title="Appearance">
         <ColorField label="Background" value={background} onChange={(v) => change({ appearance: { background: v } })} onReset={() => change({ appearance: { background: undefined } })} />
         <ColorField label="Text color" value={text} onChange={(v) => change({ appearance: { text: v } })} onReset={() => change({ appearance: { text: undefined } })} />
         <IntegerField label="Font size (px)" value={fontSizePx} min={12} max={24} onChange={(v) => change({ appearance: { fontSizePx: v } })} onReset={() => change({ appearance: { fontSizePx: undefined } })} />
-      </fieldset>
+      </Group>
 
-      {error && <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">{error}</p>}
-    </div>
+      {error && <p role="alert" className="mt-3 rounded-ui-control bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200">{error}</p>}
+    </>
   )
 }

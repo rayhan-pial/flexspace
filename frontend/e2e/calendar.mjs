@@ -2,6 +2,7 @@
 // Not part of `npm test`. Same prerequisites as grid-gesture.mjs. Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
+import { goTo, inspector } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -16,7 +17,7 @@ const log = (message) => {
 }
 
 const outline = page.getByRole('list', { name: 'Components' })
-const settings = page.getByRole('complementary', { name: 'Settings panel' })
+const settings = inspector(page)
 const status = () => page.getByRole('status').first().innerText()
 const calendar = page.locator('[data-widget-id]:has(table)')
 const agenda = async () => (await calendar.getByRole('list').last().getByRole('listitem').allInnerTexts()).map((t) => t.replace(/\s+/g, ' ').trim())
@@ -29,6 +30,8 @@ try {
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Create account' }).click()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   await outline.waitFor()
   // The starter workspace already has a calendar: use it.
   const starterMonth = await calendar.locator('p[aria-live]').innerText()
@@ -53,7 +56,9 @@ try {
   assert.equal(await calendar.locator('p[aria-live]').innerText(), starterMonth)
 
   log('edit the saved display month and an event with the real date input')
+  await goTo(page, 'Outline')
   await outline.getByRole('button', { name: 'Calendar', exact: true }).click()
+  await goTo(page, 'My workspace')
   await settings.getByLabel('Display month').selectOption('9')
   await settings.getByLabel('Display year').fill('2027')
   await calendar.getByText('September 2027').waitFor()
@@ -79,6 +84,8 @@ try {
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   await outline.waitFor()
   await calendar.getByText('September 2027').waitFor()
   assert.deepEqual(await agenda(), savedAgenda)

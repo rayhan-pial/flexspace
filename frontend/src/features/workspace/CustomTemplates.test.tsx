@@ -8,6 +8,7 @@ import type { FakeServer } from '../../test/fakeServer'
 import { stubViewport } from '../../test/viewport'
 import { useSessionStore } from '../auth/sessionStore'
 import { useEditorStore } from '../editor/editorStore'
+import { goTo, inspector } from '../../test/shell'
 
 const editor = () => useEditorStore.getState()
 
@@ -41,10 +42,10 @@ async function open() {
   await screen.findByLabelText('Meeting notes text')
   return userEvent.setup()
 }
-const settings = () => within(screen.getByRole('complementary', { name: 'Settings panel' }))
+const settings = inspector
 
 async function openTemplates(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(settings().getByRole('tab', { name: 'Templates' }))
+  await goTo(user, 'Templates')
   await settings().findByText(/Start from a ready-made design/)
 }
 const sectionTitles = () => editor().draftConfig!.sections.map((s) => s.title)

@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useId, useState } from 'react'
+import { setWorkspaceTitle } from '../../domain/workspace/commands'
 import Button from '../../shared/ui/Button'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import StatusBadge from '../../shared/ui/StatusBadge'
@@ -23,8 +24,18 @@ export default function EditorToolbar() {
   const undo = useEditorStore((s) => s.undo)
   const redo = useEditorStore((s) => s.redo)
   const historyNote = useEditorStore((s) => s.history.note)
+  const title = useEditorStore((s) => s.draftConfig?.title)
+  const revision = useEditorStore((s) => s.revision)
+  const apply = useEditorStore((s) => s.apply)
   const isDesktop = useIsDesktop()
   const mode = useEffectiveMode()
+  const titleId = useId()
+  const [titleError, setTitleError] = useState<string | null>(null)
+
+  function onTitleChange(value: string) {
+    const outcome = apply(setWorkspaceTitle(value))
+    setTitleError(outcome.status === 'rejected' ? outcome.error : null)
+  }
 
   const [confirm, setConfirm] = useState<'cancel' | 'reload' | null>(null)
   const [reloadError, setReloadError] = useState<string | null>(null)
@@ -45,9 +56,29 @@ export default function EditorToolbar() {
   else if (dirty) status = 'Unsaved changes. Open this workspace on a larger screen to save or cancel them.'
 
   return (
-    <div className="border-b border-ui-border bg-ui-surface px-4 py-2 sm:px-6">
-      <div className="mx-auto flex max-w-[1600px] flex-wrap items-center justify-between gap-3">
-        <p role="status" aria-label="Save status" aria-live="polite">
+    <div className="border-b border-ui-border bg-ui-surface px-4 py-3 sm:px-6">
+      <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0">
+          <h1 id="workspace-title" className="truncate text-xl font-semibold tracking-tight text-ui-text">{title || 'Untitled workspace'}</h1>
+          <p className="text-xs text-ui-muted">Saved revision {revision}</p>
+        </div>
+
+        {isDesktop && mode === 'edit' && (
+          <div className="min-w-48 flex-1 sm:max-w-xs">
+            <label htmlFor={titleId} className="block text-xs font-medium text-ui-muted">Workspace title</label>
+            <input
+              id={titleId}
+              type="text"
+              maxLength={120}
+              value={title ?? ''}
+              onChange={(e) => onTitleChange(e.target.value)}
+              aria-invalid={titleError ? true : undefined}
+              className="ui-focus block w-full rounded-ui-control border border-ui-control bg-ui-surface px-3 py-1.5 text-sm text-ui-text focus:border-ui-primary aria-[invalid=true]:border-ui-danger"
+            />
+          </div>
+        )}
+
+        <p role="status" aria-label="Save status" aria-live="polite" className="ml-auto">
           <StatusBadge tone={saving ? 'neutral' : dirty ? 'warning' : 'success'}>{status}</StatusBadge>
         </p>
         <p role="status" aria-label="History status" aria-live="polite" className="sr-only">{historyNote}</p>
@@ -68,15 +99,17 @@ export default function EditorToolbar() {
         </div>
       </div>
 
+      {titleError && <p role="alert" className="mt-2 text-sm font-medium text-ui-danger">{titleError}</p>}
+
       {!isDesktop && (
-        <p role="note" className="mx-auto mt-2 max-w-[1600px] rounded-lg bg-slate-100 px-3 py-2 text-sm text-slate-700">
+        <p role="note" className="mt-2 rounded-ui-control bg-ui-subtle px-3 py-2 text-sm text-ui-text">
           Editing layout and properties needs a screen at least 1024 px wide. You are viewing your workspace in preview, and you can still
           read it and use its notes.
         </p>
       )}
 
       {saveStatus.state === 'error' && !conflict && saveStatus.kind !== 'unauthenticated' && (
-        <div role="alert" className="mx-auto mt-2 flex max-w-[1600px] items-start justify-between gap-3 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">
+        <div role="alert" className="mt-2 flex items-start justify-between gap-3 rounded-ui-control bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200">
           <span>{saveStatus.message}</span>
           <button type="button" onClick={dismissSaveError} className="ui-focus shrink-0 font-medium underline">
             Dismiss
@@ -85,7 +118,7 @@ export default function EditorToolbar() {
       )}
 
       {conflict && (
-        <div role="alert" className="mx-auto mt-2 max-w-[1600px] rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
+        <div role="alert" className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
           <p className="font-medium">{conflict.message}</p>
           <p className="mt-1">
             The saved workspace is now at revision {conflict.currentRevision}. Your changes were not saved and are still here.
@@ -100,7 +133,7 @@ export default function EditorToolbar() {
       )}
 
       {reloadError && (
-        <p role="alert" className="mx-auto mt-2 max-w-[1600px] rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">
+        <p role="alert" className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">
           {reloadError}
         </p>
       )}

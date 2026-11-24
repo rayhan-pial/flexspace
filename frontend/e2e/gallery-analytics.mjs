@@ -2,6 +2,7 @@
 // Same prerequisites as grid-gesture.mjs (API + dev server running, scratch database). Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
+import { goTo, inspector } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -23,8 +24,8 @@ page.on('request', (request) => {
 })
 
 const outline = page.getByRole('list', { name: 'Components' })
-const settings = page.getByRole('complementary', { name: 'Settings panel' })
-const left = page.getByRole('complementary', { name: 'Components panel' })
+const settings = inspector(page)
+const left = inspector(page)
 const status = () => page.getByRole('status').first().innerText()
 const gallery = page.locator('[data-widget-id]:has(ul[aria-label$="images"])')
 const analytics = page.locator('[data-widget-id]:has(ul[aria-label$="metrics"])')
@@ -37,19 +38,27 @@ try {
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Create account' }).click()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   await outline.waitFor()
+  await goTo(page, 'Outline')
   await outline.getByRole('button', { name: 'Today', exact: true }).click()
-  await left.getByRole('tab', { name: 'Library' }).click()
+  await goTo(page, 'Components')
   await left.getByRole('button', { name: 'Add Gallery' }).click()
+  await goTo(page, 'My workspace')
   await settings.getByRole('button', { name: 'Add image' }).click()
   await settings.getByRole('button', { name: 'Add image' }).click()
+  await goTo(page, 'Components')
   await left.getByRole('button', { name: 'Add Analytics' }).click()
+  await goTo(page, 'My workspace')
   await settings.getByRole('button', { name: 'Add metric' }).click()
   await settings.getByRole('button', { name: 'Add metric' }).click()
 
   log('edit images')
-  await left.getByRole('tab', { name: 'Outline' }).click()
+  await goTo(page, 'Outline')
+  await goTo(page, 'Outline')
   await outline.getByRole('button', { name: 'Gallery', exact: true }).click()
+  await goTo(page, 'My workspace')
   await settings.getByLabel('Picture for image 1').selectOption('mountain')
   await settings.getByLabel('Alt text for image 1').fill('Snowy peak at sunrise')
   await settings.getByLabel('Alt text for image 1').press('Enter')
@@ -67,7 +76,9 @@ try {
   assert.deepEqual(external, [])
 
   log('edit metrics')
+  await goTo(page, 'Outline')
   await outline.getByRole('button', { name: 'Analytics', exact: true }).click()
+  await goTo(page, 'My workspace')
   await settings.getByLabel('Label for metric 1').fill('Visits')
   await settings.getByLabel('Label for metric 1').press('Enter')
   await settings.getByLabel('Value for metric 1').fill('1200.5')
@@ -97,6 +108,8 @@ try {
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Sign in' }).click()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   await outline.waitFor()
   await gallery.getByAltText('Snowy peak at sunrise').waitFor()
   await gallery.getByAltText('City at dusk').waitFor()

@@ -6,7 +6,7 @@ React + TypeScript + Vite frontend and FastAPI + SQLAlchemy + SQLite backend. Si
 
 ## What you can do
 
-- **Edit and Preview.** Edit (desktop, 1024 px or wider) shows the component outline, library, properties, theme and templates panels. Preview shows the workspace as you would use it. Narrower windows show a read-only preview.
+- **Edit and Preview.** Edit (desktop, 1024 px or wider) shows an application rail (My workspace, Outline, Components, Templates, Appearance), the canvas, and one inspector that shows the view you pick. Preview shows the workspace as you would use it. Narrower windows show a read-only preview.
 - **Build.** Add any of six widgets (Welcome, Tasks, Notes, Gallery, Analytics, Calendar), hide, show or remove them, add sections, and choose top, left or right navigation. Unknown widget types from other versions are kept safely.
 - **Arrange.** Drag and resize dashboard widgets; reorder navigation, sections, stack cards, tasks, images, metrics and agenda entries by dragging, with the keyboard (Space and arrows) or with Move buttons; move compatible items between containers. Spoken status messages announce each move.
 - **Style.** Theme colors, font and size, per-widget colors, titles and content.

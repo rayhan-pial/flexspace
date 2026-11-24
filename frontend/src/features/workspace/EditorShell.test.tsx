@@ -6,6 +6,7 @@ import { removeWidget, setWidgetHidden } from '../../domain/workspace/lifecycle'
 import { installFetch } from '../../test/fakeApi'
 import { createFakeServer } from '../../test/fakeServer'
 import type { FakeServer } from '../../test/fakeServer'
+import { goTo, inspector, inspectorPanel } from '../../test/shell'
 import { stubViewport } from '../../test/viewport'
 import { useSessionStore } from '../auth/sessionStore'
 import { selectIsDirty, useEditorStore } from '../editor/editorStore'
@@ -55,16 +56,19 @@ async function open() {
   return userEvent.setup()
 }
 
+// The outline list exists only while the rail's Outline view is open (goTo(user, 'Outline')).
 const outline = () => within(screen.getByRole('list', { name: 'Components' }))
 const canvasCard = (id: string) => document.querySelector(`[data-widget-id="${id}"]`) as HTMLElement | null
-const settings = () => within(screen.getByRole('complementary', { name: 'Settings panel' }))
-const hasPanels = () => !!screen.queryByRole('complementary', { name: 'Components panel' }) || !!screen.queryByRole('complementary', { name: 'Settings panel' })
+const hasPanels = () => !!screen.queryByRole('complementary', { name: 'Inspector' }) || !!screen.queryByRole('navigation', { name: 'Editor navigation' })
+const viewTitle = () => inspector().getByRole('heading', { level: 2 })
 
 describe('Edit mode on desktop', () => {
-  it('shows the toolbar, both builder panels and the canvas', async () => {
+  it('shows the toolbar, the application rail, one inspector and the canvas', async () => {
     await open()
-    expect(screen.getByRole('complementary', { name: 'Components panel' })).toBeInTheDocument()
-    expect(screen.getByRole('complementary', { name: 'Settings panel' })).toBeInTheDocument()
+    expect(screen.getByRole('navigation', { name: 'Editor navigation' })).toBeInTheDocument()
+    expect(inspectorPanel()).toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: 'Components panel' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('complementary', { name: 'Settings panel' })).not.toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Preview' })).toBeEnabled()
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled()
     expect(screen.getByRole('button', { name: 'Cancel' })).toBeDisabled()
@@ -72,25 +76,71 @@ describe('Edit mode on desktop', () => {
     expect(screen.queryByRole('button', { name: 'Edit workspace' })).not.toBeInTheDocument()
   })
 
-  it('offers the panel slots as tabs', async () => {
+  it('offers the builder views as rail destinations', async () => {
     const user = await open()
-    const left = within(screen.getByRole('complementary', { name: 'Components panel' }))
-    expect(left.getByRole('tab', { name: 'Outline' })).toHaveAttribute('aria-selected', 'true')
-    await user.click(left.getByRole('tab', { name: 'Library' }))
-    expect(left.getByRole('list', { name: 'Component library' })).toBeInTheDocument()
-    expect(settings().getByRole('tab', { name: 'Properties' })).toHaveAttribute('aria-selected', 'true')
-    await user.click(settings().getByRole('tab', { name: 'Theme' }))
-    expect(settings().getByLabelText('Primary color')).toBeInTheDocument()
-    await user.click(settings().getByRole('tab', { name: 'Templates' }))
-    expect(await settings().findByText(/Start from a ready-made design/)).toBeInTheDocument()
+    expect(viewTitle()).toHaveTextContent('Properties')
+    expect((await goTo(user, 'Components')).getByRole('list', { name: 'Component library' })).toBeInTheDocument()
+    expect((await goTo(user, 'Outline')).getByRole('list', { name: 'Components' })).toBeInTheDocument()
+    expect((await goTo(user, 'Appearance')).getByLabelText('Primary color')).toBeInTheDocument()
+    expect(await (await goTo(user, 'Templates')).findByText(/Start from a ready-made design/)).toBeInTheDocument()
+    await goTo(user, 'My workspace')
+    expect(viewTitle()).toHaveTextContent('Properties')
+  })
+
+  it('lists the five destinations in order and marks the current one', async () => {
+    const user = await open()
+    const rail = within(screen.getByRole('navigation', { name: 'Editor navigation' }))
+    const names = ['My workspace', 'Outline', 'Components', 'Templates', 'Appearance']
+    expect(rail.getAllByRole('button').map((b) => b.getAttribute('title'))).toEqual(names)
+    expect(rail.getByRole('button', { name: 'My workspace' })).toHaveAttribute('aria-current', 'true')
+    for (const name of names.slice(1)) expect(rail.getByRole('button', { name })).not.toHaveAttribute('aria-current')
+    await goTo(user, 'Templates')
+    expect(rail.getByRole('button', { name: 'Templates' })).toHaveAttribute('aria-current', 'true')
+    expect(rail.getByRole('button', { name: 'My workspace' })).not.toHaveAttribute('aria-current')
+  })
+
+  it('switching rail views changes nothing in the draft, history or server', async () => {
+    const user = await open()
+    const draft = editor().draftConfig
+    const saved = editor().savedConfig
+    const history = editor().history
+    for (const view of ['Outline', 'Components', 'Templates', 'Appearance', 'My workspace'] as const) await goTo(user, view)
+    expect(editor().draftConfig).toBe(draft)
+    expect(editor().savedConfig).toBe(saved)
+    expect(editor().history).toBe(history)
+    expect(selectIsDirty(editor())).toBe(false)
+    expect(server.puts).toHaveLength(0)
+    expect(screen.getByRole('status', { name: 'Save status' })).toHaveTextContent('All changes saved')
+  })
+
+  it('has a skip link to the canvas', async () => {
+    await open()
+    expect(screen.getByRole('link', { name: 'Skip to workspace' })).toHaveAttribute('href', '#workspace-canvas')
+    expect(document.getElementById('workspace-canvas')).toBeInTheDocument()
+  })
+})
+
+describe('toolbar heading and title', () => {
+  it('holds the one page heading, the revision and a labelled title field', async () => {
+    const user = await open()
+    const headings = screen.getAllByRole('heading', { level: 1 })
+    expect(headings).toHaveLength(1)
+    expect(headings[0]).toHaveTextContent('Ada workspace')
+    expect(screen.getByText('Saved revision 1')).toBeInTheDocument()
+    await user.type(screen.getByLabelText('Workspace title'), '!')
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('Ada workspace!')
+    expect(editor().draftConfig!.title).toBe('Ada workspace!')
+    expect(selectIsDirty(editor())).toBe(true)
   })
 })
 
 describe('Preview mode', () => {
-  it('hides builder panels, handles, title field and Save/Cancel, and keeps an Edit workspace entry point', async () => {
+  it('hides the rail, inspector, handles, title field and Save/Cancel, and keeps an Edit workspace entry point', async () => {
     const user = await open()
     await user.click(screen.getByRole('button', { name: 'Preview' }))
     expect(hasPanels()).toBe(false)
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
+    expect(screen.getByRole('link', { name: 'Skip to workspace' })).toHaveAttribute('href', '#workspace-canvas')
     expect(screen.queryByLabelText('Workspace title')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Cancel' })).not.toBeInTheDocument()
@@ -136,7 +186,8 @@ describe('Preview mode', () => {
 
 describe('component outline', () => {
   it('lists every section and widget, including hidden ones and unsupported types', async () => {
-    await open()
+    const user = await open()
+    await goTo(user, 'Outline')
     const list = outline()
     for (const name of ['Overview', 'Reference', 'Secret section', 'Meeting notes', 'Welcome card', 'Hidden note', 'Unsupported: kanban']) {
       expect(list.getByRole('button', { name: new RegExp(`^${name}`) })).toBeInTheDocument()
@@ -149,74 +200,123 @@ describe('component outline', () => {
   })
 })
 
+describe('inspector views and selection', () => {
+  it('unselected Properties shows the empty state and an Open outline button', async () => {
+    const user = await open()
+    expect(inspector().getByText(/Select a component on the canvas or in the outline/)).toBeInTheDocument()
+    await user.click(inspector().getByRole('button', { name: 'Open outline' }))
+    expect(viewTitle()).toHaveTextContent('Outline')
+    expect(outline().getByRole('button', { name: 'Meeting notes' })).toBeInTheDocument()
+  })
+
+  it('a canvas click from the Outline view opens Properties, an outline selection does not', async () => {
+    const user = await open()
+    await goTo(user, 'Outline')
+    await user.click(outline().getByRole('button', { name: 'Welcome card' }))
+    expect(editor().selection).toEqual({ kind: 'widget', id: 'w1' })
+    expect(viewTitle()).toHaveTextContent('Outline')
+    await user.click(screen.getByRole('heading', { name: 'Meeting notes', level: 3 }))
+    expect(editor().selection).toEqual({ kind: 'widget', id: 'n1' })
+    expect(viewTitle()).toHaveTextContent('Properties')
+    expect(inspector().getByRole('heading', { name: 'Meeting notes' })).toBeInTheDocument()
+  })
+
+  it('selected widget Properties are grouped, and a grid widget reports its layout', async () => {
+    const user = await open()
+    await user.click(screen.getByRole('heading', { name: 'Meeting notes', level: 3 }))
+    for (const name of ['Content', 'Appearance', 'Layout', 'Visibility', 'Actions']) {
+      expect(inspector().getByRole('region', { name })).toBeInTheDocument()
+    }
+    expect(within(inspector().getByRole('region', { name: 'Layout' })).getByText(/Column 1, row 1, 6 columns wide, 4 rows tall/)).toBeInTheDocument()
+    expect(within(inspector().getByRole('region', { name: 'Content' })).getByLabelText('Title')).toHaveValue('Meeting notes')
+    expect(within(inspector().getByRole('region', { name: 'Actions' })).getByRole('button', { name: 'Remove widget' })).toBeInTheDocument()
+    expect(within(inspector().getByRole('region', { name: 'Visibility' })).getByRole('button', { name: 'Hide widget' })).toBeInTheDocument()
+  })
+})
+
 describe('selection synchronization', () => {
   it('selecting in the outline selects on the canvas and fills the inspector', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: 'Meeting notes' }))
     expect(editor().selection).toEqual({ kind: 'widget', id: 'n1' })
     expect(canvasCard('n1')).toHaveAttribute('data-selected', 'true')
     expect(outline().getByRole('button', { name: 'Meeting notes' })).toHaveAttribute('aria-current', 'true')
-    expect(settings().getByRole('heading', { name: 'Meeting notes' })).toBeInTheDocument()
-    expect(settings().getByText('Notes')).toBeInTheDocument()
-    expect(settings().getByText('Visible')).toBeInTheDocument()
+    await goTo(user, 'My workspace')
+    expect(inspector().getByRole('heading', { name: 'Meeting notes' })).toBeInTheDocument()
+    expect(inspector().getByText('Notes')).toBeInTheDocument()
+    expect(inspector().getByText('Visible')).toBeInTheDocument()
   })
 
   it('selecting on the canvas highlights the outline and updates the inspector', async () => {
     const user = await open()
     await user.click(screen.getByRole('heading', { name: 'Welcome card', level: 3 }))
-    expect(outline().getByRole('button', { name: 'Welcome card' })).toHaveAttribute('aria-current', 'true')
-    expect(outline().getByRole('button', { name: 'Meeting notes' })).not.toHaveAttribute('aria-current')
-    expect(settings().getByRole('heading', { name: 'Welcome card' })).toBeInTheDocument()
+    expect(inspector().getByRole('heading', { name: 'Welcome card' })).toBeInTheDocument()
     await user.click(screen.getByRole('heading', { name: 'Meeting notes', level: 3 }))
-    expect(settings().getByRole('heading', { name: 'Meeting notes' })).toBeInTheDocument()
+    expect(inspector().getByRole('heading', { name: 'Meeting notes' })).toBeInTheDocument()
     expect(canvasCard('w1')).not.toHaveAttribute('data-selected')
+    await goTo(user, 'Outline')
+    expect(outline().getByRole('button', { name: 'Meeting notes' })).toHaveAttribute('aria-current', 'true')
+    expect(outline().getByRole('button', { name: 'Welcome card' })).not.toHaveAttribute('aria-current')
   })
 
   it('selecting a section shows its details', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: 'Overview' }))
     expect(editor().selection).toEqual({ kind: 'section', id: 's-main' })
-    expect(settings().getByText('Dashboard grid')).toBeInTheDocument()
-    expect(settings().getByText('3')).toBeInTheDocument()
+    await goTo(user, 'My workspace')
+    expect(inspector().getByText('Dashboard grid')).toBeInTheDocument()
+    expect(inspector().getByText('3')).toBeInTheDocument()
   })
 
   it('an unsupported widget can be selected and says so', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: 'Unsupported: kanban' }))
-    expect(settings().getByText('Unsupported (kanban)')).toBeInTheDocument()
+    await goTo(user, 'My workspace')
+    expect(inspector().getByText('Unsupported (kanban)')).toBeInTheDocument()
   })
 
   it('with nothing selected the inspector asks for a selection', async () => {
     await open()
-    expect(settings().getByText(/Select a component on the canvas or in the outline/)).toBeInTheDocument()
+    expect(inspector().getByText(/Select a component on the canvas or in the outline/)).toBeInTheDocument()
   })
 
   it('a hidden widget selected from the outline keeps a valid inspector but has no canvas card', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: /Hidden note/ }))
-    expect(settings().getByRole('heading', { name: 'Hidden note' })).toBeInTheDocument()
-    expect(settings().getByText('Hidden')).toBeInTheDocument()
+    await goTo(user, 'My workspace')
+    expect(inspector().getByRole('heading', { name: 'Hidden note' })).toBeInTheDocument()
+    expect(inspector().getByText('Hidden')).toBeInTheDocument()
     expect(canvasCard('n-hidden')).toBeNull()
   })
 
   it('hiding the selected widget keeps it selected; the inspector reports it hidden', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: 'Welcome card' }))
+    await goTo(user, 'My workspace')
     act(() => { editor().apply(setWidgetHidden('w1', true)) })
     expect(canvasCard('w1')).toBeNull()
-    expect(settings().getByRole('heading', { name: 'Welcome card' })).toBeInTheDocument()
-    expect(settings().getByText('Hidden')).toBeInTheDocument()
+    expect(inspector().getByRole('heading', { name: 'Welcome card' })).toBeInTheDocument()
+    expect(inspector().getByText('Hidden')).toBeInTheDocument()
+    await goTo(user, 'Outline')
     expect(outline().getByRole('button', { name: /^Welcome card/ })).toHaveAttribute('aria-current', 'true')
   })
 
   it('removing the selected widget clears the selection, inspector and outline entry', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: 'Welcome card' }))
-    expect(settings().getByRole('heading', { name: 'Welcome card' })).toBeInTheDocument()
+    await goTo(user, 'My workspace')
+    expect(inspector().getByRole('heading', { name: 'Welcome card' })).toBeInTheDocument()
     act(() => { editor().apply(removeWidget('w1')) })
     expect(editor().selection).toBeNull()
-    expect(settings().queryByRole('heading', { name: 'Welcome card' })).not.toBeInTheDocument()
-    expect(settings().getByText(/Select a component/)).toBeInTheDocument()
+    expect(inspector().queryByRole('heading', { name: 'Welcome card' })).not.toBeInTheDocument()
+    expect(inspector().getByText(/Select a component/)).toBeInTheDocument()
+    await goTo(user, 'Outline')
     expect(outline().queryByRole('button', { name: /^Welcome card/ })).not.toBeInTheDocument()
     expect(canvasCard('w1')).toBeNull()
   })
@@ -228,11 +328,12 @@ describe('selection synchronization', () => {
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
     await user.click(screen.getByRole('button', { name: 'Discard changes' }))
     expect(editor().selection).toBeNull()
-    expect(settings().getByText(/Select a component/)).toBeInTheDocument()
+    expect(inspector().getByText(/Select a component/)).toBeInTheDocument()
   })
 
   it('the selection ring disappears in Preview and is back after returning to Edit', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: 'Meeting notes' }))
     expect(canvasCard('n1')).toHaveAttribute('data-selected', 'true')
     await user.click(screen.getByRole('button', { name: 'Preview' }))
@@ -249,6 +350,7 @@ describe('below desktop width', () => {
     await open()
     expect(screen.getByRole('note')).toHaveTextContent('Editing layout and properties needs a screen at least 1024 px wide')
     expect(hasPanels()).toBe(false)
+    expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Edit workspace' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Preview' })).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument()
@@ -275,7 +377,7 @@ describe('below desktop width', () => {
     await user.type(screen.getByLabelText('Meeting notes text'), '!')
     expect(editor().mode).toBe('edit')
     act(() => viewport.set(true))
-    expect(await screen.findByRole('complementary', { name: 'Components panel' })).toBeInTheDocument()
+    expect(await screen.findByRole('complementary', { name: 'Inspector' })).toBeInTheDocument()
     expect(screen.getByLabelText('Meeting notes text')).toHaveValue('Original note!')
     expect(screen.getByRole('button', { name: 'Save' })).toBeEnabled()
   })
@@ -291,7 +393,7 @@ describe('below desktop width', () => {
     expect(hasPanels()).toBe(false)
   })
 
-  it('narrowing the window while editing hides the panels without losing anything', async () => {
+  it('narrowing the window while editing hides the rail and inspector without losing anything', async () => {
     viewport.set(true)
     const user = await open()
     await user.type(screen.getByLabelText('Meeting notes text'), '!')
@@ -307,6 +409,7 @@ describe('browser storage', () => {
   it('mode changes, selection and resizing never touch web storage', async () => {
     const setItem = vi.spyOn(Storage.prototype, 'setItem')
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: 'Meeting notes' }))
     await user.click(screen.getByRole('button', { name: 'Preview' }))
     act(() => viewport.set(false))

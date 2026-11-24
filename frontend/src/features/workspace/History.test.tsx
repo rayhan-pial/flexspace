@@ -1,4 +1,4 @@
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { setTheme } from '../../domain/workspace/commands'
@@ -9,6 +9,7 @@ import type { FakeServer } from '../../test/fakeServer'
 import { stubViewport } from '../../test/viewport'
 import { useSessionStore } from '../auth/sessionStore'
 import { selectIsDirty, useEditorStore } from '../editor/editorStore'
+import { goTo, inspector } from '../../test/shell'
 
 const editor = () => useEditorStore.getState()
 
@@ -42,10 +43,10 @@ async function open() {
   await screen.findByLabelText('Meeting notes text')
   return userEvent.setup()
 }
-const settings = () => within(screen.getByRole('complementary', { name: 'Settings panel' }))
+const settings = inspector
 
 async function openTemplates(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(settings().getByRole('tab', { name: 'Templates' }))
+  await goTo(user, 'Templates')
   await settings().findByText(/Start from a ready-made design/)
 }
 const sectionTitles = () => editor().draftConfig!.sections.map((s) => s.title)
@@ -143,7 +144,7 @@ describe('Undo and Redo buttons', () => {
 describe('colour picking', () => {
   it('one drag of the colour picker is one step, however many colours it passes through', async () => {
     const user = await open()
-    await user.click(settings().getByRole('tab', { name: 'Theme' }))
+    await goTo(user, 'Appearance')
     await user.click(settings().getAllByRole('button', { name: /^Pick/ })[0])
     const picker = document.querySelector('.react-colorful') as HTMLElement
     expect(picker).not.toBeNull()

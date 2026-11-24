@@ -6,6 +6,7 @@ import type { TaskItem } from '../../domain/workspace/types'
 import { installFetch } from '../../test/fakeApi'
 import { createFakeServer } from '../../test/fakeServer'
 import type { FakeServer } from '../../test/fakeServer'
+import { goTo, inspector } from '../../test/shell'
 import { stubViewport } from '../../test/viewport'
 import { useSessionStore } from '../auth/sessionStore'
 import { selectIsDirty, useEditorStore } from '../editor/editorStore'
@@ -76,8 +77,10 @@ describe('Welcome widget', () => {
 
   it('is edited from Properties, live, and persists after Save and login', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(screen.getByRole('button', { name: 'Welcome' }))
-    const settings = within(screen.getByRole('complementary', { name: 'Settings panel' }))
+    await goTo(user, 'My workspace')
+    const settings = inspector()
     await user.clear(settings.getByLabelText('Greeting'))
     await user.type(settings.getByLabelText('Greeting'), 'Good morning <b>Ada</b>')
     await user.clear(settings.getByLabelText('Subtitle'))
@@ -95,8 +98,10 @@ describe('Welcome widget', () => {
 
   it('shows a hint instead of an empty box when nothing is set', async () => {
     const user = await open()
+    await goTo(user, 'Outline')
     await user.click(screen.getByRole('button', { name: 'Welcome' }))
-    const settings = within(screen.getByRole('complementary', { name: 'Settings panel' }))
+    await goTo(user, 'My workspace')
+    const settings = inspector()
     await user.clear(settings.getByLabelText('Greeting'))
     await user.clear(settings.getByLabelText('Subtitle'))
     expect(screen.getByText(/add a greeting in Properties/)).toBeInTheDocument()

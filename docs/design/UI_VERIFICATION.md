@@ -105,3 +105,43 @@ text on bg 17.06, text on surface 17.85, muted on surface 4.76, muted on bg 4.55
 - Screen reader behaviour of the dialog (automated and keyboard checks only).
 - Presentation-only actions were not compared by diffing serialized JSON; "not dirty" is covered by the existing `grid-gesture.mjs` assertions and by Escape leaving the draft state unchanged.
 - Only the toolbar, header, confirmation dialog, tabs and field styles changed visibly; the panels, library, templates and auth screens are unchanged by design until their own tasks.
+
+## Phase 2 — Editor shell, toolbar, inspector (UI-005 to UI-007, 2026-11-25)
+
+### Results
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck` / `npm run lint` | clean (two unused-variable warnings in `e2e/` were removed) |
+| `npm test` | 773 passed in 54 files (765 before; 86 tests were migrated from tab navigation to the rail, 8 new) |
+| `npm run build` | built; CSS 36.04 to 38.19 kB, JS 568.00 to 572.35 kB; same chunk-size advisory |
+| `npm run test:browser` | 15 of 15 scripts OK, run by me after the migration |
+| Backend | not run: no backend change |
+
+### Test migration
+
+The two tabbed panels no longer exist, so tests and browser scripts now reach views through the rail (`src/test/shell.ts`, `e2e/shell.mjs`): Properties is My workspace, Theme is Appearance, Library is Components. Assertions were kept; only how a view is reached changed. New tests cover the rail and `aria-current`, absence of rail and inspector in Preview and below 1024 px, the skip link, view changes leaving draft, history and server untouched, canvas vs outline selection, the toolbar heading and title field, the empty state, and the property groups. Three of them were mutation-checked (wrong view for "Open outline", canvas-selection check removed, a group renamed); each failed the matching test and the source was restored. `responsive.mjs` now asserts rail widths 64/64/192 px and inspector widths 280/304/304 px at 1024/1280/1440, and `accessibility.mjs` audits all five rail destinations (265 control checks).
+
+### Browser checks performed (Playwright MCP, Edge, scratch DB, account phase2-a)
+
+- 1440 px: rail 192 px with labels, inspector 304 px, no horizontal overflow. 1280 px: rail 64 px. 1024 px: rail 64 px, inspector 280 px, widgets end at 665 px while the inspector starts at 705 px.
+- Clicking a widget title on the canvas opened Properties (Content, Appearance, Layout, Visibility, Actions). In Outline view, selecting Tasks selected its card and kept the Outline view; clicking a canvas widget afterwards switched to Properties.
+- Preview: no rail, inspector or handles; account header plus a strip with the heading, status and Edit workspace. 390 px: account header, heading, status, the desktop-only note and the stacked canvas.
+- Rename to "Phase 2 workspace", Save, reload: heading, "Saved revision 2" and "All changes saved" persisted.
+- Console errors after login: none.
+
+### Observation worth knowing
+
+Right after a viewport resize the grid still shows its previous width for a moment, because React Grid Layout re-measures asynchronously. A screenshot taken immediately showed widgets sliding under the inspector at 1024 px; after about a second they fit (checked by measurement). A fresh load at 1024 px was correct. This is the same measurement behaviour as before the redesign, so scripts wait about a second after resizing.
+
+### Screenshots (`artifacts/ui-review/after/`)
+
+`p2-01-edit-1440.png`, `p2-02-properties-welcome-1440.png`, `p2-03-outline-view-1440.png`, `p2-04-edit-1280.png`, `p2-05-edit-1024.png`, `p2-05b-edit-1024-fresh.png`, `p2-06-preview-1440.png`, `p2-07-templates-view-1440.png`, `p2-08-mobile-390.png`.
+
+### Not verified or not built in this phase
+
+- The inspector cannot be closed to widen the canvas at 1024 to 1279 px (spec allows it; not built).
+- Logout-discard confirmation was not re-exercised in the browser (unit tests only).
+- Saving, error and conflict banners were restyled but not screenshotted.
+- Dragging in the browser was verified only through the existing scripts (grid move and resize, all sorting families, outline), not by hand through the MCP browser.
+- README line on Edit mode was updated; `docs/handoff.md` still describes the old panels and is left as a dated record.

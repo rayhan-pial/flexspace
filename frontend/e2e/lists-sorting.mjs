@@ -2,6 +2,7 @@
 // Not part of `npm test`. Same prerequisites as grid-gesture.mjs. Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
+import { goTo, inspector } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -16,8 +17,8 @@ const log = (message) => {
 }
 
 const outline = page.getByRole('list', { name: 'Components' })
-const left = page.getByRole('complementary', { name: 'Components panel' })
-const settings = page.getByRole('complementary', { name: 'Settings panel' })
+const left = inspector(page)
+const settings = inspector(page)
 const status = () => page.getByRole('status', { name: 'Save status' }).innerText()
 const widgetCard = (title) => page.locator('[data-widget-id]').filter({ has: page.getByRole('heading', { level: 3, name: title, exact: true }) })
 const taskTexts = async (title) => widgetCard(title).locator('input[aria-label^="Task text: "]').evaluateAll((els) => els.map((e) => e.value))
@@ -43,11 +44,12 @@ async function drag(from, to, { release = true, steps = 25 } = {}) {
 }
 
 async function addWidget(label, title) {
+  await goTo(page, 'Outline')
   await outline.getByRole('button', { name: 'Today', exact: true }).click()
-  await left.getByRole('tab', { name: 'Library' }).click()
+  await goTo(page, 'Components')
   await left.getByRole('button', { name: `Add ${label}` }).click()
+  await goTo(page, 'My workspace')
   await settings.getByLabel('Title').fill(title)
-  await left.getByRole('tab', { name: 'Outline' }).click()
 }
 
 try {
@@ -58,6 +60,8 @@ try {
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Create account' }).click()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   await outline.waitFor()
   const starter = await taskTexts('Tasks')
   assert.equal(starter.length, 3, `starter tasks (${starter.join(' | ')})`)
@@ -139,7 +143,9 @@ try {
   assert.deepEqual({ photos: await imageCaptions('Photos'), later: await taskTexts('Later') }, beforeTile)
 
   log('the Move buttons do the same through the same command')
+  await goTo(page, 'Outline')
   await outline.getByRole('button', { name: 'Tasks', exact: true }).click()
+  await goTo(page, 'My workspace')
   const toMove = (await taskTexts('Tasks'))[0]
   await settings.getByLabel('Task to move').selectOption({ index: 0 })
   await settings.getByRole('button', { name: 'Move to Later task' }).click()
@@ -152,6 +158,8 @@ try {
   await page.getByRole('button', { name: 'Save' }).click()
   await page.getByText('All changes saved').waitFor()
   await page.reload()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   await outline.waitFor()
   assert.deepEqual({ tasks: await taskTexts('Tasks'), later: await taskTexts('Later'), photos: await imageCaptions('Photos'), more: await imageCaptions('More photos') }, expected)
   assert.deepEqual(await page.locator('[data-widget-id] input[type="checkbox"]').evaluateAll((els) => els.map((e) => e.checked)), doneBefore)

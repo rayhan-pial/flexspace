@@ -6,6 +6,7 @@ import assert from 'node:assert/strict'
 import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { chromium } from 'playwright-core'
+import { goTo, inspector } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -22,7 +23,7 @@ const log = (message) => {
 }
 
 const outline = page.getByRole('list', { name: 'Components' })
-const settings = page.getByRole('complementary', { name: 'Settings panel' })
+const settings = inspector(page)
 const status = () => page.getByRole('status', { name: 'Save status' }).innerText()
 const sectionTitles = () => page.locator('[data-section-id] > div > h2').allInnerTexts()
 const ids = () => page.evaluate(() => ({
@@ -31,7 +32,7 @@ const ids = () => page.evaluate(() => ({
 }))
 
 async function openTemplates() {
-  await settings.getByRole('tab', { name: 'Templates' }).click()
+  await goTo(page, 'Templates')
   await settings.getByText(/Start from a ready-made design/).waitFor()
 }
 
@@ -78,6 +79,8 @@ try {
   await page.getByLabel('Email').fill(email)
   await page.getByLabel('Password').fill(PASSWORD)
   await page.getByRole('button', { name: 'Create account' }).click()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   await outline.waitFor()
   assert.deepEqual(await sectionTitles(), ['Today', 'Reference'])
   const starterIds = await ids()
@@ -149,12 +152,15 @@ try {
 
   log('Analytics has the containers for card and task moves: the Move buttons transfer a card and a task')
   await apply('Analytics')
+  await goTo(page, 'Outline')
   await outline.getByRole('button', { name: 'Findings', exact: true }).click()
-  await settings.getByRole('tab', { name: 'Properties' }).click()
+  await goTo(page, 'My workspace')
   await settings.getByRole('button', { name: 'Move to Notes' }).click()
   const notesSectionCards = await page.locator('[data-section-id]').filter({ has: page.getByRole('heading', { level: 2, name: 'Notes', exact: true }) }).locator('[data-widget-id] h3').allInnerTexts()
   assert.ok(notesSectionCards.includes('Findings'), `Findings moved into the Notes section (${notesSectionCards.join(', ')})`)
+  await goTo(page, 'Outline')
   await outline.getByRole('button', { name: 'Follow-ups', exact: true }).click()
+  await goTo(page, 'My workspace')
   await settings.getByRole('button', { name: 'Move to Next steps task' }).click()
   const nextTasks = await card('Next steps').locator('input[aria-label^="Task text: "]').evaluateAll((els) => els.map((e) => e.value))
   assert.equal(nextTasks.length, 3, 'a task moved from Follow-ups into Next steps')
@@ -174,6 +180,8 @@ try {
   await page.getByText('All changes saved').waitFor()
   const savedTitles = await sectionTitles()
   await page.reload()
+  await inspector(page).waitFor()
+  await goTo(page, 'Outline')
   await outline.waitFor()
   assert.deepEqual(await sectionTitles(), savedTitles)
   const after = await ids()
