@@ -20,7 +20,7 @@ export default function TasksInspector({ widgetId, props }: WidgetInspectorProps
 
   return (
     <fieldset className="space-y-2">
-      <legend className="text-xs font-medium uppercase tracking-wide text-slate-500">Order tasks</legend>
+      <legend className="text-xs font-medium uppercase tracking-wide text-ui-muted">Order tasks</legend>
       <SelectField
         label="Task to move"
         value={taskId}

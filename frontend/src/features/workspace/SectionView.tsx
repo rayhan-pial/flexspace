@@ -41,7 +41,7 @@ export default function SectionView({ section, handle }: { section: Section; han
       </div>
 
       {visible.length === 0 && !sortableCards && (
-        <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">{emptyMessage}</p>
+        <p className="fs-rule rounded-xl border border-dashed p-6 text-center text-sm opacity-75">{emptyMessage}</p>
       )}
 
       {sortableCards && (

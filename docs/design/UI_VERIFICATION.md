@@ -209,3 +209,33 @@ Right after a viewport resize the grid still shows its previous width for a mome
 - Semantic drag feedback is an outlined, raised item at its preview position; there is no separate insertion line.
 - Coarse-pointer 44 px grips and resize corner, and screen reader announcements of the new step buttons, were not tested on real devices.
 - The static `phase4-min-size-widgets.png` is a full-page capture with sticky panels, so its side panel position is a capture artifact.
+
+## Phase 5 — Auth, responsiveness and accessibility (UI-015 to UI-017, 2026-11-25)
+
+### Results
+
+- `npm run typecheck` clean. `npm run lint` clean. `npm test` 801 passed in 57 files (794 before; 6 new in `AuthScreen.test.tsx`, 1 new in `ComponentsAppearanceGallery.test.tsx`; one existing narrow-Preview test gained two assertions). `npm run build` OK (CSS 40.23 kB, JS 585.68 kB, same chunk-size advisory). `npm run test:browser` 17 of 17 OK (no new script; `responsive.mjs` and `accessibility.mjs` were extended). Backend untouched.
+- Bundle against the UI-001 baseline (Phase 1 started at CSS 33.37 kB, JS 566.63 kB): CSS +6.86 kB, JS +19.05 kB, no dependency added; the chunk-size advisory is unchanged.
+- Mutation checks (each reverted): keeping the password revealed after a failed attempt, a constant accent text color in the Appearance sample, and the old narrow-Preview wording each made a test fail.
+
+### Browser checks performed (Playwright MCP, Edge, scratch DB, accounts phase5 and someone-else)
+
+- Baselines before any change (`before/phase5-*.png`): sign in, create account, error, 390 px, Outline at 1440, workspace at 1280/1024/768/390, narrow dirty Preview.
+- Sign in, create account with the reveal button (typed text shown and hidden again), short-password error, wrong password ("Email or password is incorrect."), duplicate email (field error plus alert), 390 px with a very long email (no sideways scrolling, screenshot read).
+- Recovery: with a real expired session (cookies cleared) Save led to "Sign in again" with the notice, the email prefilled and the draft kept; signing in as the same user restored the edited title and "Unsaved changes"; "Discard unsaved changes" opened a confirmation focused on "Keep them" and discarding returned to a clean sign-in; signing in as a different user dropped the previous user's draft and loaded their own saved workspace ("All changes saved"); Log out with unsaved changes asked first (focus on "Keep editing") and the toolbar behind it was inert.
+- Responsive: workspace at 1920, 1280, 1024, 768 and 390 px had no sideways scrolling; at 390 px a ticked task showed "Unsaved changes. Open this workspace on a larger screen to save or cancel them." plus the new explanation; widening to 1440 px restored Edit with "Unsaved changes" still in place.
+- Visual polish: Outline view, Add section, Navigation and the Analytics widget inspector use the shared look (screenshots read).
+- Console (read at the end of the session): 7 errors, every one a 401 response (the anonymous bootstrap, workspace calls after the deliberately expired session, and the wrong-password login); no script errors and no warnings.
+
+### Screenshots (`artifacts/ui-review/after/`)
+
+`phase5-auth-login.png`, `phase5-auth-register-revealed.png`, `phase5-auth-error.png`, `phase5-auth-wrong-password.png`, `phase5-auth-390.png`, `phase5-auth-reauth.png`, `phase5-auth-discard-confirm.png`, `phase5-logout-confirm.png`, `phase5-outline-1440.png`, `phase5-analytics-inspector.png`, `phase5-workspace-{1920,1280,1024,768,390}.png`, `phase5-narrow-dirty-preview-390.png`, `phase5-widened-restores-edit.png`.
+
+### Not verified or not built in this phase
+
+- No real screen reader (NVDA, JAWS, VoiceOver) and no real coarse-pointer device were used; the 44 px coarse-pointer rules are in the CSS but untested on hardware.
+- 200% zoom was emulated with 960 and 720 css px viewports, not with browser zoom.
+- Contrast was measured automatically for the editor chrome in its resting state and for the auth screens (including errors), not for every hover, selected or disabled state; disabled controls are exempt by WCAG.
+- Reduced-motion behavior is checked by computed style (the existing script), not by watching an animation.
+- The dialog backdrop keeps its fixed dark scrim (`bg-slate-900/50`), which is not themed.
+- `phase5-auth-reauth.png` and the two confirmation screenshots were captured; I read the 390 px and revealed-password auth screenshots, the narrow Preview, the Outline and the Analytics inspector, but not every saved image.

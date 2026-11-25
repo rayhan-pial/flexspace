@@ -13,13 +13,13 @@ import type { WidgetInspectorProps } from '../types'
 
 const MONTH_OPTIONS = MONTH_NAMES.map((name, index) => ({ value: String(index + 1), label: name }))
 const inputClass =
-  'mt-1 block w-full rounded-lg border border-slate-300 bg-white px-3 py-1.5 text-sm text-slate-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/40'
+  'mt-1 block w-full rounded-ui-control border border-ui-control bg-ui-surface px-3 py-1.5 text-sm text-ui-text focus:border-ui-primary ui-focus'
 
 function DateField({ label, value, onChange }: { label: string; value: string; onChange: (value: string) => void }) {
   const id = useId()
   return (
     <div>
-      <label htmlFor={id} className="block text-sm font-medium text-slate-700">{label}</label>
+      <label htmlFor={id} className="block text-sm font-medium text-ui-text">{label}</label>
       {/* A native date input only ever reports a complete, valid date or an empty value. */}
       <input id={id} type="date" min={`${MIN_YEAR}-01-01`} max={`${MAX_YEAR}-12-31`} value={value} onChange={(e) => isDate(e.target.value) && onChange(e.target.value)} className={inputClass} />
     </div>
@@ -40,17 +40,17 @@ export default function CalendarInspector({ widgetId, props, dispatch }: WidgetI
 
   return (
     <fieldset className="space-y-3">
-      <legend className="text-xs font-medium uppercase tracking-wide text-slate-500">Calendar</legend>
+      <legend className="text-xs font-medium uppercase tracking-wide text-ui-muted">Calendar</legend>
       <SelectField label="Display month" value={String(month)} options={MONTH_OPTIONS} onChange={(value) => run(setDisplayMonth(widgetId, joinMonth(year, Number(value))))} />
       <IntegerField label="Display year" value={year} min={MIN_YEAR} max={MAX_YEAR} onChange={(value) => run(setDisplayMonth(widgetId, joinMonth(value, month)))} />
 
-      <p className="pt-1 text-xs font-medium uppercase tracking-wide text-slate-500">Agenda events ({props.events.length})</p>
-      {props.events.length === 0 && <p className="text-sm text-slate-500">No events yet.</p>}
+      <p className="pt-1 text-xs font-medium uppercase tracking-wide text-ui-muted">Agenda events ({props.events.length})</p>
+      {props.events.length === 0 && <p className="text-sm text-ui-muted">No events yet.</p>}
       <ul className="space-y-3">
         {props.events.map((event, index) => {
           const name = `event ${index + 1}`
           return (
-            <li key={event.id} className="space-y-2 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
+            <li key={event.id} className="space-y-2 rounded-xl bg-ui-subtle p-3 ring-1 ring-ui-border">
               <div className="flex items-end gap-2">
                 <div className="min-w-0 flex-1">
                   <DateField label={`Date for ${name}`} value={event.date} onChange={(date) => run(updateEvent(widgetId, event.id, { date }))} />
@@ -59,7 +59,7 @@ export default function CalendarInspector({ widgetId, props, dispatch }: WidgetI
                   type="button"
                   onClick={() => run(removeEvent(widgetId, event.id))}
                   aria-label={`Remove ${name}`}
-                  className="mb-1 rounded p-1 text-slate-500 hover:bg-slate-200 hover:text-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+                  className="mb-1 rounded p-1 text-ui-muted hover:bg-ui-border hover:text-red-700 ui-focus"
                 >
                   <Trash2 aria-hidden="true" className="size-4" />
                 </button>
@@ -75,11 +75,11 @@ export default function CalendarInspector({ widgetId, props, dispatch }: WidgetI
         type="button"
         disabled={props.events.length >= MAX_LIST_ITEMS}
         onClick={() => run(addEvent(widgetId, newId('event'), `${props.displayMonth}-01`, 'New event'))}
-        className="rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+        className="rounded-ui-control border border-ui-control px-3 py-1.5 text-sm font-medium text-ui-text hover:bg-ui-subtle ui-focus disabled:cursor-not-allowed disabled:opacity-50"
       >
         Add event
       </button>
-      {error && <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">{error}</p>}
+      {error && <p role="alert" className="rounded-ui-control bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200">{error}</p>}
     </fieldset>
   )
 }

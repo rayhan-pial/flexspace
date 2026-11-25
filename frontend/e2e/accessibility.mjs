@@ -24,7 +24,7 @@ const sectionTitles = () => page.locator('[data-section-id] > div > h2').allInne
 const spoken = () => page.getByRole('status', { name: 'Sorting status' }).first().innerText()
 
 /** Every visible focusable control, focused in turn: does anything about it change? */
-async function focusAudit(label) {
+async function focusAudit(label, minimum = 10) {
   const result = await page.evaluate(() => {
     const selector = 'button, input, select, textarea, a[href], [tabindex="0"], [role="tab"], summary'
     const visible = [...document.querySelectorAll(selector)].filter((el) => {
@@ -63,14 +63,104 @@ async function focusAudit(label) {
     }
     return { checked: visible.length, failures }
   })
-  assert.ok(result.checked > 10, `${label}: audited ${result.checked} controls`)
+  assert.ok(result.checked > minimum, `${label}: audited ${result.checked} controls`)
   assert.deepEqual(result.failures, [], `${label}: controls with no visible focus indicator or no accessible name`)
   return result.checked
 }
 
+
+/**
+ * Text contrast of the editor's own surfaces (never the user's themed workspace). Every visible text
+ * node is measured against the colour actually painted behind it. Disabled controls are exempt
+ * (WCAG), and large text (24px, or 18.66px bold) needs 3:1 instead of 4.5:1.
+ */
+async function contrastSweep(label, scopeSelector) {
+  const result = await page.evaluate((selector) => {
+    const parse = (value) => {
+      const m = value.match(/rgba?\(([^)]+)\)/)
+      if (!m) return null
+      const [r, g, b, a = 1] = m[1].split(/[ ,/]+/).filter(Boolean).map(Number)
+      return { r, g, b, a }
+    }
+    const over = (top, bottom) => ({ r: top.r * top.a + bottom.r * (1 - top.a), g: top.g * top.a + bottom.g * (1 - top.a), b: top.b * top.a + bottom.b * (1 - top.a), a: 1 })
+    const backdrop = (el) => {
+      const layers = []
+      for (let n = el; n; n = n.parentElement) {
+        const c = parse(getComputedStyle(n).backgroundColor)
+        if (c && c.a > 0) layers.push(c)
+        if (c && c.a === 1) break
+      }
+      return layers.reduceRight((below, layer) => over(layer, below), { r: 255, g: 255, b: 255, a: 1 })
+    }
+    const lum = ({ r, g, b }) => {
+      const f = (v) => { const x = v / 255; return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4 }
+      return 0.2126 * f(r) + 0.7152 * f(g) + 0.0722 * f(b)
+    }
+    const failures = []
+    let checked = 0
+    for (const scope of document.querySelectorAll(selector)) {
+      const walker = document.createTreeWalker(scope, NodeFilter.SHOW_TEXT)
+      for (let node = walker.nextNode(); node; node = walker.nextNode()) {
+        const el = node.parentElement
+        if (!el || !node.textContent.trim() || el.closest('[aria-hidden="true"], .sr-only, [data-themed], .fs-themed, script, style')) continue
+        const rect = el.getBoundingClientRect()
+        const style = getComputedStyle(el)
+        if (rect.width === 0 || rect.height === 0 || style.visibility === 'hidden') continue
+        if (el.closest(':disabled, [aria-disabled="true"]')) continue
+        let opacity = 1
+        for (let n = el; n; n = n.parentElement) opacity *= parseFloat(getComputedStyle(n).opacity)
+        const bg = backdrop(el)
+        const fg = parse(style.color)
+        if (!fg) continue
+        const text = over({ ...fg, a: fg.a * opacity }, bg)
+        const [hi, lo] = [lum(text), lum(bg)].sort((a, b) => b - a)
+        const ratio = (hi + 0.05) / (lo + 0.05)
+        const size = parseFloat(style.fontSize)
+        const large = size >= 24 || (size >= 18.66 && Number(style.fontWeight) >= 700)
+        checked += 1
+        if (ratio < (large ? 3 : 4.5)) failures.push(`${ratio.toFixed(2)}:1 "${node.textContent.trim().slice(0, 40)}" in ${el.tagName.toLowerCase()}`)
+      }
+    }
+    return { checked, failures }
+  }, scopeSelector)
+  assert.ok(result.checked > 5, `${label}: measured only ${result.checked} text runs`)
+  assert.deepEqual(result.failures, [], `${label}: text below the contrast minimum`)
+  return result.checked
+}
+
 try {
+  log('sign in and create-account screens: named controls with visible focus, a working reveal toggle, readable text, no sideways scrolling')
+  await page.goto(baseUrl)
+  await page.getByLabel('Email').waitFor()
+  let contrast = await contrastSweep('sign in', 'main')
+  await focusAudit('sign in', 3)
+  await page.getByRole('button', { name: 'Create an account' }).click()
+  contrast += await contrastSweep('create account', 'main')
+  const field = page.getByLabel('Password')
+  assert.equal(await field.getAttribute('type'), 'password')
+  const reveal = page.getByRole('button', { name: 'Show characters' })
+  assert.equal(await reveal.getAttribute('aria-pressed'), 'false')
+  await field.fill(PASSWORD)
+  await reveal.click()
+  assert.equal(await field.getAttribute('type'), 'text')
+  assert.equal(await page.getByRole('button', { name: 'Hide characters' }).getAttribute('aria-pressed'), 'true')
+  await page.getByRole('button', { name: 'Hide characters' }).click()
+  assert.equal(await field.getAttribute('type'), 'password')
+  await page.getByLabel('Password').fill('short')
+  await page.getByRole('button', { name: 'Create account' }).click()
+  await page.getByText('Please fix the highlighted fields.').waitFor()
+  contrast += await contrastSweep('auth errors', 'main')
+  assert.equal(await field.inputValue(), '', 'a failed attempt clears the password and hides it again')
+  await page.setViewportSize({ width: 390, height: 800 })
+  await page.getByLabel('Email').fill(`a-very-long-address-${'x'.repeat(60)}@example-with-a-long-domain-name.com`)
+  const authOverflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth)
+  assert.equal(authOverflow, 0, `the sign-up screen scrolls sideways by ${authOverflow}px with a very long email`)
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  console.log(`  (${contrast} text runs measured on the auth screens)`)
+
   log('register')
   await page.goto(baseUrl)
+  await page.getByLabel('Email').waitFor()
   await page.getByRole('button', { name: 'Create an account' }).click()
   await page.getByLabel('Email').fill(`e2e${Date.now()}${Math.floor(Math.random() * 1e6)}@example.com`)
   await page.getByLabel('Password').fill(PASSWORD)
@@ -81,15 +171,17 @@ try {
   const rail = page.getByRole('navigation', { name: 'Editor navigation' })
   assert.deepEqual(await rail.getByRole('button').evaluateAll((els) => els.map((el) => el.getAttribute('title'))), ['My workspace', 'Outline', 'Components', 'Templates', 'Appearance'])
   let total = 0
+  let measured = 0
   for (const view of ['My workspace', 'Outline', 'Components', 'Templates', 'Appearance']) {
     await goTo(page, view)
     assert.equal(await rail.getByRole('button', { name: view, exact: true }).getAttribute('aria-current'), 'true', `${view} is marked as the current destination`)
     total += await focusAudit(view)
+    measured += await contrastSweep(view, 'aside, [data-toolbar]')
   }
   await page.getByRole('button', { name: 'Preview', exact: true }).click()
   total += await focusAudit('preview')
   await page.getByRole('button', { name: 'Edit workspace' }).click()
-  console.log(`  (${total} control checks)`)
+  console.log(`  (${total} control checks, ${measured} text runs measured)`)
 
   log('a section can be reordered with the keyboard alone, and the move is spoken in plain words')
   assert.deepEqual(await sectionTitles(), ['Today', 'Reference'])
@@ -147,6 +239,7 @@ try {
   await page.setViewportSize({ width: 390, height: 800 })
   await page.waitForTimeout(300)
   await page.getByRole('note').filter({ hasText: /at least 1024 px wide/ }).waitFor()
+  await page.getByRole('note').filter({ hasText: /stay in this browser tab until you open the workspace on a wider screen and press Save/ }).waitFor()
   assert.equal(await page.getByRole('button', { name: 'Edit workspace' }).count(), 0)
   assert.equal(await page.getByRole('complementary').count(), 0)
   await focusAudit('mobile preview').catch(() => {}) // fewer than ten controls is fine here

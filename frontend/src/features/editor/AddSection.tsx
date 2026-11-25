@@ -5,7 +5,7 @@ import { addSection } from '../../domain/workspace/lifecycle'
 import { useEditorStore } from './editorStore'
 
 const button =
-  'rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500'
+  'rounded-ui-control border border-ui-control px-3 py-1.5 text-sm font-medium text-ui-text hover:bg-ui-subtle ui-focus'
 
 /** Adds a section of a chosen layout kind and selects it. */
 export default function AddSection() {
@@ -25,8 +25,8 @@ export default function AddSection() {
   }
 
   return (
-    <div className="mt-4 border-t border-slate-200 pt-3">
-      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-slate-500">Add section</p>
+    <div className="mt-4 border-t border-ui-border pt-3">
+      <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ui-muted">Add section</p>
       <div className="flex flex-wrap gap-2">
         <button type="button" onClick={() => add('grid')} className={button}>
           Dashboard grid
@@ -36,7 +36,7 @@ export default function AddSection() {
         </button>
       </div>
       {error && (
-        <p role="alert" className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">
+        <p role="alert" className="mt-2 rounded-ui-control bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200">
           {error}
         </p>
       )}

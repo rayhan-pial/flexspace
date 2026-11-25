@@ -1,5 +1,5 @@
 // Real-browser, real-backend audit of responsive layout and keyboard accessibility (FS-026): every
-// design with every navigation placement at 1440, 1024, 768 and 390 px wide, in Preview and (from
+// design with every navigation placement at 1920, 1440, 1280, 1024, 768 and 390 px wide, in Preview and (from
 // 1024) Edit. Not part of `npm test`. Same prerequisites as grid-gesture.mjs.
 // Run: npm run test:browser      Set E2E_REPORT=1 to print every measurement.
 import assert from 'node:assert/strict'
@@ -10,7 +10,7 @@ const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Micros
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
 const report = process.env.E2E_REPORT === '1'
 const PASSWORD = 'correct horse battery staple'
-const WIDTHS = [1440, 1024, 768, 390]
+const WIDTHS = [1920, 1440, 1280, 1024, 768, 390]
 
 const browser = await chromium.launch({ executablePath })
 const page = await browser.newPage({ viewport: { width: 1440, height: 1000 } })
@@ -109,6 +109,37 @@ try {
       }
     }
   }
+
+  log('200% zoom (720 and 960 css px) with a dirty draft: Preview with no sideways scrolling, and widening restores Edit with the same draft and no write')
+  const puts = []
+  page.on('request', (request) => {
+    if (request.method() === 'PUT' && request.url().includes('/api/workspace')) puts.push(request.url())
+  })
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.waitForTimeout(800)
+  await applyTemplate('Productivity')
+  await page.getByLabel('Workspace title').fill('Zoomed workspace')
+  const box = page.getByRole('checkbox').first()
+  const ticked = await box.isChecked()
+  for (const width of [960, 720]) {
+    await page.setViewportSize({ width, height: 900 })
+    await page.waitForTimeout(500)
+    const m = await measure()
+    assert.equal(m.pageOverflow, 0, `${width}px (200% zoom): page scrolls sideways by ${m.pageOverflow}px`)
+    assert.equal(m.clippedWidgets, 0, `${width}px (200% zoom): widgets clip their content`)
+    await page.getByRole('note').filter({ hasText: /stay in this browser tab until you open the workspace on a wider screen and press Save/ }).waitFor()
+    assert.equal(await page.getByRole('complementary').count(), 0, 'no inspector below 1024px')
+    assert.match(await page.getByRole('status', { name: 'Save status' }).innerText(), /^Unsaved changes\./)
+  }
+  await page.getByRole('checkbox').first().click() // tasks still work in the narrow Preview
+  assert.equal(await page.getByRole('checkbox').first().isChecked(), !ticked)
+  await page.setViewportSize({ width: 1440, height: 1000 })
+  await page.waitForTimeout(900)
+  assert.equal(await page.getByLabel('Workspace title').inputValue(), 'Zoomed workspace', 'the draft survives narrowing and widening')
+  assert.equal(await page.getByRole('checkbox').first().isChecked(), !ticked, 'the task tick made in the narrow Preview is still in the draft')
+  assert.equal(await page.getByRole('status', { name: 'Save status' }).innerText(), 'Unsaved changes')
+  assert.equal(await inspector(page).count(), 1, 'Edit and its inspector are back')
+  assert.equal(puts.length, 0, 'resizing never wrote to the server')
 
   log('the rail and the inspector have the specified widths at 1024, 1280 and 1440 px')
   const widthsAt = async (width) => {

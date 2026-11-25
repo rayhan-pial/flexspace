@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import AuthScreen from '../features/auth/AuthScreen'
 import { useSessionStore } from '../features/auth/sessionStore'
+import Button from '../shared/ui/Button'
 import WorkspaceGate from '../features/workspace/WorkspaceGate'
 
 export default function App() {
@@ -13,25 +14,21 @@ export default function App() {
 
   if (status === 'bootstrapping') {
     return (
-      <main className="grid min-h-screen place-items-center bg-slate-50">
-        <p role="status" className="text-slate-600">Loading…</p>
+      <main className="grid min-h-screen place-items-center bg-ui-bg">
+        <p role="status" className="text-ui-muted">Loading…</p>
       </main>
     )
   }
 
   if (status === 'unavailable') {
     return (
-      <main className="grid min-h-screen place-items-center bg-slate-50 p-4">
-        <div role="alert" className="max-w-sm rounded-xl bg-white p-6 text-center shadow ring-1 ring-slate-200">
-          <p className="font-medium text-slate-900">Can't reach the server</p>
-          <p className="mt-1 text-sm text-slate-600">Check that the backend is running, then try again.</p>
-          <button
-            type="button"
-            onClick={() => void bootstrap()}
-            className="mt-4 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-          >
+      <main className="grid min-h-screen place-items-center bg-ui-bg p-4">
+        <div role="alert" className="max-w-sm rounded-ui-card bg-ui-surface p-6 text-center shadow-ui-surface ring-1 ring-ui-border">
+          <p className="font-medium text-ui-text">Can't reach the server</p>
+          <p className="mt-1 text-sm text-ui-muted">Check that the backend is running, then try again.</p>
+          <Button variant="primary" className="mt-4" onClick={() => void bootstrap()}>
             Try again
-          </button>
+          </Button>
         </div>
       </main>
     )

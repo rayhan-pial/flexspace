@@ -56,7 +56,7 @@ export default function EditorToolbar() {
   else if (dirty) status = 'Unsaved changes. Open this workspace on a larger screen to save or cancel them.'
 
   return (
-    <div className="border-b border-ui-border bg-ui-surface px-4 py-3 sm:px-6">
+    <div data-toolbar className="border-b border-ui-border bg-ui-surface px-4 py-3 sm:px-6">
       <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
         <div className="min-w-0">
           <h1 id="workspace-title" className="truncate text-xl font-semibold tracking-tight text-ui-text">{title || 'Untitled workspace'}</h1>
@@ -103,8 +103,8 @@ export default function EditorToolbar() {
 
       {!isDesktop && (
         <p role="note" className="mt-2 rounded-ui-control bg-ui-subtle px-3 py-2 text-sm text-ui-text">
-          Editing layout and properties needs a screen at least 1024 px wide. You are viewing your workspace in preview, and you can still
-          read it and use its notes.
+          Editing layout and properties needs a screen at least 1024 px wide. You are viewing your workspace in preview. You can still tick
+          tasks and type in notes here, but those changes stay in this browser tab until you open the workspace on a wider screen and press Save.
         </p>
       )}
 
@@ -118,7 +118,7 @@ export default function EditorToolbar() {
       )}
 
       {conflict && (
-        <div role="alert" className="mt-2 rounded-lg bg-amber-50 px-3 py-2 text-sm text-amber-900 ring-1 ring-amber-200">
+        <div role="alert" className="mt-2 rounded-ui-control bg-amber-50 px-3 py-2 text-sm text-ui-warning ring-1 ring-amber-200">
           <p className="font-medium">{conflict.message}</p>
           <p className="mt-1">
             The saved workspace is now at revision {conflict.currentRevision}. Your changes were not saved and are still here.
@@ -133,7 +133,7 @@ export default function EditorToolbar() {
       )}
 
       {reloadError && (
-        <p role="alert" className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">
+        <p role="alert" className="mt-2 rounded-ui-control bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200">
           {reloadError}
         </p>
       )}

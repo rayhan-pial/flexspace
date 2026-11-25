@@ -31,8 +31,8 @@ function NavLink({ item, editing }: { item: NavItem; editing: boolean }) {
         if (editing) select({ kind: 'navItem', id: item.id })
         if (item.targetSectionId) scrollToSection(item.targetSectionId)
       }}
-      className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm font-medium text-[color:var(--fs-primary,#6366f1)] hover:bg-black/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent ${
-        selected ? 'ring-2 ring-indigo-500' : ''
+      className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm font-medium text-[color:var(--fs-primary,#6366f1)] hover:bg-black/5 ui-focus disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent ${
+        selected ? 'ring-2 ring-ui-primary' : ''
       }`}
     >
       <NavIcon name={item.icon} className="size-4 shrink-0" />
@@ -102,7 +102,7 @@ export default function SimpleNav({ navigation }: { navigation: Navigation }) {
                     role="button"
                     tabIndex={0}
                     aria-label={`Reorder ${item.label}`}
-                    className="cursor-grab touch-none rounded p-0.5 text-slate-500 hover:bg-black/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 active:cursor-grabbing"
+                    className="ui-focus inline-flex min-h-6 min-w-6 cursor-grab touch-none items-center justify-center rounded p-0.5 opacity-60 hover:bg-black/10 hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
                   >
                     <GripVertical aria-hidden="true" className="size-4" />
                   </span>

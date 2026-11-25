@@ -4,7 +4,7 @@ import { FONT_FAMILIES } from '../../domain/workspace/constants'
 import type { FontFamily, Theme } from '../../domain/workspace/types'
 import { ColorField, IntegerField, SelectField } from '../../shared/ui/fields'
 import Group from '../../shared/ui/Group'
-import { themeContrastChecks } from '../workspace/contrast'
+import { contrastRatio, themeContrastChecks } from '../workspace/contrast'
 import { FONT_LABELS, FONT_STACKS } from '../workspace/theme'
 import { useEditorStore } from './editorStore'
 import { SUGGESTED_PALETTES } from './themePalettes'
@@ -30,6 +30,9 @@ export default function ThemePanel() {
 
   const checks = themeContrastChecks(theme)
   const weak = checks.filter((check) => !check.ok)
+  // Text on the sample accent: whichever of white or black reads better on the chosen color.
+  const accent = safe(theme.primary, '#6366f1')
+  const onPrimary = (contrastRatio('#ffffff', accent) ?? 0) >= (contrastRatio('#000000', accent) ?? 0) ? '#ffffff' : '#000000'
   const stack = Object.hasOwn(FONT_STACKS, theme.fontFamily) ? FONT_STACKS[theme.fontFamily] : FONT_STACKS.system
 
   return (
@@ -43,7 +46,7 @@ export default function ThemePanel() {
         <div className="rounded-ui-control p-3" style={{ backgroundColor: safe(theme.surface, '#ffffff') }}>
           <p className="text-sm font-semibold">Sample card</p>
           <p className="mt-0.5 text-xs">Text uses your text color and font.</p>
-          <span className="mt-2 inline-block rounded-full px-3 py-1 text-xs font-medium" style={{ backgroundColor: safe(theme.primary, '#6366f1'), color: '#ffffff' }}>
+          <span className="mt-2 inline-block rounded-full px-3 py-1 text-xs font-medium" style={{ backgroundColor: safe(theme.primary, '#6366f1'), color: onPrimary }}>
             Primary accent
           </span>
         </div>

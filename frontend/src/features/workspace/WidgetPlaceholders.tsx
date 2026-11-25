@@ -11,20 +11,20 @@ export function UnsupportedWidget({ widgetId, type, handle }: { widgetId: string
     <article
       data-widget-id={widgetId}
       data-unsupported="true"
-      className="flex h-full max-h-48 min-h-0 flex-col overflow-hidden rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-4 text-slate-600"
+      className="flex h-full max-h-48 min-h-0 flex-col overflow-hidden rounded-2xl fs-rule border border-dashed bg-[var(--fs-surface,#f8fafc)] p-4"
     >
       <div className="flex items-center gap-1">
         {handle}
-        <h3 className="text-sm font-semibold text-slate-700">Unsupported widget</h3>
+        <h3 className="text-sm font-semibold">Unsupported widget</h3>
       </div>
       <p className="mt-1 break-words text-sm">
         This version of FlexSpace does not know the widget type{' '}
-        <code className="rounded bg-slate-200 px-1 py-0.5 text-xs">{type}</code>. Its data is kept and will be saved unchanged.
+        <code className="fs-track rounded px-1 py-0.5 text-xs">{type}</code>. Its data is kept and will be saved unchanged.
       </p>
     </article>
   )
 }
 
 export function InvalidWidgetBody() {
-  return <p className="text-sm text-rose-700">This widget's saved data is not valid, so it cannot be shown.</p>
+  return <p className="text-sm font-medium text-red-700">This widget's saved data is not valid, so it cannot be shown.</p>
 }

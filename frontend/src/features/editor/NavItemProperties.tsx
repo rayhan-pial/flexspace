@@ -22,7 +22,7 @@ export default function NavItemProperties({ item, config }: { item: NavItem; con
   const NONE = ''
   const inPrimary = config.navigation.primaryItems.some((i) => i.id === item.id)
   return (
-    <div className="mt-4 space-y-4 border-t border-slate-200 pt-3">
+    <div className="mt-4 space-y-4 border-t border-ui-border pt-3">
       <TextField label="Label" value={item.label} maxLength={MAX_LABEL} onChange={(label) => change({ label })} />
       <SelectField
         label="Goes to"
@@ -40,7 +40,7 @@ export default function NavItemProperties({ item, config }: { item: NavItem; con
         options={ICONS.map((value) => ({ value, label: ICON_LABELS[value] }))}
       />
       <fieldset className="space-y-2">
-        <legend className="text-xs font-medium uppercase tracking-wide text-slate-500">Order</legend>
+        <legend className="text-xs font-medium uppercase tracking-wide text-ui-muted">Order</legend>
         <MoveButtons
           adapter={workspaceAdapter}
           itemId={item.id}
@@ -48,7 +48,7 @@ export default function NavItemProperties({ item, config }: { item: NavItem; con
           otherContainers={[inPrimary ? { id: NAV_SECONDARY, label: 'Secondary' } : { id: NAV_PRIMARY, label: 'Primary' }]}
         />
       </fieldset>
-      {error && <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">{error}</p>}
+      {error && <p role="alert" className="rounded-ui-control bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200">{error}</p>}
     </div>
   )
 }

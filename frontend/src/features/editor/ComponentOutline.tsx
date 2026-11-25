@@ -8,8 +8,8 @@ import { isKnownWidgetType, widgetTypeLabel } from '../workspace/registry'
 import { useEditorStore } from './editorStore'
 
 const itemClass = (selected: boolean) =>
-  `flex w-full items-center justify-between gap-2 rounded-lg px-2 py-1.5 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-    selected ? 'bg-indigo-50 font-medium text-indigo-900 ring-1 ring-indigo-200' : 'text-slate-700 hover:bg-slate-100'
+  `flex w-full items-center justify-between gap-2 rounded-ui-control px-2 py-1.5 text-left text-sm ui-focus ${
+    selected ? 'bg-ui-selected font-medium text-ui-selected-text ring-1 ring-ui-primary/40' : 'text-ui-text hover:bg-ui-subtle'
   }`
 
 function widgetLabel(widget: Widget): string {
@@ -37,7 +37,7 @@ export default function ComponentOutline() {
   if (!draft) return null
 
   if (draft.sections.length === 0) {
-    return <p className="text-sm text-slate-500">This workspace has no sections yet.</p>
+    return <p className="text-sm text-ui-muted">This workspace has no sections yet.</p>
   }
 
   const isSelected = (kind: 'section' | 'widget', id: string) => selection?.kind === kind && selection.id === id
@@ -55,7 +55,7 @@ export default function ComponentOutline() {
         className={itemClass(isSelected('widget', widget.id))}
       >
         <span className="truncate">{widgetLabel(widget)}</span>
-        {widget.hidden && <span className="shrink-0 text-xs text-slate-500">hidden</span>}
+        {widget.hidden && <span className="shrink-0 text-xs text-ui-muted">hidden</span>}
       </button>
     </div>
   )
@@ -70,7 +70,7 @@ export default function ComponentOutline() {
           orientation="vertical"
           label={`${section.title || 'Untitled section'} widgets`}
           emptyLabel="No widgets"
-          className="ml-3 gap-0 border-l border-slate-200 pl-2"
+          className="ml-3 gap-0 border-l border-ui-border pl-2"
           renderItem={(id, { handleRef }) => {
             const widget = section.widgets.find((w) => w.id === id)
             return widget ? widgetButton(widget, <SortHandle handleRef={handleRef} label={`Reorder ${widgetLabel(widget)} in outline`} />) : null
@@ -78,9 +78,9 @@ export default function ComponentOutline() {
         />
       )
     }
-    if (section.widgets.length === 0) return <p className="ml-4 py-1 text-xs text-slate-500">No widgets</p>
+    if (section.widgets.length === 0) return <p className="ml-4 py-1 text-xs text-ui-muted">No widgets</p>
     return (
-      <ul className="ml-3 border-l border-slate-200 pl-2">
+      <ul className="ml-3 border-l border-ui-border pl-2">
         {section.widgets.map((widget) => (
           <li key={widget.id}>{widgetButton(widget)}</li>
         ))}
@@ -97,7 +97,7 @@ export default function ComponentOutline() {
         className={itemClass(isSelected('section', section.id))}
       >
         <span className="truncate font-medium">{section.title || 'Untitled section'}</span>
-        {section.hidden && <span className="shrink-0 text-xs text-slate-500">hidden</span>}
+        {section.hidden && <span className="shrink-0 text-xs text-ui-muted">hidden</span>}
       </button>
       {widgetList(section)}
     </li>

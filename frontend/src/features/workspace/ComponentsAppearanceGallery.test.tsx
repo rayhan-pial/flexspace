@@ -168,6 +168,18 @@ describe('workspace appearance', () => {
     expect(inspector().getByText(/suggestion only/)).toBeInTheDocument()
   })
 
+  it('keeps the sample accent readable: its text flips between white and black with the color', async () => {
+    const user = await open()
+    await goTo(user, 'Appearance')
+    const chip = () => inspector().getByText('Primary accent')
+    await user.clear(inspector().getByLabelText('Primary color'))
+    await user.type(inspector().getByLabelText('Primary color'), '#ffffcc')
+    expect(chip()).toHaveStyle({ color: '#000000' })
+    await user.clear(inspector().getByLabelText('Primary color'))
+    await user.type(inspector().getByLabelText('Primary color'), '#222222')
+    expect(chip()).toHaveStyle({ color: '#ffffff' })
+  })
+
   it('keeps an invalid hex out of the draft', async () => {
     const user = await open()
     await goTo(user, 'Appearance')

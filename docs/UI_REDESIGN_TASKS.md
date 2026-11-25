@@ -1,6 +1,6 @@
 # FlexSpace UI redesign tasks
 
-UI-001 to UI-014 (Phases 0 to 4) complete; UI-015 onward pending. Do not alter backend/schema or original [development tasks](tasks.md) for this redesign. Read [design spec](UI_DESIGN_SPEC.md), [audit/plan](UI_REDESIGN_PLAN.md), and [acceptance checklist](UI_ACCEPTANCE_CHECKLIST.md) first. Existing paths below are relative to the repository root; proposed new files are explicitly labeled.
+UI-001 to UI-017 (Phases 0 to 5) complete; UI-018 pending. Do not alter backend/schema or original [development tasks](tasks.md) for this redesign. Read [design spec](UI_DESIGN_SPEC.md), [audit/plan](UI_REDESIGN_PLAN.md), and [acceptance checklist](UI_ACCEPTANCE_CHECKLIST.md) first. Existing paths below are relative to the repository root; proposed new files are explicitly labeled.
 
 Execute one bounded task at a time. Run the stated focused checks, fix regressions, record exact commands/results and screenshots, then mark it complete. A build alone is insufficient evidence for an interaction change. Keep an evidence entry with task ID, commit/ref if available, commands, outcomes, screenshot paths, and remaining limitations. Tests below are verification work for Claude during implementation, not tests run in this planning step.
 
@@ -130,7 +130,7 @@ Execute one bounded task at a time. Run the stated focused checks, fix regressio
 
 ### UI-015 — Restyle authentication and recovery
 
-- **Status:** Pending. **Depends on:** UI-014.
+- **Status: ✅ Complete (2026-11-25)).** Sign in, create account and sign in again use the editor tokens, the brand mark and the shared Button; errors and the session notice wrap long text. A "Show characters" / "Hide characters" button (local state only, `aria-pressed`, named so it does not collide with the Password label) reveals the password and resets after a failed attempt or a mode switch. Fields, autocomplete values, validation, frozen-draft wording and the discard confirmation are unchanged; no name, forgot-password, remember-me or social controls were added. The loading and server-unavailable screens use the same tokens. **Depends on:** UI-014.
 - **Files:** `frontend/src/features/auth/AuthScreen.tsx`; session/API modules read/reuse, shared controls.
 - **Work:** apply the shared visual language to login/register/reauth, errors and pending states; optional password visibility is local state only.
 - **Accept:** existing email/password/autocomplete/validation and frozen-draft warnings persist. No full-name/forgot-password/remember-me/social-login controls or auth backend changes. Long error/email text fits small screens; password visibility has an accessible label.
@@ -138,7 +138,7 @@ Execute one bounded task at a time. Run the stated focused checks, fix regressio
 
 ### UI-016 — Verify responsive layout and Preview behavior
 
-- **Status:** Pending. **Depends on:** UI-015.
+- **Status: ✅ Complete (2026-11-25)), with limits.** The narrow Preview note now says what is true: tasks and notes can still be changed, but only in the open tab's draft until saved from 1024 px or wider (README and `docs/handoff.md` no longer call it read-only). `e2e/responsive.mjs` now covers 1920, 1440, 1280, 1024, 768 and 390 px for five design/placement cases plus 200%-zoom-equivalent widths (960 and 720 css px) with a dirty draft: no sideways scrolling, no clipped widgets, widening restores Edit with the same draft, and no write to the server. Limit: zoom was emulated by narrowing the viewport, not by browser zoom or device pixel ratio. **Depends on:** UI-015.
 - **Files:** shell/panel/toolbar/navigation styles, `features/editor/useEffectiveMode.ts` read/reuse; existing responsive tests/scripts. Update only the misleading responsive wording in `README.md`/`docs/handoff.md` during implementation, preserving their historical result records.
 - **Work:** apply exact rail/inspector breakpoints; validate all three navigation placements and templates with panels open/closed and at 200% zoom. Keep actual mobile task/Notes interactions, with accurate ephemeral-draft/save guidance.
 - **Accept:** no page overflow or clipped primary actions at 1920/1440/1280/1024/768/390 px; below 1024 hides advanced tools without changing saved mode/layout. Side user navigation retains current adaptive thresholds; panel/canvas width changes never rewrite config.
@@ -146,7 +146,7 @@ Execute one bounded task at a time. Run the stated focused checks, fix regressio
 
 ### UI-017 — Complete accessibility and final visual polish
 
-- **Status:** Pending. **Depends on:** UI-016.
+- **Status: ✅ Complete (2026-11-25)), with limits.** The remaining old slate/indigo/rose editor surfaces (Outline, Add section, Navigation, widget inspectors for Analytics, Calendar, Gallery and Tasks, toolbar notices, placeholders, nav grips) now use the editor tokens or the widget's own colors. `e2e/accessibility.mjs` now audits the auth screens (focus, names, reveal toggle, long email at 390 px) and measures text contrast of the rail, toolbar and every inspector view against the painted background (4.5:1, or 3:1 for large text); it found and led to a fix for the Appearance sample chip (white on the default primary was 4.47:1; the sample now picks white or black). Limits: no real screen reader and no coarse-pointer device were used; contrast was measured for the default and focused-free states of editor chrome, not hover or every error state; the dialog backdrop keeps a fixed dark scrim. **Depends on:** UI-016.
 - **Files:** focused shared/component styles and tests as needed; `frontend/e2e/accessibility.mjs`, UI verification evidence.
 - **Work:** keyboard/skip links, focus order/restoration, screen-reader smoke, app contrast, touch targets, reduced motion and long/empty/error states. Keep manipulation controls accessible even when visually quiet. Review repeated overlays and bundle impact; no dependency churn for cosmetic polish.
 - **Accept:** no invisible focus, trapped panel or non-inert modal background; all operations have meaningful names; simple-pointer alternatives and announcements work. User low-contrast colors show advisory feedback without altering saved values. Record any remaining assistive-technology/browser limits honestly.

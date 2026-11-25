@@ -64,7 +64,7 @@ export default function WorkspaceView() {
             </div>
           )}
           {draft.sections.every((section) => section.hidden) && (
-            <p className="mt-8 rounded-xl border border-dashed border-slate-300 p-6 text-center text-sm text-slate-500">
+            <p className="mt-8 fs-rule rounded-xl border border-dashed p-6 text-center text-sm opacity-75">
               {draft.sections.length === 0
                 ? 'This workspace has no sections yet. Add one from the outline in Edit mode.'
                 : 'All sections are hidden. Show them from the outline in Edit mode.'}

@@ -25,8 +25,8 @@ export default function NavigationPanel() {
                 type="button"
                 aria-current={selected ? 'true' : undefined}
                 onClick={() => select({ kind: 'navItem', id: item.id })}
-                className={`flex w-full rounded-lg px-2 py-1.5 text-left text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-                  selected ? 'bg-indigo-50 font-medium text-indigo-900 ring-1 ring-indigo-200' : 'text-slate-700 hover:bg-slate-100'
+                className={`flex w-full rounded-ui-control px-2 py-1.5 text-left text-sm ui-focus ${
+                  selected ? 'bg-ui-selected font-medium text-ui-selected-text ring-1 ring-ui-primary/40' : 'text-ui-text hover:bg-ui-subtle'
                 }`}
               >
                 <span className="truncate">{item.label || 'Untitled link'}</span>
@@ -38,8 +38,8 @@ export default function NavigationPanel() {
     )
 
   return (
-    <div className="mt-4 space-y-3 border-t border-slate-200 pt-3">
-      <p className="text-xs font-medium uppercase tracking-wide text-slate-500">Navigation</p>
+    <div className="mt-4 space-y-3 border-t border-ui-border pt-3">
+      <p className="text-xs font-medium uppercase tracking-wide text-ui-muted">Navigation</p>
       <SelectField
         label="Navigation placement"
         value={navigation.placement}
@@ -49,7 +49,7 @@ export default function NavigationPanel() {
       {group('Primary', navigation.primaryItems)}
       {group('Secondary', navigation.secondaryItems)}
       {navigation.primaryItems.length + navigation.secondaryItems.length === 0 && (
-        <p className="text-sm text-slate-500">This workspace has no navigation items.</p>
+        <p className="text-sm text-ui-muted">This workspace has no navigation items.</p>
       )}
     </div>
   )

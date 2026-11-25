@@ -75,7 +75,7 @@ Repository hygiene: no `.db`, `.sqlite`, `.env`, image or credential-like string
 ## 5. Known limitations
 
 - **Scope.** Single-user editing per account with conflict detection, not collaboration. Gallery images are bundled assets, not uploads; Analytics and Calendar use local sample data. No password recovery or email verification. SQLite only (PostgreSQL and hosting automation are not part of this release).
-- **Editing needs 1024 px or wider.** Narrower windows show a read-only Preview with an explanation.
+- **Editing needs 1024 px or wider.** Narrower windows show a Preview with an explanation and no layout tools. Tasks and Notes can still be changed there, but only in the open tab's draft: Save and Cancel are available from 1024 px.
 - **Accessibility.** Keyboard sorting, Move buttons, focus rings, names and spoken status are covered by the audit, but there was no test with a real screen reader. At 1280 px and wider the outline panel is on the left visually but after the canvas in tab order.
 - **History.** 30 steps, in memory only: it does not survive a reload, and there is no list of steps.
 - **Drag in Edit mode** is verified with Edge (Chromium). Other browsers were not tested.

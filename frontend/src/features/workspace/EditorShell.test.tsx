@@ -349,6 +349,8 @@ describe('below desktop width', () => {
   it('shows a Preview with an explanation instead of builder controls', async () => {
     await open()
     expect(screen.getByRole('note')).toHaveTextContent('Editing layout and properties needs a screen at least 1024 px wide')
+    expect(screen.getByRole('note')).toHaveTextContent('stay in this browser tab until you open the workspace on a wider screen and press Save')
+    expect(screen.getByRole('note')).not.toHaveTextContent(/read-only/i)
     expect(hasPanels()).toBe(false)
     expect(screen.queryByRole('complementary')).not.toBeInTheDocument()
     expect(screen.queryByRole('button', { name: 'Edit workspace' })).not.toBeInTheDocument()
