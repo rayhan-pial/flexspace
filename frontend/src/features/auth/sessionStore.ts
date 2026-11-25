@@ -28,7 +28,7 @@ export interface SessionState {
    * memory (the workspace itself is hidden) until the same account signs in again; a different
    * account clears it.
    */
-  status: 'bootstrapping' | 'anonymous' | 'authenticated' | 'reauth' | 'unavailable'
+  status: 'bootstrapping' | 'anonymous' | 'authenticated' | 'reauth' | 'unavailable' | 'signing_out' | 'signout_failed'
   user: AuthUser | null
   /** In memory only: never written to localStorage/sessionStorage/IndexedDB. */
   csrfToken: string | null
@@ -43,7 +43,15 @@ export interface SessionState {
   bootstrap: () => Promise<void>
   login: (email: string, password: string) => Promise<AuthResult>
   register: (email: string, password: string) => Promise<AuthResult>
+  /**
+   * Ends the server session. Private content is hidden at once (`signing_out`). Only a confirmed
+   * revocation (success, or the server saying the session is already gone) ends in `anonymous`;
+   * any other outcome is `signout_failed`, from which `retryLogout` tries again.
+   */
   logout: () => Promise<void>
+  retryLogout: () => Promise<void>
+  /** Why the last sign-out could not be confirmed (generic text, never a token). */
+  signOutError: string | null
   loadWorkspace: () => Promise<void>
   /** Call when any authenticated request returns 401. */
   handleUnauthorized: () => void
@@ -85,6 +93,31 @@ export const useSessionStore = create<SessionState>()((set, get) => {
     return generation
   }
   const isCurrent = (generation: number) => get().generation === generation
+  /** The CSRF token of the session being signed out, kept out of state so Retry can reuse it. */
+  let logoutCsrf: string | null = null
+  let logoutInFlight: Promise<void> | null = null
+
+  /** One revocation attempt. Fenced by `generation`: a result for a superseded attempt changes nothing. */
+  async function revoke(): Promise<void> {
+    const generation = begin()
+    set({ status: 'signing_out', signOutError: null, notice: null, ...SIGNED_OUT })
+    try {
+      await authApi.logout(logoutCsrf)
+    } catch (error) {
+      if (!isCurrent(generation)) return
+      // A 401 means the session is already gone, which is exactly what sign-out wants.
+      if (!(error instanceof ApiError && error.status === 401)) {
+        const message = error instanceof ApiError && error.status > 0 && error.status < 500
+          ? 'The server did not accept the sign-out request.'
+          : "Couldn't reach the server to confirm that you were signed out."
+        set({ status: 'signout_failed', signOutError: message })
+        return
+      }
+    }
+    if (!isCurrent(generation)) return
+    logoutCsrf = null
+    set({ status: 'anonymous', notice: null, signOutError: null, ...SIGNED_OUT })
+  }
 
   async function authenticate(mode: 'login' | 'register', email: string, password: string): Promise<AuthResult> {
     const generation = begin()
@@ -143,6 +176,7 @@ export const useSessionStore = create<SessionState>()((set, get) => {
     csrfToken: null,
     generation: 0,
     notice: null,
+    signOutError: null,
     workspace: { status: 'idle' },
 
     async bootstrap() {
@@ -165,17 +199,28 @@ export const useSessionStore = create<SessionState>()((set, get) => {
     login: (email, password) => authenticate('login', email, password),
     register: (email, password) => authenticate('register', email, password),
 
-    async logout() {
-      const csrf = get().csrfToken
-      begin()
-      // Clear private state first so the previous user's data is never shown after logout.
-      resetEditor()
-      set({ status: 'anonymous', notice: null, ...SIGNED_OUT })
-      try {
-        await authApi.logout(csrf)
-      } catch {
-        // Already signed out locally; an expired or unreachable session needs no further handling.
+    logout() {
+      if (get().status === 'signing_out' && logoutInFlight) return logoutInFlight // duplicate activation
+      if (get().status === 'signout_failed') return get().retryLogout()
+      if (!get().csrfToken) {
+        // Nothing signed in is known here (e.g. still bootstrapping): just invalidate whatever is in flight.
+        begin()
+        resetEditor()
+        set({ status: 'anonymous', notice: null, signOutError: null, ...SIGNED_OUT })
+        return Promise.resolve()
       }
+      logoutCsrf = get().csrfToken
+      // Clear private state first so the previous user's data is never shown while or after signing out.
+      resetEditor()
+      logoutInFlight = revoke().finally(() => { logoutInFlight = null })
+      return logoutInFlight
+    },
+
+    retryLogout() {
+      if (get().status === 'signing_out' && logoutInFlight) return logoutInFlight
+      if (get().status !== 'signout_failed') return Promise.resolve()
+      logoutInFlight = revoke().finally(() => { logoutInFlight = null })
+      return logoutInFlight
     },
 
     async loadWorkspace() {

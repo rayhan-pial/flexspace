@@ -1,4 +1,5 @@
 import { Trash2 } from 'lucide-react'
+import Button from '../../shared/ui/Button'
 import { useId, useState } from 'react'
 import { addEvent, removeEvent, setDisplayMonth, updateEvent } from '../../domain/workspace/calendar'
 import type { Command } from '../../domain/workspace/commands'
@@ -71,14 +72,9 @@ export default function CalendarInspector({ widgetId, props, dispatch }: WidgetI
         })}
       </ul>
 
-      <button
-        type="button"
-        disabled={props.events.length >= MAX_LIST_ITEMS}
-        onClick={() => run(addEvent(widgetId, newId('event'), `${props.displayMonth}-01`, 'New event'))}
-        className="rounded-ui-control border border-ui-control px-3 py-1.5 text-sm font-medium text-ui-text hover:bg-ui-subtle ui-focus disabled:cursor-not-allowed disabled:opacity-50"
-      >
+      <Button reason={props.events.length >= MAX_LIST_ITEMS ? `This widget has reached the limit of ${MAX_LIST_ITEMS} entries.` : null} onClick={() => run(addEvent(widgetId, newId('event'), `${props.displayMonth}-01`, 'New event'))}>
         Add event
-      </button>
+      </Button>
       {error && <p role="alert" className="rounded-ui-control bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200">{error}</p>}
     </fieldset>
   )

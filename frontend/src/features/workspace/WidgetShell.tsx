@@ -1,5 +1,5 @@
 import type { KeyboardEvent, ReactNode } from 'react'
-import { useId } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import type { WidgetMode } from '../../widgets/types'
 import { safeAppearanceStyle } from './appearance'
 
@@ -18,6 +18,9 @@ interface Props {
   children: ReactNode
 }
 
+/** Below this card height (the smallest, 2-row cards are 80px) the chrome tightens so the content keeps room. */
+export const COMPACT_CARD_HEIGHT = 100
+
 /**
  * Common widget chrome: title, appearance and (in Edit) selection. Drag/resize handles join in
  * FS-015. Clicking anywhere in the card (including its own controls) selects it; Enter/Space
@@ -26,6 +29,17 @@ interface Props {
 export default function WidgetShell({ widgetId, title, mode, selected, appearance, onSelect, handle, icon, children }: Props) {
   const headingId = useId()
   const editing = mode === 'edit'
+  const cardRef = useRef<HTMLElement>(null)
+  const [compact, setCompact] = useState(false)
+
+  // Watch the card's own height (a grid item can be as small as two rows) and tighten padding and gaps when it is short.
+  useEffect(() => {
+    const card = cardRef.current
+    if (!card || typeof ResizeObserver === 'undefined') return
+    const observer = new ResizeObserver(() => setCompact(card.getBoundingClientRect().height < COMPACT_CARD_HEIGHT))
+    observer.observe(card)
+    return () => observer.disconnect()
+  }, [])
 
   function onKeyDown(event: KeyboardEvent) {
     if (editing && event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
@@ -36,18 +50,20 @@ export default function WidgetShell({ widgetId, title, mode, selected, appearanc
 
   return (
     <article
+      ref={cardRef}
       aria-labelledby={headingId}
+      data-compact={compact ? 'true' : undefined}
       data-widget-id={widgetId}
       data-selected={editing && selected ? 'true' : undefined}
       tabIndex={editing ? 0 : undefined}
       onClick={editing ? onSelect : undefined}
       onKeyDown={onKeyDown}
       style={safeAppearanceStyle(appearance)}
-      className={`ui-focus flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-[var(--fs-surface,#ffffff)] p-4 ring-1 transition-shadow ${
+      className={`group ui-focus flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-[var(--fs-surface,#ffffff)] p-4 ring-1 data-[compact=true]:p-2 transition-shadow ${
         editing && selected ? 'shadow-md ring-2 ring-ui-primary' : editing ? 'shadow-sm ring-black/10 hover:ring-ui-control' : 'shadow-sm ring-black/10'
       }`}
     >
-      <div className="mb-2 flex shrink-0 items-center gap-1.5">
+      <div className="mb-2 flex shrink-0 items-center gap-1.5 group-data-[compact=true]:mb-0.5">
         {editing && handle}
         {icon && <span aria-hidden="true" className="flex shrink-0 opacity-70 [&_svg]:size-4">{icon}</span>}
         <h3 id={headingId} className="min-w-0 truncate text-sm font-semibold tracking-wide">{title}</h3>

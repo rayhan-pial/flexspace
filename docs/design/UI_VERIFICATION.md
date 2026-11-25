@@ -278,3 +278,36 @@ Reviewed by eye (7): Creative at 1280 Edit, Analytics at 1920 Edit, Productivity
 - Hover and tooltip states, and focus-ring contrast values, were not measured.
 - Baseline JSON covers the default workspace only.
 - Screenshots are not tracked in git.
+
+
+## Corrective pass UI-019 to UI-030 (2026-11-25)
+
+### Gate results (scratch SQLite database on API port 8010 and Vite port 5174; nothing run against the working database)
+
+| Gate | Result |
+| --- | --- |
+| `npm run typecheck` / `npm run lint` | clean |
+| `npm test` | 876 passed in 63 files (801 before this pass) |
+| `npm run build` | OK; CSS 42.46 kB, JS 602.73 kB; chunk-size advisory unchanged (Phase 6: CSS 40.16, JS 585.82); no dependency added |
+| `npm run test:browser` | 27 of 27 scripts OK on the final code (18 before; added `reload-latest`, `logout-retry`, `add-destination`, `workspace-palette`, `min-sizes`, `inspector-panel`, `rapid-keyboard`, `browser-zoom`, `state-contrast`). The first full run failed once at `outline-grid.mjs`: my own UI-027 change switched the inspector to Properties when a card handle was pressed; fixed in the product (only a click on the card's own area does that) and the suite was rerun in full |
+| Backend `pytest` | 267 passed in 15 consecutive full runs at the end (264 before). Earlier in this pass 2 of about 14 runs failed on `test_sync_bumps_the_updated_time_only_for_rows_it_changes` (wall-clock equality); fixed without retries |
+| Backend diff | two source lines in `repositories/templates.py` (tie-break) and docstrings; no migration, API, auth or schema change |
+
+### Evidence per task
+
+Each task's evidence is recorded under its entry in [UI_REDESIGN_TASKS.md](../UI_REDESIGN_TASKS.md). Old assertions that encoded the replaced behavior were rewritten on purpose (occupied drag stops at a free column; clicking an unavailable step shows an error; library/templates in the inspector; alertdialog confirmations), and boundary, zero-overlap, privacy and invalid-JSON coverage was kept.
+
+### Demonstration (`artifacts/ui-review/demo/`, `node frontend/e2e/management-demo.mjs`)
+
+`management-demo.webm` plus ten screenshots: drop on an occupied spot (before, during, after, one Undo), disabled step at the boundary with its reason, Add to Reference with the revealed card, the Midnight and Sunset palettes, and the template gallery. Frames read: the mid-drag reflow, the revealed Add result, the disabled-bounds inspector, the palettes and the gallery.
+
+### Screenshots
+
+`after/ui024-*` (palette, 1440/1024/390, Edit and Preview, three nav placements), `after/ui025-*` (minimum sizes, light and dark), `after/ui027-*` (inspector hidden at 1024/1280/1440), `final/` (matrix regenerated for the new dialogs; it replaced the Phase 6 images in that folder), `demo/`. All untracked.
+
+### Not verified or still open
+
+- No real screen reader; no hardware touch device (UI-029 Blocked).
+- 2/1-column template tiers unreachable; flat user navigation; Welcome relies on scrolling at 80 px.
+- Same-task synthetic key burst (not producible by hardware) loses the first arrow in dnd-kit.
+- Baseline JSON still covers the default workspace only.

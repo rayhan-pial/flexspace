@@ -96,17 +96,63 @@ try {
   assert.deepEqual(await box('w-notes'), moved, 'dragging the title did not move the widget')
   assert.equal(await status(), 'Unsaved changes') // still only the earlier resize and move
 
-  log('dragging into another widget never overlaps it: the widget stops at the nearest free column')
+  const allBoxes = async () => {
+    const ids = await page.evaluate(() => [...document.querySelectorAll('.react-grid-item:not(.react-grid-placeholder) [data-widget-id]')].map((e) => e.getAttribute('data-widget-id')))
+    return Object.fromEntries(await Promise.all(ids.map(async (id) => [id, await box(id)])))
+  }
+  const noOverlaps = (boxes) => {
+    const entries = Object.entries(boxes)
+    for (const [a, p] of entries) for (const [b, q] of entries) {
+      if (a < b) assert.ok(p.x + p.width <= q.x + 1 || q.x + q.width <= p.x + 1 || p.y + p.height <= q.y + 1 || q.y + q.height <= p.y + 1, `${a} and ${b} overlap`)
+    }
+  }
+  const visualOrder = (boxes) => Object.entries(boxes).sort(([, p], [, q]) => Math.round(p.y) - Math.round(q.y) || Math.round(p.x) - Math.round(q.x)).map(([id]) => id)
+
+  log('Escape during a drag abandons it: nothing changes, no dirty write, and dragging still works afterwards')
+  const preEscape = await allBoxes()
+  const statusBefore = await status()
+  const hEsc = await card('w-notes').getByRole('button', { name: /Move or resize/ }).boundingBox()
+  const escAt = { x: hEsc.x + hEsc.width / 2, y: hEsc.y + hEsc.height / 2 }
+  await page.mouse.move(escAt.x, escAt.y)
+  await page.mouse.down()
+  await page.mouse.move(escAt.x + 5, escAt.y + 5, { steps: 2 })
+  await page.mouse.move(escAt.x - 2 * pitch, escAt.y + 80, { steps: 8 })
+  await page.keyboard.press('Escape')
+  await page.mouse.up()
+  await page.waitForTimeout(500)
+  assert.deepEqual(await allBoxes(), preEscape, 'Escape restored every widget')
+  assert.equal(await status(), statusBefore, 'Escape did not change the save status')
+
+  log('releasing outside the canvas (over the inspector) cancels instead of dropping')
+  const insp = await inspector(page).boundingBox()
+  await drag(escAt, { x: insp.x + insp.width / 2, y: insp.y + 200 }, 16)
+  await page.waitForTimeout(500)
+  assert.deepEqual(await allBoxes(), preEscape, 'an outside drop restored every widget')
+
+  log('dragging into another widget pushes it out of the way: no overlap, and one Undo restores the whole layout')
   const handle2 = await card('w-notes').getByRole('button', { name: /Move or resize/ }).boundingBox()
   const at2 = { x: handle2.x + handle2.width / 2, y: handle2.y + handle2.height / 2 }
-  const tasks = await box('w-tasks')
-  await drag(at2, { x: tasks.x + 60, y: tasks.y + 60 }, 20)
-  await page.waitForTimeout(500)
-  const blocked = await box('w-notes')
-  const tasksNow = await box('w-tasks')
-  assert.deepEqual(tasksNow, tasks, 'Tasks was not pushed')
-  assert.ok(blocked.x >= tasksNow.x + tasksNow.width, `Notes does not overlap Tasks (${blocked.x} >= ${tasksNow.x + tasksNow.width})`)
-  assert.equal(blocked.y, moved.y)
+  const before = await allBoxes()
+  const tasks = before['w-tasks']
+  await drag(at2, { x: tasks.x + 60, y: tasks.y + 20 }, 20)
+  await page.waitForTimeout(700)
+  const after = await allBoxes()
+  assert.notDeepEqual(after['w-tasks'], tasks, 'Tasks was pushed to make room')
+  noOverlaps(after)
+  for (const id of Object.keys(before)) assert.equal(Math.round(after[id].width), Math.round(before[id].width), `${id} kept its width`)
+  const dropped = after['w-notes']
+  assert.ok(Math.abs(dropped.x - tasks.x) < 2 * pitch, `Notes landed where it was dropped (${dropped.x} near ${tasks.x})`)
+  await goTo(page, 'Outline')
+  const outline = await outlineOrder()
+  const titles = await Promise.all(visualOrder(after).map(async (id) => (await card(id).getByRole('heading').first().innerText()).trim()))
+  assert.deepEqual(outline.filter((t) => titles.includes(t)), titles, 'the outline order matches what is drawn on the canvas')
+  assert.equal(await status(), 'Unsaved changes')
+  await page.getByRole('button', { name: 'Undo', exact: true }).click()
+  await page.waitForTimeout(700)
+  assert.deepEqual(await allBoxes(), before, 'one Undo restored the geometry of every widget')
+  await page.getByRole('button', { name: 'Redo', exact: true }).click()
+  await page.waitForTimeout(700)
+  assert.deepEqual(await allBoxes(), after, 'Redo returned the reflowed layout')
 
   log('Save, reload, and the geometry persists')
   await goTo(page, 'Outline')

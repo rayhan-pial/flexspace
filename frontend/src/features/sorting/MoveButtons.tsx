@@ -37,8 +37,8 @@ export default function MoveButtons({ adapter, itemId, containerId, otherContain
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        <Button disabled={index <= 0} onClick={() => move(containerId, index - 1)} aria-label={name('Move up')}>Move up</Button>
-        <Button disabled={index === -1 || index >= items.length - 1} onClick={() => move(containerId, index + 1)} aria-label={name('Move down')}>Move down</Button>
+        <Button reason={index === -1 ? 'This item is no longer in the list.' : index === 0 ? 'Already first.' : null} onClick={() => move(containerId, index - 1)} aria-label={name('Move up')}>Move up</Button>
+        <Button reason={index === -1 ? 'This item is no longer in the list.' : index >= items.length - 1 ? 'Already last.' : null} onClick={() => move(containerId, index + 1)} aria-label={name('Move down')}>Move down</Button>
         {otherContainers.map((container) => (
           <Button key={container.id} onClick={() => move(container.id, adapter.readItems(container.id)?.length ?? 0)} aria-label={name(`Move to ${container.label}`)}>
             Move to {container.label}

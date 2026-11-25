@@ -8,18 +8,26 @@ export const SUBTITLE_MAX = 400
 export default function WelcomeWidget({ props, mode }: WidgetRenderProps<WelcomeProps>) {
   const empty = props.greeting === '' && props.subtitle === ''
   return (
-    // The accent is a left border, so it adds no height: Welcome must stay legible at its smallest size.
+    // The accent is a left border, so it adds no height. At the smallest size (2 rows) the card tightens its
+    // chrome and this type steps down; whatever still does not fit scrolls (it is never clipped), and
+    // `my-auto` centers short text but keeps the first line reachable when the text is taller than the space.
     <div
       data-welcome-accent={empty ? undefined : 'true'}
-      className={`flex h-full min-h-0 flex-col justify-center overflow-hidden ${empty ? '' : 'border-l-4 border-[var(--fs-primary,#6366f1)] pl-3'}`}
+      className={`fs-scroll flex h-full min-h-0 flex-col overflow-y-auto overflow-x-hidden ${empty ? '' : 'border-l-4 border-[var(--fs-primary,#6366f1)] pl-3'}`}
     >
-      {props.greeting !== '' && <p className="break-words text-2xl font-semibold tracking-tight">{props.greeting}</p>}
-      {props.subtitle !== '' && <p className="mt-1 break-words opacity-80">{props.subtitle}</p>}
-      {empty && (
-        <p className="text-sm opacity-60">
-          {mode === 'edit' ? 'Select this widget and add a greeting in Properties.' : 'Nothing to show yet.'}
-        </p>
-      )}
+      <div className="my-auto">
+        {props.greeting !== '' && (
+          <p className="whitespace-pre-line break-words text-2xl font-semibold tracking-tight group-data-[compact=true]:text-base group-data-[compact=true]:leading-5">{props.greeting}</p>
+        )}
+        {props.subtitle !== '' && (
+          <p className="mt-1 whitespace-pre-line break-words opacity-80 group-data-[compact=true]:mt-0 group-data-[compact=true]:text-xs group-data-[compact=true]:leading-4">{props.subtitle}</p>
+        )}
+        {empty && (
+          <p className="text-sm opacity-60">
+            {mode === 'edit' ? 'Select this widget and add a greeting in Properties.' : 'Nothing to show yet.'}
+          </p>
+        )}
+      </div>
     </div>
   )
 }

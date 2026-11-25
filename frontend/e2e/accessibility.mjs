@@ -174,6 +174,17 @@ try {
   let measured = 0
   for (const view of ['My workspace', 'Outline', 'Components', 'Templates', 'Appearance']) {
     await goTo(page, view)
+    if (view === 'Components' || view === 'Templates') {
+      // The library and the template gallery are modal dialogs, not inspector views: they take focus, name themselves, and give focus back.
+      const dialog = page.getByRole('dialog', { name: view === 'Components' ? 'Add a component' : 'Templates' })
+      assert.equal(await rail.getByRole('button', { name: view, exact: true }).getAttribute('aria-haspopup'), 'dialog')
+      assert.equal(await page.evaluate(() => !!document.activeElement?.closest('[role="dialog"]')), true, 'focus moved into the dialog')
+      measured += await contrastSweep(`${view} dialog`, '[role="dialog"]')
+      await page.keyboard.press('Escape')
+      await dialog.waitFor({ state: 'hidden' })
+      assert.equal(await page.evaluate(() => document.activeElement?.getAttribute('title')), view, `focus returned to the ${view} button`)
+      continue
+    }
     assert.equal(await rail.getByRole('button', { name: view, exact: true }).getAttribute('aria-current'), 'true', `${view} is marked as the current destination`)
     total += await focusAudit(view)
     measured += await contrastSweep(view, 'aside, [data-toolbar]')

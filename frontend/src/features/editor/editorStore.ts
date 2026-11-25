@@ -80,6 +80,11 @@ export interface EditorState {
    * re-login. A frozen editor accepts no mutations, saves or cancels.
    */
   frozen: boolean
+  /**
+   * True while a confirmed "Reload latest" request is in flight. The draft is locked (no edits, undo,
+   * save or cancel) so nothing typed meanwhile can be replaced by the response.
+   */
+  reloading: boolean
 
   load: (input: LoadInput) => void
   reset: () => void
@@ -96,6 +101,10 @@ export interface EditorState {
   reportFailure: (failure: SaveFailure) => void
   freeze: () => void
   unfreeze: () => void
+  /** Start a reload: locks the draft. Null when one cannot start (no draft, frozen, saving, already reloading). */
+  beginReload: () => { epoch: number; ownerId: string } | null
+  /** Unlock after a failed or abandoned reload. The draft is untouched. Ignored if the owner/epoch moved on. */
+  endReload: (ticket: { epoch: number; ownerId: string }) => void
   cancel: () => boolean
   /** Group the commands that follow into one history step until `endEditSession`. */
   beginEditSession: () => void
@@ -117,6 +126,7 @@ const EMPTY = {
   saveStatus: { state: 'idle' } as SaveStatus,
   history: NO_HISTORY,
   frozen: false,
+  reloading: false,
 }
 
 export const useEditorStore = create<EditorState>()((set, get) => {
@@ -124,8 +134,8 @@ export const useEditorStore = create<EditorState>()((set, get) => {
   let sessions = 0
   /** Undo and Redo need an editable, idle draft: not frozen, and not in the middle of a drag. */
   const canStep = () => {
-    const { draftConfig, frozen, interaction } = get()
-    return draftConfig !== null && !frozen && !interaction.gesture
+    const { draftConfig, frozen, interaction, reloading } = get()
+    return draftConfig !== null && !frozen && !reloading && !interaction.gesture
   }
 
   return {
@@ -153,6 +163,7 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       const { draftConfig } = get()
       if (!draftConfig) return { status: 'rejected', error: 'No workspace is loaded.' }
       if (get().frozen) return { status: 'rejected', error: 'Your session expired. Sign in to continue editing.' }
+      if (get().reloading) return { status: 'rejected', error: 'Reloading the latest workspace. Editing resumes when it finishes.' }
       const result = command(draftConfig)
       if (!result.ok) return { status: 'rejected', error: result.error }
       if (result.config === draftConfig || deepEqual(result.config, draftConfig)) return { status: 'noop' }
@@ -189,15 +200,15 @@ export const useEditorStore = create<EditorState>()((set, get) => {
     },
 
     beginGesture(kind) {
-      if (get().interaction.gesture) return false
+      if (get().interaction.gesture || get().reloading) return false
       set({ interaction: { gesture: kind } })
       return true
     },
     endGesture: () => set({ interaction: { gesture: null } }),
 
     beginSave() {
-      const { ownerId, revision, draftConfig, savedConfig, saveStatus, interaction, epoch, frozen } = get()
-      if (!ownerId || revision === null || !draftConfig || !savedConfig || frozen) return null
+      const { ownerId, revision, draftConfig, savedConfig, saveStatus, interaction, epoch, frozen, reloading } = get()
+      if (!ownerId || revision === null || !draftConfig || !savedConfig || frozen || reloading) return null
       if (saveStatus.state === 'saving' || interaction.gesture) return null // no duplicate or mid-drag saves
       if (selectIsDirty(get()) === false) return null
       // The draft is frozen, so this reference is an immutable snapshot of what is being saved.
@@ -243,9 +254,20 @@ export const useEditorStore = create<EditorState>()((set, get) => {
       set({ frozen: false, ...(interrupted && { saveStatus: { state: 'idle' } as SaveStatus }) })
     },
 
+    beginReload() {
+      const { ownerId, epoch, draftConfig, frozen, reloading, saveStatus } = get()
+      if (!ownerId || !draftConfig || frozen || reloading || saveStatus.state === 'saving') return null
+      set({ reloading: true, interaction: { gesture: null } })
+      return { epoch, ownerId }
+    },
+
+    endReload(ticket) {
+      if (get().epoch === ticket.epoch && get().ownerId === ticket.ownerId && get().reloading) set({ reloading: false })
+    },
+
     cancel() {
-      const { savedConfig, saveStatus, frozen } = get()
-      if (!savedConfig || saveStatus.state === 'saving' || frozen) return false
+      const { savedConfig, saveStatus, frozen, reloading } = get()
+      if (!savedConfig || saveStatus.state === 'saving' || frozen || reloading) return false
       set({
         draftConfig: savedConfig, // frozen, so sharing the reference is safe
         selection: null,
@@ -291,10 +313,42 @@ export const useEditorStore = create<EditorState>()((set, get) => {
   }
 })
 
-export const selectCanUndo = (state: Pick<EditorState, 'history' | 'frozen' | 'interaction'>): boolean =>
-  state.history.past.length > 0 && !state.frozen && !state.interaction.gesture
-export const selectCanRedo = (state: Pick<EditorState, 'history' | 'frozen' | 'interaction'>): boolean =>
-  state.history.future.length > 0 && !state.frozen && !state.interaction.gesture
+export const selectCanUndo = (state: Pick<EditorState, 'history' | 'frozen' | 'interaction' | 'reloading'>): boolean =>
+  state.history.past.length > 0 && !state.frozen && !state.reloading && !state.interaction.gesture
+export const selectCanRedo = (state: Pick<EditorState, 'history' | 'frozen' | 'interaction' | 'reloading'>): boolean =>
+  state.history.future.length > 0 && !state.frozen && !state.reloading && !state.interaction.gesture
+
+type Gate = Pick<EditorState, 'frozen' | 'reloading' | 'interaction' | 'saveStatus' | 'savedConfig' | 'draftConfig' | 'history'>
+
+/** Why a Save cannot run right now, in words, or null. Pure: reads state only. */
+export function saveBlocker(state: Gate): string | null {
+  if (!state.draftConfig) return 'No workspace is loaded.'
+  if (state.frozen) return 'Sign in again to keep editing.'
+  if (state.reloading) return 'The latest saved workspace is loading.'
+  if (state.saveStatus.state === 'saving') return 'A save is already in progress.'
+  if (state.interaction.gesture) return 'Finish the drag or resize first.'
+  if (!selectIsDirty(state)) return 'There are no unsaved changes.'
+  return null
+}
+
+/** Why Cancel (discard changes) cannot run right now, or null. */
+export function cancelBlocker(state: Gate): string | null {
+  if (!state.draftConfig) return 'No workspace is loaded.'
+  if (state.frozen) return 'Sign in again to keep editing.'
+  if (state.reloading) return 'The latest saved workspace is loading.'
+  if (state.saveStatus.state === 'saving') return 'A save is in progress.'
+  if (!selectIsDirty(state)) return 'There are no unsaved changes to discard.'
+  return null
+}
+
+/** Why Undo or Redo cannot run right now, or null. */
+export function historyBlocker(state: Gate, direction: 'undo' | 'redo'): string | null {
+  if (state.frozen) return 'Sign in again to keep editing.'
+  if (state.reloading) return 'The latest saved workspace is loading.'
+  if (state.interaction.gesture) return 'Finish the drag or resize first.'
+  const steps = direction === 'undo' ? state.history.past.length : state.history.future.length
+  return steps === 0 ? (direction === 'undo' ? 'There is nothing to undo.' : 'There is nothing to redo.') : null
+}
 
 let lastDirty: { saved: unknown; draft: unknown; result: boolean } | null = null
 

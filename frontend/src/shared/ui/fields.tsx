@@ -105,6 +105,7 @@ export function ColorField({
         />
       </div>
       {hint && <p id={hintId} className="mt-1 text-xs text-ui-muted">{hint}</p>}
+      {onReset && <p data-color-source className="mt-1 text-xs font-medium text-ui-muted">{value === undefined ? 'Inherit workspace' : 'Custom color'}</p>}
       {invalid && <p id={errorId} role="alert" className={errorText}>Use a colour like #1a2b3c (six hex digits).</p>}
       <div className="mt-1 flex gap-2">
         <button type="button" aria-expanded={picking} onClick={() => setPicking((open) => !open)} className={small}>

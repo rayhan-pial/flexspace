@@ -1,6 +1,7 @@
 import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
+import { updateNavItem } from '../../domain/workspace/navigation'
 import { parseWorkspaceConfig } from '../../domain/workspace/parse'
 import type { WorkspaceConfig } from '../../domain/workspace/types'
 import { selectIsDirty, useEditorStore } from '../editor/editorStore'
@@ -256,6 +257,26 @@ describe('temporary navigation', () => {
     expect(within(nav).getByRole('button', { name: 'Nowhere' })).toBeDisabled()
   })
 
+  it('Preview disables a link to a hidden section with a reason, while Edit keeps it selectable to repair (UI-022)', () => {
+    renderView()
+    act(() => { editor().apply(updateNavItem('nav-3', { targetSectionId: 's-hidden' })) })
+    act(() => editor().setMode('preview'))
+    const nav = screen.getByRole('navigation', { name: 'Workspace' })
+    const link = within(nav).getByRole('button', { name: 'Nowhere' })
+    expect(link).toBeDisabled()
+    expect(link).toHaveAccessibleDescription('The section this link points at is hidden.')
+    expect(within(nav).getByRole('button', { name: 'Overview' })).toBeEnabled()
+    act(() => editor().setMode('edit'))
+    const editLink = within(screen.getByRole('navigation', { name: 'Workspace' })).getByRole('button', { name: 'Nowhere' })
+    expect(editLink).toBeEnabled()
+  })
+
+  it('an unlinked item explains itself in Preview', () => {
+    renderView()
+    act(() => useEditorStore.getState().setMode('preview'))
+    expect(screen.getByRole('button', { name: 'Nowhere' })).toHaveAccessibleDescription('This link does not point at a section yet.')
+  })
+
   it('moves to and focuses the target section', async () => {
     const scrollIntoView = vi.fn()
     Element.prototype.scrollIntoView = scrollIntoView
@@ -272,11 +293,11 @@ describe('temporary navigation', () => {
     ['right', 'lg:flex-row-reverse', 'min-[1400px]:flex-row-reverse'],
   ] as const)('honours the saved %s placement (beside the canvas from lg in Preview, from 1400px in Edit where panels take room)', (placement, preview, edit) => {
     const { container } = renderView(placement)
-    expect((container.firstElementChild as HTMLElement).className).toContain(edit)
-    expect((container.firstElementChild as HTMLElement).className).not.toContain('lg:flex-row')
+    expect(((container.firstElementChild as HTMLElement).firstElementChild as HTMLElement).className).toContain(edit)
+    expect(((container.firstElementChild as HTMLElement).firstElementChild as HTMLElement).className).not.toContain('lg:flex-row')
     act(() => useEditorStore.getState().setMode('preview'))
-    expect((container.firstElementChild as HTMLElement).className).toContain(preview)
-    expect((container.firstElementChild as HTMLElement).className).not.toContain('min-[1400px]')
+    expect(((container.firstElementChild as HTMLElement).firstElementChild as HTMLElement).className).toContain(preview)
+    expect(((container.firstElementChild as HTMLElement).firstElementChild as HTMLElement).className).not.toContain('min-[1400px]')
   })
 
   it('renders nothing when there are no navigation items', () => {

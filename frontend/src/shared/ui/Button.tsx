@@ -1,3 +1,4 @@
+import { useId } from 'react'
 import type { ComponentProps } from 'react'
 
 type ButtonVariant ='primary' | 'secondary' | 'quiet' | 'destructive'
@@ -14,9 +15,28 @@ const VARIANTS: Record<ButtonVariant, string> = {
 
 interface Props extends ComponentProps<'button'> {
   variant?: ButtonVariant
+  /**
+   * Why the button cannot be used right now. A non-empty reason makes the button natively disabled and
+   * is attached with `aria-describedby`, so it is announced with the button instead of living only in a tooltip.
+   */
+  reason?: string | null
 }
 
 /** The editor's one button. Defaults to type="button" so it never submits a form by accident. */
-export default function Button({ variant = 'secondary', className = '', type = 'button', ...rest }: Props) {
-  return <button type={type} className={`${BASE} ${VARIANTS[variant]} ${className}`.trim()} {...rest} />
+export default function Button({ variant = 'secondary', className = '', type = 'button', reason, disabled, ...rest }: Props) {
+  const reasonId = useId()
+  const unavailable = Boolean(reason)
+  return (
+    <>
+      <button
+        type={type}
+        className={`${BASE} ${VARIANTS[variant]} ${className}`.trim()}
+        disabled={disabled || unavailable}
+        aria-describedby={unavailable ? reasonId : rest['aria-describedby']}
+        {...rest}
+        {...(unavailable && { 'aria-describedby': reasonId })}
+      />
+      {unavailable && <span id={reasonId} className="sr-only">{reason}</span>}
+    </>
+  )
 }

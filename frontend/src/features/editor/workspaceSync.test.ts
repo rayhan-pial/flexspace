@@ -395,3 +395,59 @@ describe('browser storage', () => {
     expect(localStorage.length + sessionStorage.length).toBe(0)
   })
 })
+
+describe('Reload latest locks the draft while the request is in flight (UI-019)', () => {
+  it('refuses edits, undo, save, cancel and gestures until the GET settles, then the newest remote is shown honestly', async () => {
+    await signIn()
+    edit('Local one')
+    const gate = deferred<Response>()
+    server.getHook = () => gate.promise
+    const reloading = reloadLatest()
+    await flush()
+    expect(editor().reloading).toBe(true)
+    expect(edit('New edit AFTER confirming reload')).toMatchObject({ status: 'rejected' })
+    expect(editor().draftConfig!.title).toBe('Local one')
+    expect(editor().undo()).toBe(false)
+    expect(editor().cancel()).toBe(false)
+    expect(editor().beginSave()).toBeNull()
+    expect(editor().beginGesture('grid')).toBe(false)
+    expect(await reloadLatest()).toMatchObject({ ok: false }) // no second concurrent reload
+    gate.resolve(json(200, { id: 'ws-a', revision: 1, updatedAt: 'x', config: server.users.a.config }))
+    expect(await reloading).toEqual({ ok: true })
+    expect(editor().reloading).toBe(false)
+    expect(dirty()).toBe(false)
+    expect(edit('Editing resumes')).toMatchObject({ status: 'applied' })
+  })
+
+  it('a failed reload unlocks and keeps the draft recoverable', async () => {
+    await signIn()
+    edit('Keep me')
+    const gate = deferred<Response>()
+    server.getHook = () => gate.promise
+    const reloading = reloadLatest()
+    await flush()
+    gate.resolve(apiError(500, 'server_error'))
+    expect(await reloading).toMatchObject({ ok: false })
+    expect(editor().reloading).toBe(false)
+    expect(editor().draftConfig!.title).toBe('Keep me')
+    expect(edit('Keep me, more')).toMatchObject({ status: 'applied' })
+  })
+
+  it('an owner switch while pending ignores the late result and leaves no stale lock', async () => {
+    await signIn()
+    const gate = deferred<Response>()
+    server.getHook = () => gate.promise
+    const reloading = reloadLatest()
+    await flush()
+    await session().logout()
+    expect(editor().reloading).toBe(false)
+    server.getHook = undefined
+    await signIn('b@example.com')
+    const bTitle = editor().draftConfig!.title
+    gate.resolve(json(200, { id: 'ws-a', revision: 9, updatedAt: 'x', config: server.users.a.config }))
+    expect(await reloading).toMatchObject({ ok: false })
+    expect(editor().ownerId).not.toBeNull()
+    expect(editor().draftConfig!.title).toBe(bTitle)
+    expect(editor().reloading).toBe(false)
+  })
+})

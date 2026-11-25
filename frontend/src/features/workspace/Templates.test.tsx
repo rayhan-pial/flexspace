@@ -8,7 +8,7 @@ import type { FakeServer } from '../../test/fakeServer'
 import { stubViewport } from '../../test/viewport'
 import { useSessionStore } from '../auth/sessionStore'
 import { selectIsDirty, useEditorStore } from '../editor/editorStore'
-import { goTo, inspector } from '../../test/shell'
+import { goTo, templatesDialog } from '../../test/shell'
 
 const editor = () => useEditorStore.getState()
 
@@ -42,7 +42,7 @@ async function open() {
   await screen.findByLabelText('Meeting notes text')
   return userEvent.setup()
 }
-const settings = inspector
+const settings = templatesDialog
 
 async function openTemplates(user: ReturnType<typeof userEvent.setup>) {
   await goTo(user, 'Templates')
@@ -166,14 +166,35 @@ describe('applying a design', () => {
     await openTemplates(user)
     await user.click(settings().getByRole('radio', { name: /Creative/ }))
     await user.click(await settings().findByRole('button', { name: 'Apply Creative' }))
-    const dialog = await screen.findByRole('alertdialog')
+    const dialog = await screen.findByRole('region', { name: /Replace your unsaved changes\?|Delete this template\?/ })
     expect(within(dialog).getByText('Replace your unsaved changes?')).toBeInTheDocument()
     expect(within(dialog).getByText(/Cancel brings it back/)).toBeInTheDocument()
     const draft = editor().draftConfig
     await user.click(within(dialog).getByRole('button', { name: 'Keep my changes' }))
     expect(editor().draftConfig).toBe(draft)
-    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /Replace your unsaved changes\?|Delete this template\?/ })).not.toBeInTheDocument()
     expect(server.templateDetailGets.filter((id) => id === 'tpl-creative')).toHaveLength(1) // only the preview fetched it
+  })
+
+  it('the confirmation is a step inside the dialog: Escape cancels it first, focus returns to the Apply button, a second Escape closes the dialog (UI-026)', async () => {
+    const user = await open()
+    await user.type(screen.getByLabelText('Meeting notes text'), ' plus edit')
+    await openTemplates(user)
+    await user.click(settings().getByRole('radio', { name: /Creative/ }))
+    const apply = await settings().findByRole('button', { name: 'Apply Creative' })
+    await user.click(apply)
+    const confirmation = await screen.findByRole('region', { name: 'Replace your unsaved changes?' })
+    expect(screen.getAllByRole('dialog')).toHaveLength(1) // no second modal stacked on the first
+    expect(within(confirmation).getByRole('button', { name: 'Keep my changes' })).toHaveFocus() // the safe choice
+    const draft = editor().draftConfig
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('region', { name: 'Replace your unsaved changes?' })).not.toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Templates' })).toBeInTheDocument() // still open
+    expect(settings().getByRole('button', { name: 'Apply Creative' })).toHaveFocus()
+    expect(editor().draftConfig).toBe(draft)
+    await user.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(editor().draftConfig).toBe(draft)
   })
 
   it('"Replace my draft" applies it, and Cancel afterwards restores the saved baseline, not the unsaved edit', async () => {
@@ -182,7 +203,7 @@ describe('applying a design', () => {
     await openTemplates(user)
     await user.click(settings().getByRole('radio', { name: /Creative/ }))
     await user.click(await settings().findByRole('button', { name: 'Apply Creative' }))
-    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Replace my draft' }))
+    await user.click(within(await screen.findByRole('region', { name: /Replace your unsaved changes\?|Delete this template\?/ })).getByRole('button', { name: 'Replace my draft' }))
     await settings().findByText(/Creative is now in your draft/)
     expect(sectionTitles()).toEqual(['Studio', 'Ideas', 'Archive'])
     await user.click(screen.getByRole('button', { name: 'Cancel' }))
@@ -198,7 +219,7 @@ describe('applying a design', () => {
     await settings().findByText(/Productivity is now in your draft/)
     const first = allDraftIds()
     await user.click(settings().getByRole('button', { name: 'Apply Productivity' }))
-    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Replace my draft' }))
+    await user.click(within(await screen.findByRole('region', { name: /Replace your unsaved changes\?|Delete this template\?/ })).getByRole('button', { name: 'Replace my draft' }))
     await waitFor(() => expect(allDraftIds()).not.toEqual(first))
     expect(allDraftIds().filter((id) => first.includes(id))).toEqual([])
   })
@@ -214,7 +235,7 @@ describe('Restore default', () => {
     expect(sectionTitles()).toEqual(['Studio', 'Ideas', 'Archive'])
 
     await user.click(settings().getByRole('button', { name: 'Restore default' }))
-    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Replace my draft' })) // the draft is dirty now
+    await user.click(within(await screen.findByRole('region', { name: /Replace your unsaved changes\?|Delete this template\?/ })).getByRole('button', { name: 'Replace my draft' })) // the draft is dirty now
     await settings().findByText(/The default Productivity design is now in your draft/)
     expect(editor().draftConfig!.title).toBe('My workspace')
     expect(sectionTitles()).toEqual(['Today', 'Reference'])
@@ -228,7 +249,7 @@ describe('Restore default', () => {
     await openTemplates(user)
     await user.click(settings().getByRole('button', { name: 'Restore default' }))
     await settings().findByText(/The default Productivity design is now in your draft/)
-    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument()
+    expect(screen.queryByRole('region', { name: /Replace your unsaved changes\?|Delete this template\?/ })).not.toBeInTheDocument()
     expect(sectionTitles()).toEqual(['Today', 'Reference'])
   })
 })
@@ -246,7 +267,8 @@ describe('guards and failures', () => {
     await user.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(settings().getByRole('button', { name: 'Apply Creative' })).toBeDisabled())
     expect(settings().getByRole('button', { name: 'Restore default' })).toBeDisabled()
-    expect(settings().getByText('Wait for the save to finish before replacing the workspace.')).toBeInTheDocument()
+    expect(settings().getByRole('button', { name: 'Apply Creative' })).toHaveAccessibleDescription('Wait for the save to finish before replacing the workspace.')
+    expect(settings().getAllByText('Wait for the save to finish before replacing the workspace.').length).toBeGreaterThan(0)
     expect(sectionTitles()).toEqual(['My section'])
 
     hold.resolve(json(200, { id: 'ws-a', revision: 2, updatedAt: '2026-11-23T10:00:00Z', config: editor().draftConfig }))

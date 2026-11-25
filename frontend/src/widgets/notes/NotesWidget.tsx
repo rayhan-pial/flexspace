@@ -22,7 +22,7 @@ export default function NotesWidget({ title, props, mode, onChangeProps }: Widge
         maxLength={NOTES_MAX}
         placeholder="Write a note…"
         onChange={(event) => onChangeProps({ body: event.target.value })}
-        className={`min-h-24 w-full flex-1 resize-none rounded-lg p-2 text-[length:inherit] leading-relaxed ${
+        className={`min-h-10 w-full flex-1 resize-none rounded-lg p-2 text-[length:inherit] leading-relaxed ${
           editing ? 'fs-field' : 'fs-field !border-transparent !bg-transparent'
         }`}
       />

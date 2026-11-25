@@ -4,12 +4,13 @@ import { useInspectorView } from '../editor/inspectorView'
 import type { InspectorView } from '../editor/inspectorView'
 import AccountControls from './AccountControls'
 
-const DESTINATIONS: Array<{ view: InspectorView; label: string; icon: ReactNode }> = [
-  { view: 'properties', label: 'My workspace', icon: <WorkspaceIcon /> },
-  { view: 'outline', label: 'Outline', icon: <OutlineIcon /> },
-  { view: 'components', label: 'Components', icon: <ComponentsIcon /> },
-  { view: 'templates', label: 'Templates', icon: <TemplatesIcon /> },
-  { view: 'appearance', label: 'Appearance', icon: <AppearanceIcon /> },
+/** `view` destinations show a builder view in the inspector; `dialog` ones open a focused dialog instead. */
+const DESTINATIONS: Array<{ id: string; view?: InspectorView; dialog?: 'library' | 'templates'; label: string; icon: ReactNode }> = [
+  { id: 'properties', view: 'properties', label: 'My workspace', icon: <WorkspaceIcon /> },
+  { id: 'outline', view: 'outline', label: 'Outline', icon: <OutlineIcon /> },
+  { id: 'components', dialog: 'library', label: 'Components', icon: <ComponentsIcon /> },
+  { id: 'templates', dialog: 'templates', label: 'Templates', icon: <TemplatesIcon /> },
+  { id: 'appearance', view: 'appearance', label: 'Appearance', icon: <AppearanceIcon /> },
 ]
 
 /**
@@ -18,7 +19,7 @@ const DESTINATIONS: Array<{ view: InspectorView; label: string; icon: ReactNode 
  * 64px icon rail from 1024px and a 192px labelled rail from 1440px.
  */
 export default function ApplicationRail() {
-  const { view, setView } = useInspectorView()
+  const { view, setView, openLibrary, openTemplates } = useInspectorView()
   return (
     <aside className="sticky top-0 z-10 flex h-screen w-16 shrink-0 flex-col gap-4 border-r border-ui-border bg-ui-surface px-2 py-4 min-[1440px]:w-48 min-[1440px]:px-3">
       <div className="flex items-center justify-center gap-2 min-[1440px]:justify-start min-[1440px]:px-1">
@@ -27,15 +28,16 @@ export default function ApplicationRail() {
       </div>
       <nav aria-label="Editor navigation" className="flex-1">
         <ul className="flex flex-col gap-1">
-          {DESTINATIONS.map(({ view: id, label, icon }) => {
-            const current = id === view
+          {DESTINATIONS.map(({ id, view: target, dialog, label, icon }) => {
+            const current = target !== undefined && target === view
             return (
               <li key={id}>
                 <button
                   type="button"
                   title={label}
                   aria-current={current ? 'true' : undefined}
-                  onClick={() => setView(id)}
+                  aria-haspopup={dialog ? 'dialog' : undefined}
+                  onClick={() => (target ? setView(target) : dialog === 'templates' ? openTemplates() : openLibrary())}
                   className={`ui-focus flex h-11 w-full items-center justify-center gap-3 rounded-ui-control text-sm font-medium transition-colors min-[1440px]:justify-start min-[1440px]:px-3 ${
                     current ? 'bg-ui-selected text-ui-selected-text' : 'text-ui-muted hover:bg-ui-subtle hover:text-ui-text'
                   }`}

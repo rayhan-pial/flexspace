@@ -2,7 +2,7 @@
 // Same prerequisites as grid-gesture.mjs (API + dev server running, scratch database). Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
-import { goTo, inspector } from './shell.mjs'
+import { goTo, inspector, library } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -25,7 +25,7 @@ page.on('request', (request) => {
 
 const outline = page.getByRole('list', { name: 'Components' })
 const settings = inspector(page)
-const left = inspector(page)
+const left = library(page)
 const status = () => page.getByRole('status').first().innerText()
 const gallery = page.locator('[data-widget-id]:has(ul[aria-label$="images"])')
 const analytics = page.locator('[data-widget-id]:has(ul[aria-label$="metrics"])')
@@ -45,11 +45,13 @@ try {
   await outline.getByRole('button', { name: 'Today', exact: true }).click()
   await goTo(page, 'Components')
   await left.getByRole('button', { name: 'Add Gallery' }).click()
+  await page.waitForFunction(() => document.activeElement?.hasAttribute('data-widget-id')) // the new card is revealed and focused
   await goTo(page, 'My workspace')
   await settings.getByRole('button', { name: 'Add image' }).click()
   await settings.getByRole('button', { name: 'Add image' }).click()
   await goTo(page, 'Components')
   await left.getByRole('button', { name: 'Add Analytics' }).click()
+  await page.waitForFunction(() => document.activeElement?.hasAttribute('data-widget-id')) // the new card is revealed and focused
   await goTo(page, 'My workspace')
   await settings.getByRole('button', { name: 'Add metric' }).click()
   await settings.getByRole('button', { name: 'Add metric' }).click()

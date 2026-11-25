@@ -9,7 +9,7 @@ import type { FakeServer } from '../../test/fakeServer'
 import { stubViewport } from '../../test/viewport'
 import { useSessionStore } from '../auth/sessionStore'
 import { selectIsDirty, useEditorStore } from '../editor/editorStore'
-import { goTo, inspector } from '../../test/shell'
+import { goTo, inspector, templatesDialog } from '../../test/shell'
 
 const editor = () => useEditorStore.getState()
 
@@ -44,10 +44,11 @@ async function open() {
   return userEvent.setup()
 }
 const settings = inspector
+const templates = templatesDialog
 
 async function openTemplates(user: ReturnType<typeof userEvent.setup>) {
   await goTo(user, 'Templates')
-  await settings().findByText(/Start from a ready-made design/)
+  await templates().findByText(/Start from a ready-made design/)
 }
 const sectionTitles = () => editor().draftConfig!.sections.map((s) => s.title)
 const allDraftIds = () => {
@@ -195,9 +196,9 @@ describe('with templates, Save and Cancel', () => {
     const user = await open()
     const idsBefore = allDraftIds()
     await openTemplates(user)
-    await user.click(settings().getByRole('radio', { name: /Creative/ }))
-    await user.click(await settings().findByRole('button', { name: 'Apply Creative' }))
-    await settings().findByText(/Creative is now in your draft/)
+    await user.click(templates().getByRole('radio', { name: /Creative/ }))
+    await user.click(await templates().findByRole('button', { name: 'Apply Creative' }))
+    await templates().findByText(/Creative is now in your draft/)
     expect(sectionTitles()).toEqual(['Studio', 'Ideas', 'Archive'])
     await user.click(undoButton())
     expect(sectionTitles()).toEqual(['My section'])

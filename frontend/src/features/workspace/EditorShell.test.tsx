@@ -80,9 +80,11 @@ describe('Edit mode on desktop', () => {
     const user = await open()
     expect(viewTitle()).toHaveTextContent('Properties')
     expect((await goTo(user, 'Components')).getByRole('list', { name: 'Component library' })).toBeInTheDocument()
+    await user.keyboard('{Escape}')
     expect((await goTo(user, 'Outline')).getByRole('list', { name: 'Components' })).toBeInTheDocument()
     expect((await goTo(user, 'Appearance')).getByLabelText('Primary color')).toBeInTheDocument()
     expect(await (await goTo(user, 'Templates')).findByText(/Start from a ready-made design/)).toBeInTheDocument()
+    await user.keyboard('{Escape}')
     await goTo(user, 'My workspace')
     expect(viewTitle()).toHaveTextContent('Properties')
   })
@@ -94,9 +96,12 @@ describe('Edit mode on desktop', () => {
     expect(rail.getAllByRole('button').map((b) => b.getAttribute('title'))).toEqual(names)
     expect(rail.getByRole('button', { name: 'My workspace' })).toHaveAttribute('aria-current', 'true')
     for (const name of names.slice(1)) expect(rail.getByRole('button', { name })).not.toHaveAttribute('aria-current')
-    await goTo(user, 'Templates')
-    expect(rail.getByRole('button', { name: 'Templates' })).toHaveAttribute('aria-current', 'true')
+    await goTo(user, 'Appearance')
+    expect(rail.getByRole('button', { name: 'Appearance' })).toHaveAttribute('aria-current', 'true')
     expect(rail.getByRole('button', { name: 'My workspace' })).not.toHaveAttribute('aria-current')
+    // Components and Templates open dialogs, so they announce that instead of becoming the current view.
+    expect(rail.getByRole('button', { name: 'Templates' })).toHaveAttribute('aria-haspopup', 'dialog')
+    expect(rail.getByRole('button', { name: 'Components' })).toHaveAttribute('aria-haspopup', 'dialog')
   })
 
   it('switching rail views changes nothing in the draft, history or server', async () => {
@@ -104,7 +109,10 @@ describe('Edit mode on desktop', () => {
     const draft = editor().draftConfig
     const saved = editor().savedConfig
     const history = editor().history
-    for (const view of ['Outline', 'Components', 'Templates', 'Appearance', 'My workspace'] as const) await goTo(user, view)
+    for (const view of ['Outline', 'Components', 'Templates', 'Appearance', 'My workspace'] as const) {
+      await goTo(user, view)
+      if (view === 'Components' || view === 'Templates') await user.keyboard('{Escape}')
+    }
     expect(editor().draftConfig).toBe(draft)
     expect(editor().savedConfig).toBe(saved)
     expect(editor().history).toBe(history)

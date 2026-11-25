@@ -116,21 +116,27 @@ export type ReloadResult = { ok: true } | { ok: false; message: string }
 
 /**
  * Replace the draft and baseline with the server's latest. This discards unsaved edits, so the UI
- * must confirm first; it is refused while a save is in flight.
+ * must confirm first. While the request is in flight the draft is locked (`reloading`), so an edit
+ * made after confirming can never be replaced by the response; it is refused while a save runs.
  */
 export async function reloadLatest(): Promise<ReloadResult> {
-  const { ownerId, epoch, saveStatus, frozen } = editor()
-  if (!ownerId || frozen || saveStatus.state === 'saving') return { ok: false, message: 'Wait for the current save to finish.' }
+  const ticket = editor().beginReload()
+  if (!ticket) return { ok: false, message: 'Wait for the current save to finish.' }
+  const { ownerId, epoch } = ticket
   const stillSame = () => editor().ownerId === ownerId && editor().epoch === epoch
   try {
     const envelope = await getWorkspace()
     if (!stillSame()) return { ok: false, message: 'The workspace changed while reloading.' }
     const parsed = parseWorkspaceConfig(envelope.config)
-    if (!parsed.ok) return { ok: false, message: MESSAGES.unreadable }
+    if (!parsed.ok) {
+      editor().endReload(ticket)
+      return { ok: false, message: MESSAGES.unreadable }
+    }
     editor().load({ ownerId, workspaceId: envelope.id, revision: envelope.revision, config: parsed.config })
     return { ok: true }
   } catch (error) {
     if (!stillSame()) return { ok: false, message: 'The workspace changed while reloading.' }
+    editor().endReload(ticket) // the draft was never touched, so it is still there to keep editing
     if (error instanceof ApiError && error.status === 401) {
       session().handleUnauthorized()
       return { ok: false, message: 'Your session expired.' }

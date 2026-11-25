@@ -5,7 +5,7 @@
 // Same prerequisites as grid-gesture.mjs. Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
-import { goTo, inspector } from './shell.mjs'
+import { goTo, inspector, library, templates } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -24,7 +24,7 @@ const log = (message) => {
 }
 
 const settings = (p) => inspector(p)
-const components = (p) => inspector(p)
+const components = (p) => library(p)
 const status = (p) => p.getByRole('status', { name: 'Save status' }).innerText()
 const sectionTitles = (p) => p.locator('[data-section-id] > div > h2').allInnerTexts()
 const note = (p) => p.locator('[data-widget-id="w-notes"] textarea') // a stable pick: sections are reordered during the run
@@ -53,11 +53,14 @@ async function login(p, email) {
 }
 async function applyTemplate(p, name, confirmReplace = true) {
   await goTo(p, 'Templates')
-  await settings(p).getByRole('radio', { name: new RegExp(name) }).check()
-  await settings(p).getByRole('button', { name: `Apply ${name}` }).click()
-  const dialog = p.getByRole('alertdialog')
+  const gallery = templates(p)
+  await gallery.getByRole('radio', { name: new RegExp(name) }).check()
+  await gallery.getByRole('button', { name: `Apply ${name}` }).click()
+  const dialog = p.getByRole('region', { name: 'Replace your unsaved changes?' })
   if (confirmReplace && (await dialog.isVisible().catch(() => false))) await dialog.getByRole('button', { name: 'Replace my draft' }).click()
-  await settings(p).getByText(new RegExp(`${name} is now in your draft`)).waitFor()
+  await gallery.getByText(new RegExp(`${name} is now in your draft`)).waitFor()
+  await p.keyboard.press('Escape')
+  await gallery.waitFor({ state: 'hidden' })
 }
 async function cancelChanges(p) {
   await p.getByRole('button', { name: 'Cancel', exact: true }).click()
@@ -88,7 +91,7 @@ try {
   await settings(page).getByLabel('Base font size (px)').fill('18')
   await settings(page).getByLabel('Font family').selectOption({ index: 1 })
   await goTo(page, 'Outline')
-  for (const placement of ['top', 'left', 'right']) await components(page).getByLabel('Navigation placement').selectOption(placement)
+  for (const placement of ['top', 'left', 'right']) await settings(page).getByLabel('Navigation placement').selectOption(placement)
   assert.equal(await status(page), 'Unsaved changes')
 
   log('3. reorder sections by keyboard, and move a navigation item to the other group with the Move buttons')
@@ -159,9 +162,12 @@ try {
 
   log('7. save a private custom template; apply Creative and Cancel; apply Analytics and Save; restore default and Cancel')
   await goTo(page, 'Templates')
-  await settings(page).getByLabel('Template name').fill('Demo design')
-  await settings(page).getByRole('button', { name: 'Save current design as template' }).click()
-  await settings(page).getByText(/Saved "Demo design"/).waitFor()
+  await templates(page).getByRole('tab', { name: 'My templates' }).click()
+  await templates(page).getByLabel('Template name').fill('Demo design')
+  await templates(page).getByRole('button', { name: 'Save current design as template' }).click()
+  await templates(page).getByText(/Saved "Demo design"/).waitFor()
+  await page.keyboard.press('Escape')
+  await templates(page).waitFor({ state: 'hidden' })
   assert.equal((await api(page, '/workspace')).body.revision, saved.revision, 'saving a template did not save the workspace')
   const customId = (await api(page, '/templates')).body.items.find((i) => i.kind === 'custom').id
   await applyTemplate(page, 'Creative')
@@ -172,10 +178,13 @@ try {
   assert.deepEqual(await sectionTitles(page), ['Overview', 'Reports', 'Notes'])
   await saveAndWait(page)
   assert.equal((await api(page, '/workspace')).body.config.title, 'Analytics workspace')
-  await settings(page).getByRole('button', { name: 'Restore default' }).click()
-  const restoreDialog = page.getByRole('alertdialog')
+  await goTo(page, 'Templates')
+  await templates(page).getByRole('button', { name: 'Restore default' }).click()
+  const restoreDialog = page.getByRole('region', { name: 'Replace your unsaved changes?' })
   if (await restoreDialog.isVisible().catch(() => false)) await restoreDialog.getByRole('button', { name: 'Replace my draft' }).click()
-  await settings(page).getByText(/default Productivity design is now in your draft/).waitFor()
+  await templates(page).getByText(/default Productivity design is now in your draft/).waitFor()
+  await page.keyboard.press('Escape')
+  await templates(page).waitFor({ state: 'hidden' })
   assert.deepEqual(await sectionTitles(page), ['Today', 'Reference'])
   await cancelChanges(page)
   assert.deepEqual(await sectionTitles(page), ['Overview', 'Reports', 'Notes'])

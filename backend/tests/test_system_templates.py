@@ -1,5 +1,6 @@
 import copy
 import json
+from datetime import UTC, datetime
 
 import pytest
 from sqlalchemy import select
@@ -184,14 +185,21 @@ def test_sync_never_touches_user_workspaces_or_custom_templates(client, session)
 def test_sync_bumps_the_updated_time_only_for_rows_it_changes(session):
     seed_system_templates(session)
     session.commit()
+    # Pin every row to a time safely in the past, so the assertion below cannot depend on the clock's
+    # resolution (a sync landing in the same tick as the seed used to make this test flaky).
+    pinned = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
+    for template in rows(session).values():
+        template.updated_at = pinned
+    session.commit()
     before = {k: t.updated_at for k, t in rows(session).items()}
+    assert set(before.values()) == {pinned}
     stale = rows(session)["creative"]
     stale.config = {"schemaVersion": 1, "title": "stale"}
     session.commit()
     sync_system_templates(session)
     session.commit()
     after = {k: t.updated_at for k, t in rows(session).items()}
-    assert after["creative"] > before["creative"]
+    assert after["creative"] > pinned
     assert after["productivity"] == before["productivity"] and after["analytics"] == before["analytics"]
 
 

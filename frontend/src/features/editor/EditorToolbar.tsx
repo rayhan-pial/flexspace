@@ -1,9 +1,10 @@
 import { useId, useState } from 'react'
+import { useInspectorView } from './inspectorView'
 import { setWorkspaceTitle } from '../../domain/workspace/commands'
 import Button from '../../shared/ui/Button'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import StatusBadge from '../../shared/ui/StatusBadge'
-import { selectCanRedo, selectCanUndo, selectIsDirty, useEditorStore } from './editorStore'
+import { cancelBlocker, historyBlocker, saveBlocker, selectIsDirty, useEditorStore } from './editorStore'
 import { useEffectiveMode, useIsDesktop } from './useEffectiveMode'
 import { reloadLatest, saveDraft } from './workspaceSync'
 
@@ -19,15 +20,21 @@ export default function EditorToolbar() {
   const cancel = useEditorStore((s) => s.cancel)
   const setMode = useEditorStore((s) => s.setMode)
   const dismissSaveError = useEditorStore((s) => s.dismissSaveError)
-  const canUndo = useEditorStore(selectCanUndo)
-  const canRedo = useEditorStore(selectCanRedo)
+  const undoBlocker = useEditorStore((s) => historyBlocker(s, 'undo'))
+  const redoBlocker = useEditorStore((s) => historyBlocker(s, 'redo'))
+  const saveBlock = useEditorStore(saveBlocker)
+  const cancelBlock = useEditorStore(cancelBlocker)
   const undo = useEditorStore((s) => s.undo)
   const redo = useEditorStore((s) => s.redo)
   const historyNote = useEditorStore((s) => s.history.note)
   const title = useEditorStore((s) => s.draftConfig?.title)
   const revision = useEditorStore((s) => s.revision)
   const apply = useEditorStore((s) => s.apply)
+  const reloading = useEditorStore((s) => s.reloading)
   const isDesktop = useIsDesktop()
+  const { openLibrary, openTemplates, inspectorOpen, setInspectorOpen } = useInspectorView()
+  const gesture = useEditorStore((s) => s.interaction.gesture)
+  const editBlock = useEditorStore((s) => (s.frozen ? 'Sign in again to keep editing.' : s.reloading ? 'The latest saved workspace is loading.' : null))
   const mode = useEffectiveMode()
   const titleId = useId()
   const [titleError, setTitleError] = useState<string | null>(null)
@@ -50,7 +57,8 @@ export default function EditorToolbar() {
   }
 
   let status = 'All changes saved'
-  if (saving) status = 'Saving…'
+  if (reloading) status = 'Reloading the latest saved workspace… editing is paused'
+  else if (saving) status = 'Saving…'
   else if (dirty && mode === 'edit') status = 'Unsaved changes'
   else if (dirty && isDesktop) status = 'Unsaved changes. Switch to Edit to save or cancel them.'
   else if (dirty) status = 'Unsaved changes. Open this workspace on a larger screen to save or cancel them.'
@@ -71,6 +79,7 @@ export default function EditorToolbar() {
               type="text"
               maxLength={120}
               value={title ?? ''}
+              disabled={reloading}
               onChange={(e) => onTitleChange(e.target.value)}
               aria-invalid={titleError ? true : undefined}
               className="ui-focus block w-full rounded-ui-control border border-ui-control bg-ui-surface px-3 py-1.5 text-sm text-ui-text focus:border-ui-primary aria-[invalid=true]:border-ui-danger [@media(pointer:coarse)]:min-h-11"
@@ -79,18 +88,27 @@ export default function EditorToolbar() {
         )}
 
         <p role="status" aria-label="Save status" aria-live="polite" className="ml-auto">
-          <StatusBadge tone={saving ? 'neutral' : dirty ? 'warning' : 'success'}>{status}</StatusBadge>
+          <StatusBadge tone={saving || reloading ? 'neutral' : dirty ? 'warning' : 'success'}>{status}</StatusBadge>
         </p>
         <p role="status" aria-label="History status" aria-live="polite" className="sr-only">{historyNote}</p>
 
         <div className="flex flex-wrap items-center gap-2">
           {isDesktop && mode === 'edit' && (
             <>
-              <Button disabled={!canUndo} onClick={() => undo()} title="Undo (Ctrl+Z)">Undo</Button>
-              <Button disabled={!canRedo} onClick={() => redo()} title="Redo (Ctrl+Shift+Z)">Redo</Button>
+              <Button reason={editBlock} aria-haspopup="dialog" onClick={openLibrary}>Add component</Button>
+              <Button reason={editBlock} aria-haspopup="dialog" onClick={openTemplates}>Templates</Button>
+              <Button reason={undoBlocker} onClick={() => undo()} title="Undo (Ctrl+Z)">Undo</Button>
+              <Button reason={redoBlocker} onClick={() => redo()} title="Redo (Ctrl+Shift+Z)">Redo</Button>
+              <Button
+                aria-expanded={inspectorOpen}
+                reason={gesture ? 'Finish the drag or resize first.' : null}
+                onClick={() => setInspectorOpen(!inspectorOpen)}
+              >
+                {inspectorOpen ? 'Hide inspector' : 'Show inspector'}
+              </Button>
               <Button onClick={() => setMode('preview')}>Preview</Button>
-              <Button disabled={!dirty || saving} onClick={() => setConfirm('cancel')}>Cancel</Button>
-              <Button variant="primary" disabled={!dirty || saving} onClick={() => void saveDraft()}>Save</Button>
+              <Button reason={cancelBlock} onClick={() => setConfirm('cancel')}>Cancel</Button>
+              <Button variant="primary" reason={saveBlock} onClick={() => void saveDraft()}>Save</Button>
             </>
           )}
           {isDesktop && mode === 'preview' && (
@@ -125,7 +143,7 @@ export default function EditorToolbar() {
           </p>
           <div className="mt-2 flex gap-2">
             <Button onClick={dismissSaveError}>Keep editing</Button>
-            <Button variant="primary" disabled={saving} onClick={() => (dirty ? setConfirm('reload') : void reload())}>
+            <Button variant="primary" disabled={saving || reloading} onClick={() => (dirty ? setConfirm('reload') : void reload())}>
               Reload latest
             </Button>
           </div>

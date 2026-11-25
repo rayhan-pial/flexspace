@@ -1,4 +1,4 @@
-import { render, screen, within } from '@testing-library/react'
+import { act, render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import App from '../../app/App'
@@ -113,18 +113,65 @@ describe('grid step controls', () => {
     expect(selectIsDirty(editor())).toBe(false)
   })
 
-  it('explains a refused step next to the controls and leaves the draft untouched', async () => {
+  it('disables a step that cannot run before it is clicked, explains why, and re-enables it after a valid change (UI-022)', async () => {
     const user = await selectNotes()
     const panel = inspector()
+    const left = () => panel.getByRole('button', { name: 'Move Meeting notes left' })
+    const up = () => panel.getByRole('button', { name: 'Move Meeting notes up' })
+    const right = () => panel.getByRole('button', { name: 'Move Meeting notes right' })
+    const wider = () => panel.getByRole('button', { name: 'Make Meeting notes wider' })
     const draft = editor().draftConfig
-    await user.click(panel.getByRole('button', { name: 'Move Meeting notes left' }))
-    expect(panel.getByRole('alert')).toHaveTextContent('That is outside the grid.')
-    await user.click(panel.getByRole('button', { name: 'Make Meeting notes wider' }))
-    expect(panel.getByRole('alert')).toHaveTextContent('That space is taken by another widget.')
+    const history = editor().history
+    // Notes is at column 0, row 0, 6 wide (the right half is taken by a neighbour, which is fine).
+    expect(left()).toBeDisabled()
+    expect(left()).toHaveAccessibleDescription('Already at the left edge of the grid.')
+    expect(up()).toBeDisabled()
+    expect(up()).toHaveAccessibleDescription('Already at the top of the grid.')
+    expect(right()).toBeEnabled() // occupied, but the neighbour can be pushed: available
+    expect(wider()).toBeEnabled()
+    expect(panel.getByTestId('step-reasons')).toHaveTextContent('Left (already at the left edge of the grid)')
+    // Merely evaluating availability never touched the draft or history.
     expect(editor().draftConfig).toBe(draft)
+    expect(editor().history).toBe(history)
     expect(selectIsDirty(editor())).toBe(false)
-    await user.click(panel.getByRole('button', { name: 'Make Meeting notes narrower' }))
+
+    await user.click(left()) // a click on a natively disabled button does nothing
+    expect(editor().draftConfig).toBe(draft)
+
+    await user.click(right())
     expect(panel.queryByRole('alert')).not.toBeInTheDocument()
+    expect(selectIsDirty(editor())).toBe(true)
+    expect(left()).toBeEnabled() // re-enabled right away
+    await user.click(left())
+    expect(left()).toBeDisabled()
+  })
+
+  it('size steps stop at the type minimum and at the grid edge, with reasons', async () => {
+    const user = await selectNotes()
+    const panel = inspector()
+    const narrower = () => panel.getByRole('button', { name: 'Make Meeting notes narrower' })
+    const shorter = () => panel.getByRole('button', { name: 'Make Meeting notes shorter' })
+    for (let i = 0; i < 3; i += 1) await user.click(narrower()) // notes minimum width is 3, starting at 6
+    expect(narrower()).toBeDisabled()
+    expect(narrower()).toHaveAccessibleDescription('Already at the narrowest this widget can be.')
+    expect(shorter()).toBeEnabled()
+    for (let i = 0; i < 1; i += 1) await user.click(shorter()) // notes minimum height is 3, starting at 4
+    expect(shorter()).toBeDisabled()
+    expect(shorter()).toHaveAccessibleDescription('Already at the shortest this widget can be.')
+    await user.click(panel.getByRole('button', { name: 'Make Meeting notes wider' }))
+    expect(narrower()).toBeEnabled()
+  })
+
+  it('every step control is disabled with a reason while a drag is in progress', async () => {
+    const user = await selectNotes()
+    const panel = inspector()
+    act(() => { editor().beginGesture('grid') })
+    const move = panel.getByRole('button', { name: 'Move Meeting notes right' })
+    expect(move).toBeDisabled()
+    expect(move).toHaveAccessibleDescription('Finish the drag or resize first.')
+    act(() => { editor().endGesture() })
+    expect(move).toBeEnabled()
+    expect(user).toBeDefined()
   })
 
   it('keeps the Order buttons and offers no step controls in Preview', async () => {

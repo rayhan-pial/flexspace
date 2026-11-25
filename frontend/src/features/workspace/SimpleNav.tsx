@@ -1,4 +1,5 @@
 import { GripVertical } from 'lucide-react'
+import { useId } from 'react'
 import { useMediaQuery } from '../../shared/hooks/useMediaQuery'
 import type { NavItem, Navigation } from '../../domain/workspace/types'
 import { useEditorStore } from '../editor/editorStore'
@@ -18,26 +19,44 @@ function scrollToSection(sectionId: string) {
   target.focus({ preventScroll: true })
 }
 
+/**
+ * Why a Preview link cannot go anywhere: no target, a target that no longer exists, or a hidden
+ * section that is not on the page. In Edit such items stay selectable so the target can be repaired.
+ */
+function unavailableReason(item: NavItem, target: { hidden: boolean } | null | undefined): string | null {
+  if (item.targetSectionId === null) return 'This link does not point at a section yet.'
+  if (!target) return 'The section this link pointed at no longer exists.'
+  if (target.hidden) return 'The section this link points at is hidden.'
+  return null
+}
+
 function NavLink({ item, editing }: { item: NavItem; editing: boolean }) {
   const select = useEditorStore((s) => s.select)
   const selected = useEditorStore((s) => editing && s.selection?.kind === 'navItem' && s.selection.id === item.id)
+  const reasonId = useId()
+  const reason = useEditorStore((s) => unavailableReason(item, s.draftConfig?.sections.find((section) => section.id === item.targetSectionId)))
+  const blocked = !editing && reason !== null
   return (
+    <>
     <button
       type="button"
-      // In Edit an unlinked item is still clickable: it selects the item so its target can be set.
-      disabled={!editing && item.targetSectionId === null}
+      // In Edit an unavailable item is still clickable: it selects the item so its target can be set.
+      disabled={blocked}
+      aria-describedby={blocked ? reasonId : undefined}
       aria-current={selected ? 'true' : undefined}
       onClick={() => {
         if (editing) select({ kind: 'navItem', id: item.id })
         if (item.targetSectionId) scrollToSection(item.targetSectionId)
       }}
-      className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm font-medium text-[color:var(--fs-primary,#6366f1)] hover:bg-black/5 ui-focus disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent [@media(pointer:coarse)]:min-h-11 ${
-        selected ? 'ring-2 ring-ui-primary' : ''
+      className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm font-medium text-[color:var(--fs-text,#0f172a)] hover:bg-[color-mix(in_srgb,var(--fs-text,#0f172a)_8%,transparent)] hover:text-[color:var(--fs-primary,#6366f1)] ui-focus disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent disabled:hover:text-[color:var(--fs-text,#0f172a)] [@media(pointer:coarse)]:min-h-11 ${
+        selected ? 'bg-[color-mix(in_srgb,var(--fs-primary,#6366f1)_14%,transparent)] text-[color:var(--fs-primary,#6366f1)] ring-2 ring-[color:var(--fs-primary,#6366f1)]' : ''
       }`}
     >
-      <NavIcon name={item.icon} className="size-4 shrink-0" />
+      <NavIcon name={item.icon} className="size-4 shrink-0 text-[color:var(--fs-primary,#6366f1)]" />
       {item.label}
     </button>
+    {blocked && <span id={reasonId} className="sr-only">{reason}</span>}
+    </>
   )
 }
 

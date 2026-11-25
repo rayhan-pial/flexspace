@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import type { Command } from './commands'
-import { commitGridLayout, nudgeWidget } from './grid'
+import { commitGridLayout, nudgeWidget, planNudge, stepAvailability } from './grid'
 import { deepFreeze } from './immutable'
 import { parseWorkspaceConfig } from './parse'
-import { compactLayout, overlaps, spatialOrder } from './placement'
+import { compactLayout, overlaps, pushDown, reflowAfterGesture, spatialOrder } from './placement'
 import type { GridRect, WorkspaceConfig } from './types'
 
 // Array order: a, hid, b, c. Visible rectangles: a (0,0 6x4), b (6,0 6x4), c (0,4 6x4). `hid` is hidden at (0,0).
@@ -135,8 +135,17 @@ describe('nudgeWidget', () => {
     expect(refusal(nudgeWidget('c', { dw: -4 }))).toMatch(/smaller/)
     expect(refusal(nudgeWidget('b', { dw: 1 }))).toMatch(/outside/)
   })
-  it('refuses to land on another visible widget, but a hidden widget does not block', () => {
-    expect(refusal(nudgeWidget('a', { dx: 1 }))).toMatch(/taken/)
+  it('landing on another visible widget pushes only that widget out of the way (UI-021)', () => {
+    const config = run(nudgeWidget('a', { dx: 1 })) // a becomes (1,0) and covers b: b drops below a's rows, beside c
+    expect(layoutOf(config).find((r) => r.i === 'a')).toEqual(rect('a', 1, 0, 6, 4))
+    expect(layoutOf(config).find((r) => r.i === 'b')).toEqual(rect('b', 6, 4, 6, 4))
+    expect(layoutOf(config).find((r) => r.i === 'c')).toEqual(rect('c', 0, 4, 6, 3)) // untouched
+    expect(layoutOf(config).find((r) => r.i === 'hid')).toEqual(rect('hid', 0, 0, 4, 3)) // hidden untouched
+    expect(orderOf(config)).toEqual(['a', 'hid', 'c', 'b']) // array order follows the visible spatial order
+    const visible = layoutOf(config).filter((r) => r.i !== 'hid')
+    expect(visible.some((p, n) => visible.slice(n + 1).some((q) => overlaps(p, q)))).toBe(false)
+  })
+  it('a hidden widget does not block, and boundaries still refuse', () => {
     expect(refusal(nudgeWidget('a', { dx: -1 }))).toMatch(/outside/)
     expect(refusal(nudgeWidget('a', { dy: -1 }))).toMatch(/outside/)
     const moved = run(nudgeWidget('c', { dy: -0 }))
@@ -147,5 +156,107 @@ describe('nudgeWidget', () => {
   it('fails for stack widgets and unknown ids', () => {
     expect(refusal(nudgeWidget('st', { dx: 1 }))).toMatch(/not in a grid/)
     expect(refusal(nudgeWidget('nope', { dx: 1 }))).toMatch(/not in a grid/)
+  })
+})
+
+describe('pushDown and reflowAfterGesture (UI-021)', () => {
+  it('keeps the pinned rectangle fixed and pushes a collision cascade down without changing sizes or columns', () => {
+    const input = [rect('a', 0, 0, 4, 4), rect('b', 0, 4, 4, 4), rect('c', 0, 8, 4, 4), rect('m', 0, 4, 4, 2)]
+    const out = pushDown(input, 'm')
+    expect(out.find((r) => r.i === 'm')).toEqual(rect('m', 0, 4, 4, 2))
+    expect(out.find((r) => r.i === 'b')).toEqual(rect('b', 0, 6, 4, 4))
+    expect(out.find((r) => r.i === 'c')).toEqual(rect('c', 0, 10, 4, 4))
+    expect(out.find((r) => r.i === 'a')).toEqual(rect('a', 0, 0, 4, 4))
+    expect(out.map((r) => r.i)).toEqual(['a', 'b', 'c', 'm']) // input order preserved
+    expect(input[1]).toEqual(rect('b', 0, 4, 4, 4)) // input untouched
+  })
+  it('moves nothing when nothing collides, and never moves anything up or sideways', () => {
+    const input = [rect('a', 0, 3, 4, 2), rect('b', 6, 9, 4, 2)]
+    expect(pushDown(input, 'a')).toEqual(input)
+  })
+  it('mixed sizes and several neighbours: zero overlaps, same ids/sizes, idempotent after reflow, for pseudo-random layouts', () => {
+    let seed = 11
+    const next = (n: number) => ((seed = (seed * 1103515245 + 12345) & 0x7fffffff) % n)
+    for (let round = 0; round < 80; round += 1) {
+      const placed: GridRect[] = []
+      for (let n = 0; n < 7; n += 1) {
+        const w = 2 + next(6)
+        const candidate = rect(`r${n}`, next(13 - w), next(24), w, 2 + next(5))
+        if (!placed.some((other) => overlaps(other, candidate))) placed.push(candidate)
+      }
+      const movedId = placed[next(placed.length)].i
+      const moved = placed.map((r) => (r.i === movedId ? { ...r, x: next(13 - r.w), y: next(24) } : r))
+      const out = reflowAfterGesture(moved, movedId)
+      expect(out.some((p, n) => out.slice(n + 1).some((q) => overlaps(p, q)))).toBe(false)
+      expect(out.map((r) => [r.i, r.w, r.h])).toEqual(moved.map((r) => [r.i, r.w, r.h]))
+      expect(out.every((r) => r.x === moved.find((m) => m.i === r.i)!.x)).toBe(true)
+      const again = reflowAfterGesture(out, movedId)
+      expect(again).toEqual(out)
+    }
+  })
+  it('dragging C onto A and A down over B: the committed visible order equals the previewed spatial order', () => {
+    // preview = reflowAfterGesture; the commit receives that very layout and keeps it
+    const a = rect('a', 0, 0, 6, 4), b = rect('b', 6, 0, 6, 4), c = rect('c', 0, 4, 6, 3)
+    const previewC = reflowAfterGesture([a, b, { ...c, x: 0, y: 0 }], 'c')
+    expect(previewC.find((r) => r.i === 'c')).toEqual(rect('c', 0, 0, 6, 3))
+    expect(previewC.find((r) => r.i === 'a')!.y).toBe(3)
+    const committed = run(commitGridLayout('s1', previewC))
+    expect(layoutOf(committed).filter((r) => r.i !== 'hid')).toEqual(previewC)
+    expect(orderOf(committed).filter((id) => id !== 'hid')).toEqual(spatialOrder(previewC))
+    // one Undo would restore the whole layout: commit is a single command whose input is untouched
+    const before = sample()
+    run(commitGridLayout('s1', previewC), before)
+    expect(layoutOf(before)).toEqual(sample().sections[0].layout)
+  })
+  it('an actually overlapping final callback is still refused, so the reflow cannot be bypassed', () => {
+    expect(refusal(commitGridLayout('s1', [rect('a', 0, 0, 6, 4), rect('b', 3, 0, 6, 4), rect('c', 0, 4, 6, 3)]))).toMatch(/overlap/)
+  })
+})
+
+describe('stepAvailability (UI-022)', () => {
+  const steps: Array<[string, Parameters<typeof stepAvailability>[2], boolean, string | null]> = [
+    ['Left at column 0', { dx: -1 }, false, 'Already at the left edge of the grid.'],
+    ['Up at row 0', { dy: -1 }, false, 'Already at the top of the grid.'],
+    ['Right onto a neighbour (resolvable by pushing)', { dx: 1 }, true, null],
+    ['Down', { dy: 1 }, true, null],
+    ['Narrower above the minimum', { dw: -1 }, true, null],
+    ['Wider onto a neighbour', { dw: 1 }, true, null],
+    ['Taller', { dh: 1 }, true, null],
+  ]
+  it.each(steps)('%s', (_name, change, allowed, reason) => {
+    expect(stepAvailability(sample(), 'a', change)).toEqual({ allowed, reason })
+  })
+  it('reports the per-type minimum and the right edge, and unknown widgets', () => {
+    // c is a welcome card, minimum 3 x 2, currently 6 x 3
+    let config = sample()
+    for (let i = 0; i < 3; i += 1) config = run(nudgeWidget('c', { dw: -1 }), config)
+    expect(stepAvailability(config, 'c', { dw: -1 })).toEqual({ allowed: false, reason: 'Already at the narrowest this widget can be.' })
+    expect(stepAvailability(config, 'c', { dh: -1 })).toEqual({ allowed: true, reason: null })
+    config = run(nudgeWidget('c', { dh: -1 }), config)
+    expect(stepAvailability(config, 'c', { dh: -1 })).toEqual({ allowed: false, reason: 'Already at the shortest this widget can be.' })
+    expect(stepAvailability(sample(), 'b', { dw: 1 })).toEqual({ allowed: false, reason: 'No room to the right: it already reaches the edge of the grid.' })
+    expect(stepAvailability(sample(), 'b', { dx: 1 })).toEqual({ allowed: false, reason: 'Already at the right edge of the grid.' })
+    expect(stepAvailability(sample(), 'st', { dx: 1 }).allowed).toBe(false)
+    expect(stepAvailability(sample(), 'ghost', { dx: 1 }).reason).toMatch(/no longer in a grid/)
+  })
+  it('agrees with execution for every step of every widget, and never mutates anything', () => {
+    const config = sample()
+    const frozen = JSON.stringify(config)
+    for (const id of ['a', 'b', 'c', 'hid']) {
+      for (const change of [{ dx: -1 }, { dx: 1 }, { dy: -1 }, { dy: 1 }, { dw: -1 }, { dw: 1 }, { dh: -1 }, { dh: 1 }]) {
+        expect(stepAvailability(config, id, change).allowed).toBe(nudgeWidget(id, change)(config).ok)
+      }
+    }
+    expect(JSON.stringify(config)).toBe(frozen)
+  })
+})
+
+describe('planNudge', () => {
+  it('describes a step without producing a command, and never mutates the config', () => {
+    const before = sample()
+    const frozen = JSON.stringify(before)
+    expect(planNudge(before, 'a', { dx: 1 })).toMatchObject({ ok: true })
+    expect(planNudge(before, 'a', { dx: -1 })).toMatchObject({ ok: false })
+    expect(JSON.stringify(before)).toBe(frozen)
   })
 })

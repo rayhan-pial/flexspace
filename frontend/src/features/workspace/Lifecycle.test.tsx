@@ -67,10 +67,10 @@ describe('component and section lifecycle', () => {
     const user = await open()
     await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: 'Overview' }))
-    await goTo(user, 'Components')
-    expect(left().getByText('Overview', { selector: 'strong' })).toBeInTheDocument()
     for (const label of ['Welcome', 'Tasks', 'Notes', 'Gallery', 'Analytics', 'Calendar']) {
-      await user.click(left().getByRole('button', { name: `Add ${label}` }))
+      const lib = await goTo(user, 'Components')
+      expect(lib.getByLabelText('Add to section')).toHaveDisplayValue(/Overview/) // the selected section, shown before Add
+      await user.click(lib.getByRole('button', { name: `Add ${label}` }))
     }
     const added = widgetsOf('s-main').slice(3)
     expect(added.map((w) => w.type)).toEqual(['welcome', 'tasks', 'notes', 'gallery', 'analytics', 'calendar'])
@@ -83,8 +83,8 @@ describe('component and section lifecycle', () => {
 
   it('shows known widgets whose renderer is not built yet as a card rather than failing', async () => {
     const user = await open()
-    await goTo(user, 'Components')
-    await user.click(left().getByRole('button', { name: 'Add Gallery' }))
+    const lib = await goTo(user, 'Components')
+    await user.click(lib.getByRole('button', { name: 'Add Gallery' }))
     expect(canvasCard(editor().selection!.id)).not.toBeNull()
   })
 
@@ -165,16 +165,17 @@ describe('component and section lifecycle', () => {
       await user.click(dialog().getByRole('button', { name: 'Remove section' }))
     }
     expect(screen.getByText(/This workspace has no sections yet. Add one/)).toBeInTheDocument()
-    await goTo(user, 'Components')
-    expect(left().getByText(/Add a section in the Outline tab first/)).toBeInTheDocument()
+    const lib = await goTo(user, 'Components')
+    expect(lib.getByText(/There are no sections yet/)).toBeInTheDocument()
+    await user.keyboard('{Escape}')
   })
 
   it('Cancel reverses all lifecycle actions and Save persists them', async () => {
     const user = await open()
     await goTo(user, 'Outline')
     await user.click(outline().getByRole('button', { name: 'Overview' }))
-    await goTo(user, 'Components')
-    await user.click(left().getByRole('button', { name: 'Add Tasks' }))
+    const first = await goTo(user, 'Components')
+    await user.click(first.getByRole('button', { name: 'Add Tasks' }))
     await goTo(user, 'My workspace')
     await user.click(settings().getByRole('button', { name: 'Hide widget' }))
     await goTo(user, 'Outline')
@@ -188,8 +189,8 @@ describe('component and section lifecycle', () => {
     expect(widgetsOf('s-main')).toHaveLength(3)
 
     await user.click(outline().getByRole('button', { name: 'Overview' }))
-    await goTo(user, 'Components')
-    await user.click(left().getByRole('button', { name: 'Add Tasks' }))
+    const second = await goTo(user, 'Components')
+    await user.click(second.getByRole('button', { name: 'Add Tasks' }))
     await user.click(screen.getByRole('button', { name: 'Save' }))
     await waitFor(() => expect(screen.getByText('All changes saved')).toBeInTheDocument())
     const saved = server.puts[0].config as { sections: Array<{ id: string; widgets: Array<{ type: string }> }> }

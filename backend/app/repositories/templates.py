@@ -35,7 +35,14 @@ def _visible_to(user_id: str):
 
 
 def list_visible(session: Session, user_id: str) -> list[Template]:
-    return list(session.scalars(select(Template).where(_visible_to(user_id)).order_by(Template.created_at.desc())))
+    """Visible templates, newest first by ``created_at``.
+
+    Equal timestamps are possible (a coarse clock, or rows created in one transaction), so ties are broken by
+    ``id`` ascending. That makes the order deterministic and repeatable; it is *not* insertion order, because ids
+    are random UUIDs. Callers that need system templates in their documented order sort those themselves.
+    """
+    statement = select(Template).where(_visible_to(user_id)).order_by(Template.created_at.desc(), Template.id.asc())
+    return list(session.scalars(statement))
 
 
 def get_visible(session: Session, template_id: str, user_id: str) -> Template | None:

@@ -38,7 +38,8 @@ export default function WorkspaceView() {
 
   return (
     <WithSorting>
-      <div style={themeVariables(draft.theme)} className={`fs-themed mt-6 flex gap-6 rounded-2xl p-4 ${direction}`}>
+      <div style={themeVariables(draft.theme)} data-workspace-stage className="fs-themed min-h-[70vh] flex-1 p-4 sm:p-6">
+      <div className={`mx-auto flex max-w-[1600px] gap-6 ${direction}`}>
         <SimpleNav navigation={draft.navigation} />
         <div className="min-w-0 flex-1">
           {editing ? (
@@ -71,6 +72,7 @@ export default function WorkspaceView() {
             </p>
           )}
         </div>
+      </div>
       </div>
     </WithSorting>
   )

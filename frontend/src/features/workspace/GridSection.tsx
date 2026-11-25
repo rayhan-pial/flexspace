@@ -1,10 +1,10 @@
 import type { CSSProperties } from 'react'
 import { useEffect, useMemo, useRef, useState } from 'react'
-import ReactGridLayout, { getCompactor, useContainerWidth } from 'react-grid-layout'
-import type { Layout } from 'react-grid-layout'
+import ReactGridLayout, { useContainerWidth } from 'react-grid-layout'
+import type { Compactor, Layout } from 'react-grid-layout'
 import { GRID_COLUMNS } from '../../domain/workspace/constants'
 import { commitGridLayout } from '../../domain/workspace/grid'
-import { minSizeFor } from '../../domain/workspace/placement'
+import { minSizeFor, reflowAfterGesture } from '../../domain/workspace/placement'
 import type { GridRect, Section, Widget } from '../../domain/workspace/types'
 import { useEditorStore } from '../editor/editorStore'
 import { useEffectiveMode } from '../editor/useEffectiveMode'
@@ -16,9 +16,36 @@ const ROW_HEIGHT = 32
 const GAP = 16
 // Nothing inside a widget may start a grid drag; only the handle does.
 const CANCEL = 'input, textarea, select, button, a, [data-no-drag]'
-// No automatic compaction or pushing while dragging: the view always equals the saved layout.
-// The final layout is validated and compacted once, in `commitGridLayout`.
-const compactor = getCompactor(null, false, true)
+
+/**
+ * React Grid Layout asks its compactor to arrange the layout on mount, on every container resize
+ * and on every drag frame. While nothing is being dragged this one returns the layout unchanged, so
+ * saved positions (including gaps) are drawn exactly as stored and opening a panel or resizing the
+ * window can never move or save anything. During a drag or resize it applies the domain's reflow:
+ * neighbours are pushed down out of the way and everything compacts upward, the very resolution
+ * `commitGridLayout` receives, so the preview is the result. Items are cloned, never mutated.
+ */
+function createCompactor(movedId: { current: string | null }): Compactor {
+  return {
+    type: 'vertical',
+    allowOverlap: false,
+    preventCollision: false,
+    compact(layout) {
+      const moved = movedId.current
+      if (!moved) return layout.map((item) => ({ ...item }))
+      const resolved = new Map(reflowAfterGesture(layout.map(toRect), moved).map((rect) => [rect.i, rect]))
+      return layout.map((item) => ({ ...item, ...resolved.get(item.i) }))
+    },
+  }
+}
+
+/** Where a pointer or touch event ended, if it carries coordinates. */
+function pointOf(event: unknown): { x: number; y: number } | null {
+  const e = event as { clientX?: number; clientY?: number; changedTouches?: ArrayLike<{ clientX: number; clientY: number }> } | undefined
+  if (e && typeof e.clientX === 'number' && typeof e.clientY === 'number') return { x: e.clientX, y: e.clientY }
+  const touch = e?.changedTouches?.[0]
+  return touch ? { x: touch.clientX, y: touch.clientY } : null
+}
 
 const toRect = ({ i, x, y, w, h }: { i: string; x: number; y: number; w: number; h: number }): GridRect => ({ i, x, y, w, h })
 
@@ -36,7 +63,30 @@ export default function GridSection({ section, widgets }: { section: Section; wi
   const beginGesture = useEditorStore((s) => s.beginGesture)
   const endGesture = useEditorStore((s) => s.endGesture)
   const [resetKey, setResetKey] = useState(0)
+  const [gesturing, setGesturing] = useState(false)
   const owning = useRef(false)
+  const movedId = useRef<string | null>(null)
+  const compactor = useMemo(() => createCompactor(movedId), [])
+
+  /** Abandon the gesture in progress: nothing is applied, and the section redraws from the draft. */
+  function abandon() {
+    movedId.current = null
+    if (owning.current) endGesture()
+    owning.current = false
+    setGesturing(false)
+    setResetKey((key) => key + 1)
+  }
+
+  // Escape cancels a drag or resize in progress without writing to the draft or its history.
+  useEffect(() => {
+    if (!gesturing) return
+    function onKey(event: KeyboardEvent) {
+      if (event.key === 'Escape') abandon()
+    }
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [gesturing])
 
   // Leaving Edit (or unmounting) mid-gesture must not leave Save blocked.
   useEffect(
@@ -58,11 +108,22 @@ export default function GridSection({ section, widgets }: { section: Section; wi
     [widgets, rects],
   )
 
-  function onStart() {
+  function onStart(_layout: Layout, item: { i: string } | null) {
     owning.current = beginGesture('grid')
+    movedId.current = item?.i ?? null
+    setGesturing(true)
   }
-  function onStop(final: Layout) {
+  function onStop(final: Layout, event: unknown) {
+    // Releasing outside the canvas (over the inspector, the rail, the toolbar) is a cancel, not a drop.
+    const point = pointOf(event)
+    const canvas = containerRef.current?.closest('#workspace-canvas')?.getBoundingClientRect()
+    if (point && canvas && (point.x < canvas.left || point.x > canvas.right || point.y < canvas.top)) {
+      abandon()
+      return
+    }
     const outcome = apply(commitGridLayout(section.id, final.map(toRect)))
+    movedId.current = null
+    setGesturing(false)
     if (owning.current) endGesture()
     owning.current = false
     // A refused or unchanged result must visibly snap back to the saved layout.
@@ -70,6 +131,15 @@ export default function GridSection({ section, widgets }: { section: Section; wi
   }
 
   const live = editing && mounted && width > 0
+
+  // Leaving Edit (or losing the measured width) mid-gesture abandons it: nothing is written and Save is not left blocked.
+  useEffect(() => {
+    if (live || !owning.current) return
+    movedId.current = null
+    owning.current = false
+    endGesture()
+    setGesturing(false)
+  }, [live, endGesture])
 
   return (
     <div ref={containerRef}>
@@ -82,10 +152,10 @@ export default function GridSection({ section, widgets }: { section: Section; wi
           dragConfig={{ enabled: true, handle: `.${GRID_HANDLE_CLASS}`, cancel: CANCEL }}
           resizeConfig={{ enabled: true, handles: ['se'] }}
           compactor={compactor}
-          onDragStart={onStart}
-          onDragStop={(next) => onStop(next)}
-          onResizeStart={onStart}
-          onResizeStop={(next) => onStop(next)}
+          onDragStart={(l, old) => onStart(l, old)}
+          onDragStop={(next, _old, _new, _ph, event) => onStop(next, event)}
+          onResizeStart={(l, old) => onStart(l, old)}
+          onResizeStop={(next, _old, _new, _ph, event) => onStop(next, event)}
         >
           {widgets.map((widget) => (
             <div key={widget.id} className="min-w-0">

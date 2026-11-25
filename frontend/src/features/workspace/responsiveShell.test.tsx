@@ -25,7 +25,7 @@ describe('editor shell layout', () => {
     const inspector = screen.getByRole('complementary', { name: 'Inspector' })
     for (const cls of ['lg:sticky', 'lg:overflow-y-auto', 'lg:max-h-[calc(100vh-2rem)]', 'min-w-0']) expect(inspector.className).toContain(cls)
     const grid = inspector.parentElement?.parentElement as HTMLElement
-    for (const cls of ['lg:grid-cols-[minmax(0,1fr)_17.5rem]', 'xl:grid-cols-[minmax(0,1fr)_19rem]']) expect(grid.className).toContain(cls)
+    for (const cls of ['lg:grid-cols-[minmax(0,1fr)_calc(17.5rem+3rem)]', 'xl:grid-cols-[minmax(0,1fr)_calc(19rem+3rem)]']) expect(grid.className).toContain(cls)
     expect(screen.queryByRole('complementary', { name: 'Components panel' })).not.toBeInTheDocument()
     expect(screen.queryByRole('complementary', { name: 'Settings panel' })).not.toBeInTheDocument()
   })

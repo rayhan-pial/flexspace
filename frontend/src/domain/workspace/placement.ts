@@ -52,6 +52,37 @@ export function compactLayout(rects: readonly GridRect[]): GridRect[] {
   return placed
 }
 
+/**
+ * Collision resolution around one fixed rectangle: `pinnedId` stays exactly where it is, and every
+ * other rectangle, taken in (y, x, id) order, keeps its column and size but moves *down* just far
+ * enough to clear everything already placed. Never moves anything up or sideways, never changes a size,
+ * and the result has no overlaps (given in-bounds input). Pure: the input is not modified.
+ */
+export function pushDown(rects: readonly GridRect[], pinnedId: string): GridRect[] {
+  const pinned = rects.find((r) => r.i === pinnedId)
+  const others = rects
+    .filter((r) => r.i !== pinnedId)
+    .map((r) => ({ ...r }))
+    .sort((a, b) => a.y - b.y || a.x - b.x || (a.i < b.i ? -1 : a.i > b.i ? 1 : 0))
+  const placed: GridRect[] = pinned ? [{ ...pinned }] : []
+  for (const rect of others) {
+    while (placed.some((other) => overlaps(other, rect))) rect.y += 1
+    placed.push(rect)
+  }
+  const byId = new Map(placed.map((r) => [r.i, r]))
+  return rects.map((r) => byId.get(r.i)!)
+}
+
+/**
+ * The layout a drag or resize ends in: neighbours are pushed down out of the moved widget's way
+ * (`pushDown`), then everything is compacted upward. This is the single resolution used both for the
+ * live preview and for the committed result, so what is shown while dragging is what is saved.
+ */
+export function reflowAfterGesture(rects: readonly GridRect[], movedId: string): GridRect[] {
+  const compact = new Map(compactLayout(pushDown(rects, movedId)).map((r) => [r.i, r]))
+  return rects.map((r) => compact.get(r.i)!)
+}
+
 /** Widget ids in semantic order: the ids of `visible` rectangles sorted by (y, x, id). */
 export function spatialOrder(rects: readonly GridRect[]): string[] {
   return [...rects].sort((a, b) => a.y - b.y || a.x - b.x || (a.i < b.i ? -1 : a.i > b.i ? 1 : 0)).map((r) => r.i)

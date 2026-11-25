@@ -48,17 +48,32 @@ try {
   const [w1, h1] = await size('Tasks')
   assert.ok(w1 < w0 && h1 === h0, `expected a narrower Tasks (${w0} to ${w1})`)
   assert.equal(await status(), 'Unsaved changes')
-  await panel.getByRole('button', { name: 'Move Tasks left' }).click()
-  await panel.getByText('That is outside the grid.').waitFor()
-  assert.deepEqual(await size('Tasks'), [w1, h1], 'a refused step changes nothing')
+  const left = panel.getByRole('button', { name: 'Move Tasks left' })
+  assert.equal(await left.isDisabled(), true, 'Left is natively disabled at column 0 before any click')
+  assert.equal(await left.getAttribute('aria-describedby') !== null, true, 'the reason is attached to the button')
+  await panel.getByText(/Unavailable now: .*Left \(already at the left edge of the grid\)/).waitFor()
+  assert.equal(await panel.getByRole('alert').count(), 0, 'no error was needed')
+  assert.deepEqual(await size('Tasks'), [w1, h1], 'nothing changed')
+  assert.equal(await status(), 'Unsaved changes')
+  assert.equal(await panel.getByRole('button', { name: 'Move Tasks right' }).isDisabled(), false, 'a valid step stays enabled')
 
-  log('step buttons: Undo reverses a step and a collision is refused')
+  log('step buttons: Undo reverses a step, and widening onto a neighbour pushes it instead of refusing (UI-021)')
   await page.getByRole('button', { name: 'Undo', exact: true }).click()
   await settle()
   assert.deepEqual(await size('Tasks'), [w0, h0])
   assert.equal(await status(), 'All changes saved')
   await panel.getByRole('button', { name: 'Make Tasks wider' }).click()
-  await panel.getByText('That space is taken by another widget.').waitFor()
+  await settle()
+  assert.equal(await panel.getByRole('alert').count(), 0, 'a step onto a neighbour is not an error')
+  assert.ok((await size('Tasks'))[0] > w0, 'Tasks became wider')
+  assert.equal(await status(), 'Unsaved changes')
+  const rects = await page.evaluate(() => [...document.querySelectorAll('.react-grid-item:not(.react-grid-placeholder)')].map((e) => e.getBoundingClientRect()))
+  for (const [i, p] of rects.entries()) for (const q of rects.slice(i + 1)) {
+    assert.ok(p.right <= q.left + 1 || q.right <= p.left + 1 || p.bottom <= q.top + 1 || q.bottom <= p.top + 1, 'no two widgets overlap after the push')
+  }
+  await page.getByRole('button', { name: 'Undo', exact: true }).click()
+  await settle()
+  assert.deepEqual(await size('Tasks'), [w0, h0])
 
   log('a real pointer drag of the resize corner still commits a change')
   await panel.getByRole('button', { name: 'Make Tasks narrower' }).click()
@@ -86,10 +101,9 @@ try {
   for (const name of ['Tasks', 'Calendar']) {
     await card(name).click({ position: { x: 60, y: 12 } })
     for (const word of ['narrower', 'shorter']) {
-      for (let i = 0; i < 14; i += 1) {
-        await panel.getByRole('button', { name: new RegExp(`^Make .* ${word}$`) }).click()
-        if (await panel.getByRole('alert').count()) break
-      }
+      const button = panel.getByRole('button', { name: new RegExp(`^Make .* ${word}$`) })
+      for (let i = 0; i < 14 && (await button.isEnabled()); i += 1) await button.click()
+      assert.equal(await button.isDisabled(), true, `${name} ${word} is disabled at its minimum`)
     }
     await settle()
     const overflow = await card(name).evaluate((el) => {

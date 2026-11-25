@@ -8,7 +8,7 @@ import type { FakeServer } from '../../test/fakeServer'
 import { stubViewport } from '../../test/viewport'
 import { useSessionStore } from '../auth/sessionStore'
 import { useEditorStore } from '../editor/editorStore'
-import { goTo, inspector } from '../../test/shell'
+import { goTo, templatesDialog } from '../../test/shell'
 
 const editor = () => useEditorStore.getState()
 
@@ -42,11 +42,12 @@ async function open() {
   await screen.findByLabelText('Meeting notes text')
   return userEvent.setup()
 }
-const settings = inspector
+const settings = templatesDialog
 
 async function openTemplates(user: ReturnType<typeof userEvent.setup>) {
   await goTo(user, 'Templates')
   await settings().findByText(/Start from a ready-made design/)
+  await user.click(settings().getByRole('tab', { name: 'My templates' }))
 }
 const sectionTitles = () => editor().draftConfig!.sections.map((s) => s.title)
 const allDraftIds = () => {
@@ -171,7 +172,7 @@ describe('own templates', () => {
     await openTemplates(user)
     await user.click(await settings().findByRole('radio', { name: /Ada layout/ }))
     await user.click(await settings().findByRole('button', { name: 'Apply Ada layout' }))
-    expect(await screen.findByRole('alertdialog')).toBeInTheDocument()
+    expect(await screen.findByRole('region', { name: /Replace your unsaved changes\?|Delete this template\?/ })).toBeInTheDocument()
     expect(sectionTitles()).toEqual(['My section'])
   })
 
@@ -210,12 +211,12 @@ describe('deleting', () => {
     const draft = editor().draftConfig
 
     await user.click(settings().getByRole('button', { name: 'Delete template Ada layout' }))
-    const dialog = await screen.findByRole('alertdialog')
+    const dialog = await screen.findByRole('region', { name: /Replace your unsaved changes\?|Delete this template\?/ })
     await user.click(within(dialog).getByRole('button', { name: 'Keep template' }))
     expect(server.templateDeletes).toHaveLength(0)
 
     await user.click(settings().getByRole('button', { name: 'Delete template Ada layout' }))
-    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Delete template' }))
+    await user.click(within(await screen.findByRole('region', { name: /Replace your unsaved changes\?|Delete this template\?/ })).getByRole('button', { name: 'Delete template' }))
     await settings().findByText(/Deleted "Ada layout"/)
     expect(server.templateDeletes).toEqual(['tpl-a'])
     expect(server.templateDeleteCsrf).toEqual(['csrf-a'])
@@ -226,6 +227,35 @@ describe('deleting', () => {
     expect(settings().getByText(/You have no saved templates yet/)).toBeInTheDocument()
   })
 
+  it('after a delete the result is announced and focus is on it; cancelling a delete returns focus to its Delete button (UI-026)', async () => {
+    server.addTemplate(own('tpl-a', 'Ada layout', 'a'))
+    const user = await open()
+    await openTemplates(user)
+    await user.click(await settings().findByRole('radio', { name: /Ada layout/ }))
+    const remove = settings().getByRole('button', { name: 'Delete template Ada layout' })
+    await user.click(remove)
+    await user.keyboard('{Escape}')
+    expect(screen.getByRole('dialog', { name: 'Templates' })).toBeInTheDocument()
+    expect(settings().getByRole('button', { name: 'Delete template Ada layout' })).toHaveFocus()
+    await user.click(settings().getByRole('button', { name: 'Delete template Ada layout' }))
+    await user.click(within(await screen.findByRole('region', { name: 'Delete this template?' })).getByRole('button', { name: 'Delete template' }))
+    const notice = await settings().findByText(/Deleted "Ada layout"/)
+    expect(notice).toHaveFocus()
+  })
+
+  it('a response arriving after the dialog was closed changes nothing', async () => {
+    const gate = deferred<Response>()
+    server.templateHook = (call) => (call.method === 'GET' && call.path === '/templates' ? gate.promise : undefined)
+    const user = await open()
+    await goTo(user, 'Templates')
+    await user.keyboard('{Escape}')
+    const draft = editor().draftConfig
+    gate.resolve(json(200, { items: [] }))
+    await new Promise((resolve) => setTimeout(resolve, 20))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    expect(editor().draftConfig).toBe(draft)
+  })
+
   it('reports a template that is already gone', async () => {
     server.addTemplate(own('tpl-a', 'Ada layout', 'a'))
     const user = await open()
@@ -233,7 +263,7 @@ describe('deleting', () => {
     await settings().findByRole('radio', { name: /Ada layout/ })
     server.templates = server.templates.filter((t) => t.id !== 'tpl-a')
     await user.click(settings().getByRole('button', { name: 'Delete template Ada layout' }))
-    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Delete template' }))
+    await user.click(within(await screen.findByRole('region', { name: /Replace your unsaved changes\?|Delete this template\?/ })).getByRole('button', { name: 'Delete template' }))
     expect(await settings().findByRole('alert')).toHaveTextContent('That template no longer exists.')
   })
 
@@ -244,7 +274,7 @@ describe('deleting', () => {
     await openTemplates(user)
     await settings().findByRole('radio', { name: /Ada layout/ })
     await user.click(settings().getByRole('button', { name: 'Delete template Ada layout' }))
-    await user.click(within(await screen.findByRole('alertdialog')).getByRole('button', { name: 'Delete template' }))
+    await user.click(within(await screen.findByRole('region', { name: /Replace your unsaved changes\?|Delete this template\?/ })).getByRole('button', { name: 'Delete template' }))
     expect(await settings().findByRole('alert')).toHaveTextContent(/wasn't deleted/)
     expect(settings().getByRole('radio', { name: /Ada layout/ })).toBeInTheDocument()
   })

@@ -25,7 +25,7 @@ vi.mock('react-grid-layout', async () => {
       React.useEffect(() => {
         rglMounts += 1
       }, [])
-      const call = (name: string, layout: unknown) => () => (props[name] as (l: unknown) => void)(layout)
+      const call = (name: string, layout: unknown) => () => (props[name] as (l: unknown, item: unknown) => void)(layout, (layout as Array<{ i: string }>).find((r) => r.i === 'c'))
       const layout = props.layout as Array<{ i: string; x: number; y: number; w: number; h: number }>
       return (
         <div data-testid="rgl">
@@ -40,7 +40,6 @@ vi.mock('react-grid-layout', async () => {
         </div>
       )
     },
-    getCompactor: (...args: unknown[]) => ({ mock: args }),
     useContainerWidth: () => ({ width: measured.width, mounted: measured.mounted, containerRef: { current: null } }),
   }
 })
@@ -114,6 +113,64 @@ describe('React Grid Layout adapter', () => {
     })
     expect(editor().draftConfig).toBe(draft)
     expect(selectIsDirty(editor())).toBe(false)
+  })
+
+  it('the compactor changes nothing while idle, including gaps, and never mutates its input (UI-021)', () => {
+    render(<Harness />)
+    const { compactor } = rglProps.current as { compactor: { compact: (l: unknown[], cols: number) => Array<Record<string, number | string>>; allowOverlap: boolean; preventCollision: boolean } }
+    const gappy = [{ i: 'a', x: 0, y: 5, w: 6, h: 4 }, { i: 'b', x: 6, y: 9, w: 6, h: 4 }]
+    const frozen = JSON.stringify(gappy)
+    const out = compactor.compact(gappy, 12)
+    expect(out).toEqual(gappy)
+    expect(out[0]).not.toBe(gappy[0])
+    expect(JSON.stringify(gappy)).toBe(frozen)
+    expect(compactor.allowOverlap).toBe(false)
+    expect(compactor.preventCollision).toBe(false) // native pushing, not collision blocking
+  })
+
+  it('during a gesture the compactor pushes neighbours down and compacts, and the stop commits that same layout', async () => {
+    render(<Harness />)
+    await click('drag start') // the stub reports c as the moved item
+    const { compactor } = rglProps.current as { compactor: { compact: (l: unknown[], cols: number) => Array<{ i: string; x: number; y: number; w: number; h: number }> } }
+    const dragged = [{ i: 'a', x: 0, y: 0, w: 6, h: 4 }, { i: 'b', x: 6, y: 0, w: 6, h: 4 }, { i: 'c', x: 0, y: 0, w: 6, h: 3, minW: 3 }]
+    const preview = compactor.compact(dragged, 12)
+    expect(preview.find((r) => r.i === 'c')).toMatchObject({ x: 0, y: 0, w: 6, h: 3, minW: 3 }) // extra props survive
+    expect(preview.find((r) => r.i === 'a')).toMatchObject({ x: 0, y: 3, w: 6, h: 4 })
+    expect(preview.find((r) => r.i === 'b')).toMatchObject({ x: 6, y: 0 })
+    const stop = (rglProps.current as { onDragStop: (l: unknown, ...rest: unknown[]) => void }).onDragStop
+    act(() => stop(preview.map(({ i, x, y, w, h }) => ({ i, x, y, w, h }))))
+    expect(layoutOf().find((r) => r.i === 'a')).toEqual({ i: 'a', x: 0, y: 3, w: 6, h: 4 })
+    expect(layoutOf().find((r) => r.i === 'c')).toEqual({ i: 'c', x: 0, y: 0, w: 6, h: 3 })
+    expect(editor().draftConfig!.sections[0].widgets.map((w) => w.id)).toEqual(['c', 'b', 'a'])
+    expect(editor().history.past).toHaveLength(1) // one gesture, one Undo step
+    editor().undo()
+    expect(layoutOf()).toEqual(base.sections[0].layout)
+    // after the gesture the compactor is idle again
+    const idle = (rglProps.current as { compactor: { compact: (l: unknown[], cols: number) => unknown[] } }).compactor.compact(dragged, 12)
+    expect(idle).toEqual(dragged)
+  })
+
+  it('Escape cancels a gesture in progress: no draft or history write, Save is unblocked and the grid redraws', async () => {
+    const user = userEvent.setup()
+    render(<Harness />)
+    const draft = editor().draftConfig
+    const mounts = rglMounts
+    await click('drag start')
+    expect(editor().interaction.gesture).toBe('grid')
+    await user.keyboard('{Escape}')
+    expect(editor().interaction.gesture).toBeNull()
+    expect(editor().draftConfig).toBe(draft)
+    expect(editor().history.past).toHaveLength(0)
+    expect(rglMounts).toBeGreaterThan(mounts)
+  })
+
+  it('leaving Edit mid-gesture abandons it without writing or leaving Save blocked', async () => {
+    render(<Harness />)
+    const draft = editor().draftConfig
+    await click('drag start')
+    act(() => editor().setMode('preview'))
+    expect(editor().interaction.gesture).toBeNull()
+    expect(editor().draftConfig).toBe(draft)
   })
 
   it('a drag stop commits exactly one compacted command and syncs array order', async () => {
@@ -220,20 +277,25 @@ describe('keyboard move and resize on the handle', () => {
     expect(layoutOf().find((r) => r.i === 'c')).toEqual({ i: 'c', x: 0, y: 4, w: 6, h: 3 })
   })
 
-  it('a refused move is announced and changes nothing; a valid move clears the message', async () => {
+  it('an occupied move pushes the neighbour down (UI-021); a move outside the grid is announced and changes nothing', async () => {
     measured.mounted = false
     const user = userEvent.setup()
     render(<Harness />)
     handle('A note').focus()
-    const draft = editor().draftConfig
+    const before = editor().draftConfig!.sections[0].layout!
     await user.keyboard('{ArrowRight}')
-    expect(screen.getByRole('alert')).toHaveTextContent('taken by another widget')
-    expect(editor().draftConfig).toBe(draft)
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+    const after = editor().draftConfig!.sections[0].layout!
+    expect(after.find((r) => r.i === 'a')).toMatchObject({ x: 1, y: 0, w: 6, h: 4 })
+    expect(after.find((r) => r.i === 'b')).toMatchObject({ x: 6, y: 4, w: 6, h: 4 }) // pushed, same size
+    expect(after.find((r) => r.i === 'c')).toEqual(before.find((r) => r.i === 'c'))
 
     handle('C card').focus()
+    const draft = editor().draftConfig
     await user.keyboard('{ArrowLeft}')
     expect(screen.getAllByRole('alert').map((n) => n.textContent)).toContain('That is outside the grid.')
+    expect(editor().draftConfig).toBe(draft)
     await user.keyboard('{ArrowRight}')
-    expect(screen.getAllByRole('alert')).toHaveLength(1) // only A's message remains; C's was cleared
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument() // C's message was cleared by a valid move
   })
 })

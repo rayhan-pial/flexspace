@@ -1,5 +1,6 @@
 import copy
 import json
+from datetime import UTC, datetime, timedelta
 
 import pytest
 from sqlalchemy import select
@@ -64,10 +65,23 @@ def test_anonymous_access_is_401_everywhere(client):
     assert request(client, "DELETE", "/api/templates/anything", csrf="x").status_code == 401
 
 
-def test_list_shows_system_templates_in_order_then_own_newest_first(alice):
+def set_created(session, when, *template_ids):
+    """Pin creation times explicitly, so ordering tests never depend on the clock's resolution."""
+    session.rollback()
+    for template_id in template_ids:
+        session.get(Template, template_id).created_at = when
+    session.commit()
+
+
+T0 = datetime(2026, 1, 1, 12, 0, 0, tzinfo=UTC)
+
+
+def test_list_shows_system_templates_in_order_then_own_newest_first(alice, session):
     client, _ = alice
     first = create(alice, "First").json()["id"]
     second = create(alice, "Second").json()["id"]
+    set_created(session, T0, first)
+    set_created(session, T0 + timedelta(seconds=5), second)  # distinct, explicit times: second is newer
     response = client.get("/api/templates")
     assert response.status_code == 200 and response.headers["cache-control"] == "no-store"
     items = response.json()["items"]
@@ -75,6 +89,37 @@ def test_list_shows_system_templates_in_order_then_own_newest_first(alice):
     assert [i["name"] for i in items[:3]] == list(SYSTEM_TEMPLATE_NAMES.values())
     assert [i["id"] for i in items[3:]] == [second, first]
     assert all(set(i) == {"id", "name", "kind", "updatedAt"} for i in items)  # metadata only
+
+
+def test_equal_creation_times_list_in_a_documented_deterministic_order(alice, session):
+    """Ties are broken by id ascending: repeatable, and deliberately not claimed to be insertion order."""
+    client, _ = alice
+    ids = [create(alice, name).json()["id"] for name in ("A", "B", "C", "D")]
+    set_created(session, T0, *ids)  # all four share one timestamp
+    expected = sorted(ids)
+    for _ in range(5):
+        custom = [i["id"] for i in client.get("/api/templates").json()["items"] if i["kind"] == "custom"]
+        assert custom == expected
+
+
+def test_a_newer_template_still_comes_first_and_only_equal_times_fall_back_to_ids(alice, session):
+    client, _ = alice
+    a, b, c = (create(alice, name).json()["id"] for name in ("A", "B", "C"))
+    set_created(session, T0, a, b)
+    set_created(session, T0 + timedelta(seconds=1), c)
+    custom = [i["id"] for i in client.get("/api/templates").json()["items"] if i["kind"] == "custom"]
+    assert custom == [c, *sorted([a, b])]
+
+
+def test_ties_never_reorder_system_templates_or_leak_other_users_rows(alice, bob, session):
+    client, _ = alice
+    mine = [create(alice, name).json()["id"] for name in ("A", "B")]
+    theirs = create(bob, "Theirs").json()["id"]
+    set_created(session, T0, *mine, theirs)
+    items = client.get("/api/templates").json()["items"]
+    assert [i["name"] for i in items[:3]] == list(SYSTEM_TEMPLATE_NAMES.values())  # system order is its own rule
+    assert [i["id"] for i in items[3:]] == sorted(mine)
+    assert theirs not in [i["id"] for i in items]
 
 
 def test_list_never_includes_another_users_templates(alice, bob):

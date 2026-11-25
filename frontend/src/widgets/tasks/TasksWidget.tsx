@@ -88,7 +88,9 @@ function TaskRow({ item, editing, handle, onDone, onRename, onDelete }: RowProps
 export default function TasksWidget({ widgetId, title, props, mode, dispatch }: WidgetRenderProps<TasksProps>) {
   const editing = mode === 'edit'
   const formId = useId()
+  const addReasonId = useId()
   const [draft, setDraft] = useState('')
+  const addReason = props.items.length >= MAX_LIST_ITEMS ? `This list has reached the limit of ${MAX_LIST_ITEMS} tasks.` : draft.trim() === '' ? 'Type a task first.' : null
   const [error, setError] = useState<string | null>(null)
   const hasSorting = useOptionalSortContext() !== null
   const sortable = editing && hasSorting
@@ -160,11 +162,13 @@ export default function TasksWidget({ widgetId, title, props, mode, dispatch }: 
           />
           <button
             type="submit"
-            disabled={draft.trim() === '' || props.items.length >= MAX_LIST_ITEMS}
+            disabled={addReason !== null}
+            aria-describedby={addReason ? addReasonId : undefined}
             className="ui-focus shrink-0 rounded-lg bg-ui-primary px-3 py-1 text-sm font-medium text-white hover:bg-ui-primary-hover disabled:cursor-not-allowed disabled:opacity-50 [@media(pointer:coarse)]:min-h-11"
           >
             Add
           </button>
+          {addReason && <span id={addReasonId} className="sr-only">{addReason}</span>}
         </form>
       )}
       {error && <p role="alert" className="text-sm font-medium text-red-700">{error}</p>}

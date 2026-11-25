@@ -7,7 +7,7 @@ import { mkdirSync } from 'node:fs'
 import { join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { chromium } from 'playwright-core'
-import { goTo, inspector } from './shell.mjs'
+import { goTo, inspector, templates } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -36,14 +36,16 @@ try {
   for (const design of ['Productivity', 'Analytics', 'Creative']) {
     await page.setViewportSize({ width: 1440, height: 1000 })
     await goTo(page, 'Templates')
-    await inspector(page).getByRole('radio', { name: new RegExp(design) }).check()
-    await inspector(page).getByRole('button', { name: `Apply ${design}` }).click()
-    const confirm = page.getByRole('alertdialog')
+    await templates(page).getByRole('radio', { name: new RegExp(design) }).check()
+    if (design === 'Analytics') await shot('final-templates-gallery-1440')
+    await templates(page).getByRole('button', { name: `Apply ${design}` }).click()
+    const confirm = page.getByRole('region', { name: 'Replace your unsaved changes?' })
     if (await confirm.isVisible().catch(() => false)) {
       if (design === 'Analytics') await shot('final-modal-replace-draft')
       await confirm.getByRole('button', { name: 'Replace my draft' }).click()
     }
-    await inspector(page).getByText(new RegExp(`${design} is now in your draft`)).waitFor()
+    await templates(page).getByText(new RegExp(`${design} is now in your draft`)).waitFor()
+    await page.keyboard.press('Escape')
     await goTo(page, 'My workspace')
     for (const width of WIDTHS) {
       await page.setViewportSize({ width, height: 1000 })
@@ -66,25 +68,29 @@ try {
   // Selected widget, and each inspector view, on the Productivity design at 1440.
   await page.setViewportSize({ width: 1440, height: 1000 })
   await goTo(page, 'Templates')
-  await inspector(page).getByRole('radio', { name: /Productivity/ }).check()
-  await inspector(page).getByRole('button', { name: 'Apply Productivity' }).click()
-  const again = page.getByRole('alertdialog')
+  await templates(page).getByRole('radio', { name: /Productivity/ }).check()
+  await templates(page).getByRole('button', { name: 'Apply Productivity' }).click()
+  const again = page.getByRole('region', { name: 'Replace your unsaved changes?' })
   if (await again.isVisible().catch(() => false)) await again.getByRole('button', { name: 'Replace my draft' }).click()
+  await page.keyboard.press('Escape')
   await page.getByRole('article', { name: 'Tasks' }).click({ position: { x: 60, y: 12 } })
   await shot('final-selected-widget-1440')
   for (const view of ['Outline', 'Components', 'Templates', 'Appearance']) {
     await goTo(page, view)
     await shot(`final-inspector-${view.toLowerCase()}-1440`)
+    if (view === 'Components' || view === 'Templates') await page.keyboard.press('Escape')
   }
 
   // Modal states: delete a custom template, and log out with unsaved changes.
   await goTo(page, 'Templates')
-  await inspector(page).getByLabel('Template name').fill('Matrix snapshot')
-  await inspector(page).getByRole('button', { name: 'Save current design as template' }).click()
-  await inspector(page).getByText(/Your workspace was not changed/).waitFor()
-  await inspector(page).getByRole('button', { name: 'Delete template Matrix snapshot' }).click()
-  await page.getByRole('alertdialog').waitFor()
+  await templates(page).getByRole('tab', { name: 'My templates' }).click()
+  await templates(page).getByLabel('Template name').fill('Matrix snapshot')
+  await templates(page).getByRole('button', { name: 'Save current design as template' }).click()
+  await templates(page).getByText(/Your workspace was not changed/).waitFor()
+  await templates(page).getByRole('button', { name: 'Delete template Matrix snapshot' }).click()
+  await page.getByRole('region', { name: 'Delete this template?' }).waitFor()
   await shot('final-modal-delete-template')
+  await page.keyboard.press('Escape')
   await page.keyboard.press('Escape')
   await page.getByRole('button', { name: 'Log out' }).click()
   await page.getByRole('alertdialog').waitFor()

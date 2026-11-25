@@ -121,6 +121,8 @@ Widgets with unsupported types render a bounded placeholder in their normal save
 
 ## 5. Reusable ordering and spatial layout
 
+Interaction update, 2026-11-25: the revised [UI design specification](UI_DESIGN_SPEC.md#7-drag-resize-and-ordering-language) now requires automatic pushing/reflow on occupied same-grid drag moves (UI-021). This supersedes the implementation's collision-blocking gesture behavior, not the JSON invariant forbidding final visible overlap. Resolve geometry transiently, validate/commit the complete result once, retain hidden rectangles and derive visible semantic order from final positions. Never compact saved layouts merely on load/measurement. Explicit Add destinations and preflight-disabled controls are specified in the same UI contract; no workspace schema change is required.
+
 `SortableSection` accepts `containerId`, ordered item IDs, item type, an `accepts` policy, orientation, item renderer, and a domain adapter. The adapter supplies `readItems`, `canMove`, and `commitMove({itemId, fromContainerId, toContainerId, toIndex})`. It resolves stable IDs at commit time, never trusting stale drag indices. All move buttons and keyboard operations call the same domain command as drag/drop.
 
 Use one dnd-kit provider for semantic sorting. Namespace runtime container identifiers, e.g. `nav:primary`, `sections:root`, `section:<id>:widgets`, `widget:<id>:tasks`. They are derived, not extra persisted ordering fields. Filter collision candidates by type and nesting level. Empty containers need explicit drop targets; dnd-kit's [multiple-list guide](https://dndkit.com/react/guides/multiple-sortable-lists/) describes that distinction.

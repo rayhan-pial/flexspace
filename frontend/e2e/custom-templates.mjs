@@ -4,7 +4,7 @@
 // Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
-import { goTo, inspector } from './shell.mjs'
+import { goTo, inspector, templates } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -17,7 +17,7 @@ const log = (message) => {
   console.log(`- ${message}`)
 }
 
-const settings = (p) => inspector(p)
+const settings = (p) => templates(p) // the Templates dialog
 const sectionTitles = (page) => page.locator('[data-section-id] > div > h2').allInnerTexts()
 const widgetIds = (page) => page.evaluate(() => [...document.querySelectorAll('[data-widget-id]')].map((e) => e.getAttribute('data-widget-id')))
 const api = (page, path) => page.evaluate(async (p) => {
@@ -34,9 +34,10 @@ async function register(page) {
   await inspector(page).waitFor()
 }
 
-async function openTemplates(page) {
+async function openTemplates(page, tab = 'My templates') {
   await goTo(page, 'Templates')
   await settings(page).getByText(/Start from a ready-made design/).waitFor()
+  await settings(page).getByRole('tab', { name: tab }).click()
 }
 
 try {
@@ -44,10 +45,11 @@ try {
   const a = await contextA.newPage()
   log('account A registers and applies Creative, leaving a dirty draft')
   await register(a)
-  await openTemplates(a)
+  await openTemplates(a, 'Ready-made')
   await settings(a).getByRole('radio', { name: /Creative/ }).check()
   await settings(a).getByRole('button', { name: 'Apply Creative' }).click()
   await settings(a).getByText(/Creative is now in your draft/).waitFor()
+  await settings(a).getByRole('tab', { name: 'My templates' }).click()
   assert.deepEqual(await sectionTitles(a), ['Studio', 'Ideas', 'Archive'])
   const before = (await api(a, '/workspace')).body.revision
 
@@ -95,7 +97,7 @@ try {
   log('deleting it removes it for good and leaves the workspace and draft alone')
   const draftIds = await widgetIds(a)
   await settings(a).getByRole('button', { name: 'Delete template Studio copy' }).click()
-  await a.getByRole('alertdialog').getByRole('button', { name: 'Delete template' }).click()
+  await a.getByRole('region', { name: 'Delete this template?' }).getByRole('button', { name: 'Delete template' }).click()
   await settings(a).getByText(/Deleted "Studio copy"/).waitFor()
   assert.equal(await settings(a).getByRole('radio', { name: /Studio copy/ }).count(), 0)
   assert.deepEqual(await widgetIds(a), draftIds)

@@ -6,6 +6,8 @@ const DISCRETE_INPUTS = new Set(['checkbox', 'radio', 'button', 'submit', 'reset
 /** A control whose edits arrive as a stream of small changes (typing, sliding, picking a colour). */
 export function isContinuousControl(element: Element | null): boolean {
   if (!element) return false
+  // Controls inside a dialog (choosing where to add, searching) are not a stream of draft edits.
+  if (element.closest('[data-dialog-root]')) return false
   if (element instanceof HTMLInputElement) return !DISCRETE_INPUTS.has(element.type)
   if (element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) return true
   return element instanceof HTMLElement && (element.isContentEditable || element.classList.contains('react-colorful__interactive'))

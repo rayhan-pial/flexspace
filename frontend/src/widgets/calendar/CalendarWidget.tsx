@@ -1,6 +1,6 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { useState } from 'react'
+import { useId, useState } from 'react'
 import { formatDate, monthOf, monthTitle, monthWeeks, shiftMonth } from '../../domain/workspace/dates'
 import type { CalendarEvent, CalendarProps } from '../../domain/workspace/types'
 import SortHandle from '../../features/sorting/SortHandle'
@@ -32,6 +32,8 @@ const navButton =
  */
 export default function CalendarWidget({ widgetId, title, props, mode }: WidgetRenderProps<CalendarProps>) {
   const hasSorting = useOptionalSortContext() !== null
+  const previousId = useId()
+  const nextId = useId()
   const [browse, setBrowse] = useState<{ from: string; month: string } | null>(null)
   const shown = browse && browse.from === props.displayMonth ? browse.month : props.displayMonth
   const previous = shiftMonth(shown, -1)
@@ -49,13 +51,15 @@ export default function CalendarWidget({ widgetId, title, props, mode }: WidgetR
     <div className="@container fs-scroll flex h-full min-h-0 flex-col gap-3 overflow-x-hidden overflow-y-auto">
       <div>
         <div className="flex items-center justify-between gap-2">
-          <button type="button" disabled={previous === null} onClick={() => go(previous)} aria-label="Previous month" className={navButton}>
+          <button type="button" disabled={previous === null} aria-describedby={previous === null ? previousId : undefined} onClick={() => go(previous)} aria-label="Previous month" className={navButton}>
             <ChevronLeft aria-hidden="true" className="size-4" />
           </button>
+          {previous === null && <span id={previousId} className="sr-only">This is the earliest month you can show.</span>}
           <p aria-live="polite" className="text-sm font-semibold">{monthTitle(shown)}</p>
-          <button type="button" disabled={next === null} onClick={() => go(next)} aria-label="Next month" className={navButton}>
+          <button type="button" disabled={next === null} aria-describedby={next === null ? nextId : undefined} onClick={() => go(next)} aria-label="Next month" className={navButton}>
             <ChevronRight aria-hidden="true" className="size-4" />
           </button>
+          {next === null && <span id={nextId} className="sr-only">This is the latest month you can show.</span>}
         </div>
         {shown !== props.displayMonth && (
           <button type="button" onClick={() => setBrowse(null)} className="ui-focus mt-1 text-xs underline">

@@ -1,7 +1,7 @@
 import type { Command } from './commands'
 import { fail, ok } from './commands'
 import { GRID_COLUMNS, MAX_ROW_H } from './constants'
-import { compactLayout, minSizeFor, overlaps, spatialOrder } from './placement'
+import { compactLayout, minSizeFor, overlaps, pushDown, spatialOrder } from './placement'
 import type { GridRect, Section, Widget, WorkspaceConfig } from './types'
 
 /*
@@ -64,26 +64,63 @@ export function commitGridLayout(sectionId: string, rects: readonly GridRect[]):
 
 export interface RectChange { dx?: number; dy?: number; dw?: number; dh?: number }
 
+/** What a one-cell step would do, worked out without touching the draft. */
+export type NudgePlan = { ok: true; sectionId: string; layout: GridRect[]; widgets: Widget[] } | { ok: false; error: string }
+
 /**
- * Nudge one widget by whole cells (keyboard move / resize). Nothing else moves: a change that
- * would leave the grid, shrink below the minimum or land on a visible widget is refused.
+ * The single planner behind keyboard moves, click steps and their availability. A step that leaves
+ * the grid or shrinks below the minimum is invalid. A step onto other visible widgets is resolved by
+ * pushing just those widgets (and anything they then touch) down out of the way; nothing else moves,
+ * no size changes and hidden rectangles are untouched. Pure and free of side effects.
  */
+export function planNudge(config: WorkspaceConfig, widgetId: string, change: RectChange): NudgePlan {
+  const section = config.sections.find((s) => s.kind === 'grid' && s.widgets.some((w) => w.id === widgetId))
+  if (!section) return { ok: false, error: `Widget ${widgetId} is not in a grid section.` }
+  const widget = section.widgets.find((w) => w.id === widgetId)!
+  const rect = section.layout?.find((r) => r.i === widgetId)
+  if (!rect) return { ok: false, error: `Widget ${widgetId} has no position.` }
+
+  const next: GridRect = { i: rect.i, x: rect.x + (change.dx ?? 0), y: rect.y + (change.dy ?? 0), w: rect.w + (change.dw ?? 0), h: rect.h + (change.dh ?? 0) }
+  const issue = problem(next, widget)
+  if (issue) return { ok: false, error: issue }
+  let layout = section.layout!.map((r) => (r.i === widgetId ? next : r))
+  if (!widget.hidden) {
+    const hiddenIds = new Set(section.widgets.filter((w) => w.hidden).map((w) => w.id))
+    const visible = layout.filter((r) => !hiddenIds.has(r.i))
+    if (visible.some((other) => other.i !== widgetId && overlaps(other, next))) {
+      const pushed = new Map(pushDown(visible, widgetId).map((r) => [r.i, r]))
+      layout = layout.map((r) => pushed.get(r.i) ?? r)
+    }
+  }
+  return { ok: true, sectionId: section.id, layout, widgets: syncOrder(section.widgets, layout) }
+}
+
+export interface StepAvailability { allowed: boolean; reason: string | null }
+
+/**
+ * Whether a one-cell step can run, and if not, why in plain words. Side-effect free: it only reads
+ * `config` through `planNudge`, so evaluating it creates no draft, history, id or request.
+ */
+export function stepAvailability(config: WorkspaceConfig, widgetId: string, change: RectChange): StepAvailability {
+  const plan = planNudge(config, widgetId, change)
+  if (plan.ok) return { allowed: true, reason: null }
+  if (/not in a grid|no position/.test(plan.error)) return { allowed: false, reason: 'This widget is no longer in a grid section.' }
+  if ((change.dx ?? 0) < 0) return { allowed: false, reason: 'Already at the left edge of the grid.' }
+  if ((change.dx ?? 0) > 0) return { allowed: false, reason: 'Already at the right edge of the grid.' }
+  if ((change.dy ?? 0) < 0) return { allowed: false, reason: 'Already at the top of the grid.' }
+  if ((change.dw ?? 0) < 0) return { allowed: false, reason: 'Already at the narrowest this widget can be.' }
+  if ((change.dw ?? 0) > 0) return { allowed: false, reason: 'No room to the right: it already reaches the edge of the grid.' }
+  if ((change.dh ?? 0) < 0) return { allowed: false, reason: 'Already at the shortest this widget can be.' }
+  if ((change.dh ?? 0) > 0) return { allowed: false, reason: 'Already at the tallest a widget can be.' }
+  return { allowed: false, reason: plan.error }
+}
+
+/** Nudge one widget by whole cells (keyboard move / resize), pushing any widgets in the way down. */
 export function nudgeWidget(widgetId: string, change: RectChange): Command {
   return (config) => {
-    const section = config.sections.find((s) => s.kind === 'grid' && s.widgets.some((w) => w.id === widgetId))
-    if (!section) return fail(`Widget ${widgetId} is not in a grid section.`)
-    const widget = section.widgets.find((w) => w.id === widgetId)!
-    const rect = section.layout?.find((r) => r.i === widgetId)
-    if (!rect) return fail(`Widget ${widgetId} has no position.`)
-
-    const next: GridRect = { i: rect.i, x: rect.x + (change.dx ?? 0), y: rect.y + (change.dy ?? 0), w: rect.w + (change.dw ?? 0), h: rect.h + (change.dh ?? 0) }
-    const issue = problem(next, widget)
-    if (issue) return fail(issue)
-    if (!widget.hidden) {
-      const others = (section.layout ?? []).filter((r) => r.i !== widgetId && !section.widgets.find((w) => w.id === r.i)!.hidden)
-      if (others.some((other) => overlaps(other, next))) return fail('That space is taken by another widget.')
-    }
-    const layout = section.layout!.map((r) => (r.i === widgetId ? next : r))
-    return ok(replaceSection(config, { ...section, layout, widgets: syncOrder(section.widgets, layout) }))
+    const plan = planNudge(config, widgetId, change)
+    if (!plan.ok) return fail(plan.error)
+    const section = config.sections.find((s) => s.id === plan.sectionId)!
+    return ok(replaceSection(config, { ...section, layout: plan.layout, widgets: plan.widgets }))
   }
 }

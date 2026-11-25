@@ -108,6 +108,7 @@ try {
   await clean('a resize that changed nothing')
 
   log('outline reorder: drag Calendar above Welcome; the canvas repacks to match')
+  await goTo(page, 'Outline') // pressing a card's handle on the canvas switched the inspector to Properties
   const cal = await center(outlineGrip('Calendar'))
   const wel = await center(outlineGrip('Welcome'))
   await drag(cal, { x: wel.x, y: wel.y - 6 })

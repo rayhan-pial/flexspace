@@ -6,7 +6,7 @@
 import assert from 'node:assert/strict'
 import { existsSync, readFileSync } from 'node:fs'
 import { chromium } from 'playwright-core'
-import { goTo, inspector } from './shell.mjs'
+import { goTo, inspector, library } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -83,7 +83,7 @@ try {
   log('edit (title, component, palette, hidden widget), Save, log out and in: the JSON is identical')
   await page.getByLabel('Workspace title').fill('Round trip')
   await goTo(page, 'Components')
-  await inspector(page).getByRole('button', { name: 'Add Tasks', exact: true }).click()
+  await library(page).getByRole('button', { name: 'Add Tasks', exact: true }).click()
   await goTo(page, 'Appearance')
   await inspector(page).getByRole('button', { name: 'Use Forest palette' }).click()
   await page.getByRole('article', { name: 'Welcome' }).click({ position: { x: 60, y: 12 } })
@@ -147,7 +147,7 @@ try {
     await tablet.waitForTimeout(300)
     small.push(
       ...(await tablet.evaluate((where) => {
-        const scopes = ['aside', '[data-toolbar]']
+        const scopes = ['aside', '[data-toolbar]', '[role="dialog"]']
         const found = []
         for (const selector of scopes) {
           for (const scope of document.querySelectorAll(selector)) {
@@ -164,6 +164,7 @@ try {
         return found
       }, view)),
     )
+    if (view === 'Components' || view === 'Templates') await tablet.keyboard.press('Escape')
   }
   console.log(`  (${small.length} controls under 44 px)${small.length ? ': ' + small.slice(0, 12).join('; ') : ''}`)
   assert.deepEqual(small, [], 'controls smaller than 44 px with a coarse pointer')

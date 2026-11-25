@@ -2,7 +2,7 @@
 // Not part of `npm test`. Same prerequisites as grid-gesture.mjs. Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
-import { goTo, inspector } from './shell.mjs'
+import { goTo, inspector, library } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -17,7 +17,7 @@ const log = (message) => {
 }
 
 const outline = page.getByRole('list', { name: 'Components' })
-const left = inspector(page)
+const left = library(page)
 const settings = inspector(page)
 const status = () => page.getByRole('status', { name: 'Save status' }).innerText()
 const widgetCard = (title) => page.locator('[data-widget-id]').filter({ has: page.getByRole('heading', { level: 3, name: title, exact: true }) })
@@ -48,6 +48,7 @@ async function addWidget(label, title) {
   await outline.getByRole('button', { name: 'Today', exact: true }).click()
   await goTo(page, 'Components')
   await left.getByRole('button', { name: `Add ${label}` }).click()
+  await page.waitForFunction(() => document.activeElement?.hasAttribute('data-widget-id')) // the new card is revealed and focused
   await goTo(page, 'My workspace')
   await settings.getByLabel('Title').fill(title)
 }
@@ -81,6 +82,8 @@ try {
   assert.deepEqual(await taskTexts('Later'), [])
 
   log('typing in a task field and ticking a checkbox never start a drag')
+  await widgetCard('Tasks').scrollIntoViewIfNeeded() // adding revealed the last card; measure where Tasks is now
+  await page.waitForTimeout(150)
   const startBox = await widgetCard('Tasks').boundingBox()
   const field = widgetCard('Tasks').locator('input[aria-label^="Task text: "]').first()
   await field.click()

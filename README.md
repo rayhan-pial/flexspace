@@ -53,6 +53,8 @@ npm run dev
 
 Open http://localhost:5173 and create an account. Use `http://localhost:5173` or `http://127.0.0.1:5173` (both are allowed origins) and keep `FLEXSPACE_COOKIE_SECURE=false` in `backend/.env` for plain-HTTP development.
 
+**Letting other PCs on your network use it.** Start the SPA with `npm run dev:lan` (it listens on all network interfaces; the API stays on 127.0.0.1 behind the proxy), and add the address people will type to `FLEXSPACE_ALLOWED_ORIGINS` in `backend\.env` as a JSON list, for example `["http://localhost:5173","http://127.0.0.1:5173","http://192.168.1.71:5173"]`, then restart the API. The API refuses any other origin. Allow inbound TCP 5173 in the firewall if it is on. This is plain HTTP for a trusted office network (hence `FLEXSPACE_COOKIE_SECURE=false`); use HTTPS and a real build before exposing it more widely. A DHCP address can change, so update the list if it does.
+
 ## Test and check
 
 ```powershell
@@ -69,7 +71,7 @@ npm run build
 
 Use PowerShell for these commands; running Vitest from Git Bash with an absolute `/c/...` path can break module resolution.
 
-### Real-browser suite (18 scripts)
+### Real-browser suite (27 scripts)
 
 `npm run test:browser` drives a real Chromium-family browser through every feature, including the brief's full demonstration run with two accounts and two tabs (`e2e/acceptance.mjs`). It registers throwaway accounts, so use a scratch database, and it needs the API and the dev server running:
 

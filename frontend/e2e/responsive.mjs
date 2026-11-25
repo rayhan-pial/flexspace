@@ -4,7 +4,7 @@
 // Run: npm run test:browser      Set E2E_REPORT=1 to print every measurement.
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
-import { goTo, inspector } from './shell.mjs'
+import { goTo, inspector, templates } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -20,16 +20,18 @@ const log = (message) => {
   console.log(`- ${message}`)
 }
 
-const settings = inspector(page)
 const components = inspector(page)
 
 async function applyTemplate(name) {
   await goTo(page, 'Templates')
-  await settings.getByRole('radio', { name: new RegExp(name) }).check()
-  await settings.getByRole('button', { name: `Apply ${name}` }).click()
-  const confirm = page.getByRole('alertdialog')
-  if (await confirm.isVisible().catch(() => false)) await confirm.getByRole('button', { name: 'Replace my draft' }).click()
-  await settings.getByText(new RegExp(`${name} is now in your draft`)).waitFor()
+  const gallery = templates(page)
+  await gallery.getByRole('radio', { name: new RegExp(name) }).check()
+  await gallery.getByRole('button', { name: `Apply ${name}` }).click()
+  const confirm = page.getByRole('region', { name: 'Replace your unsaved changes?' }).getByRole('button', { name: 'Replace my draft' })
+  if (await confirm.isVisible().catch(() => false)) await confirm.click()
+  await gallery.getByText(new RegExp(`${name} is now in your draft`)).waitFor()
+  await page.keyboard.press('Escape')
+  await gallery.waitFor({ state: 'hidden' })
 }
 
 async function setPlacement(label) {

@@ -19,6 +19,13 @@ const safe = (value: string, fallback: string) => (HEX.test(value) ? value : fal
  */
 export default function ThemePanel() {
   const theme = useEditorStore((s) => s.draftConfig?.theme)
+  // Widgets that set their own color or size keep it when the palette changes; say how many.
+  const overridden = useEditorStore((s) =>
+    (s.draftConfig?.sections ?? []).reduce(
+      (sum, section) => sum + section.widgets.filter((w) => w.appearance && ['background', 'text', 'fontSizePx'].some((key) => (w.appearance as Record<string, unknown>)[key] !== undefined)).length,
+      0,
+    ),
+  )
   const apply = useEditorStore((s) => s.apply)
   const [error, setError] = useState<string | null>(null)
   if (!theme) return null
@@ -34,6 +41,8 @@ export default function ThemePanel() {
   const accent = safe(theme.primary, '#6366f1')
   const onPrimary = (contrastRatio('#ffffff', accent) ?? 0) >= (contrastRatio('#000000', accent) ?? 0) ? '#ffffff' : '#000000'
   const stack = Object.hasOwn(FONT_STACKS, theme.fontFamily) ? FONT_STACKS[theme.fontFamily] : FONT_STACKS.system
+  const same = (a: string, b: string) => a.toLowerCase() === b.toLowerCase()
+  const applied = SUGGESTED_PALETTES.find(({ colors }) => (Object.keys(colors) as Array<keyof typeof colors>).every((key) => same(colors[key], theme[key])))
 
   return (
     <div>
@@ -52,15 +61,20 @@ export default function ThemePanel() {
         </div>
       </div>
 
-      <Group title="Suggested palettes">
-        <ul aria-label="Suggested palettes" className="grid gap-2 min-[1280px]:grid-cols-2">
+      <Group title="Suggested workspace palettes">
+        <p className="text-xs text-ui-muted">Changes your workspace background, navigation and cards. Editor controls keep their own colors.</p>
+        <p role="status" data-palette-state className="text-xs font-medium text-ui-text">
+          {applied ? `Applied: ${applied.name}.` : 'Applied: custom colors (no suggested palette matches).'}
+        </p>
+        <ul aria-label="Suggested workspace palettes" className="grid gap-2 min-[1280px]:grid-cols-2">
           {SUGGESTED_PALETTES.map(({ name, colors }) => (
             <li key={name}>
               <button
                 type="button"
                 onClick={() => change(colors)}
                 aria-label={`Use ${name} palette`}
-                className="ui-focus flex w-full min-w-0 items-center gap-2 rounded-ui-control bg-ui-surface px-2 py-2 text-left text-sm font-medium text-ui-text ring-1 ring-ui-control hover:bg-ui-subtle [@media(pointer:coarse)]:min-h-11"
+                aria-pressed={applied?.name === name}
+                className={`ui-focus flex w-full min-w-0 items-center gap-2 rounded-ui-control px-2 py-2 text-left text-sm font-medium text-ui-text hover:bg-ui-subtle [@media(pointer:coarse)]:min-h-11 ${applied?.name === name ? 'bg-ui-selected ring-2 ring-ui-primary' : 'bg-ui-surface ring-1 ring-ui-control'}`}
               >
                 <span aria-hidden="true" className="flex shrink-0 -space-x-1">
                   {[colors.primary, colors.background, colors.text].map((color, index) => (
@@ -68,16 +82,22 @@ export default function ThemePanel() {
                   ))}
                 </span>
                 <span className="min-w-0 truncate">{name}</span>
+                {applied?.name === name && <span aria-hidden="true" className="ml-auto shrink-0 text-ui-primary">✓</span>}
               </button>
             </li>
           ))}
         </ul>
-        <p className="text-xs text-ui-muted">Sets the four colors below. You can still change each one.</p>
+        <p className="text-xs text-ui-muted">Sets the four colors below in one step (one Undo). You can still change each one.</p>
+        <p data-override-note className="text-xs text-ui-muted">
+          {overridden === 0
+            ? 'No widget has its own color or size, so every card follows the palette.'
+            : `${overridden} ${overridden === 1 ? 'widget has' : 'widgets have'} its own color or size. ${overridden === 1 ? 'It keeps' : 'They keep'} that when the palette changes. Open the widget's Properties and choose Use theme default to follow the workspace again.`}
+        </p>
       </Group>
 
       <Group title="Colors">
         <ColorField label="Primary color" hint="Buttons, links and highlights." value={theme.primary} onChange={(primary) => change({ primary })} />
-        <ColorField label="Page background" hint="Behind all sections." value={theme.background} onChange={(background) => change({ background })} />
+        <ColorField label="Workspace background" hint="Behind all sections, the navigation and the empty space." value={theme.background} onChange={(background) => change({ background })} />
         <ColorField label="Card background" hint="Widgets and cards." value={theme.surface} onChange={(surface) => change({ surface })} />
         <ColorField label="Text color" hint="Headings and body text." value={theme.text} onChange={(text) => change({ text })} />
         <div aria-label="Contrast" role="group">

@@ -33,7 +33,7 @@ async function retitle(user: ReturnType<typeof userEvent.setup>, input: HTMLInpu
 
 const save = () => screen.getByRole('button', { name: 'Save' })
 const cancel = () => screen.getByRole('button', { name: 'Cancel' })
-const status = () => screen.getByText(/All changes saved|Unsaved changes|Saving…/)
+const status = () => screen.getByText(/All changes saved|Unsaved changes|Saving…|Reloading/)
 
 describe('dirty, saving and saved status', () => {
   it('starts clean with Save and Cancel disabled', async () => {
@@ -154,6 +154,31 @@ describe('logout guard', () => {
   })
 })
 
+describe('unsuccessful logout (UI-020)', () => {
+  it('shows pending, then a failure with Retry; the server session is only revoked on a real success', async () => {
+    const { input, user } = await open()
+    await retitle(user, input, 'Private draft')
+    const original = server.handlers['POST /auth/logout']
+    const gate = deferred<Response>()
+    server.handlers['POST /auth/logout'] = () => gate.promise
+    await user.click(screen.getByRole('button', { name: 'Log out' }))
+    await user.click(screen.getByRole('button', { name: 'Discard and log out' }))
+    expect(await screen.findByText('Signing out…')).toBeInTheDocument()
+    expect(screen.queryByDisplayValue('Private draft')).not.toBeInTheDocument()
+    gate.reject(new TypeError('network down'))
+    const alert = await screen.findByRole('alert')
+    expect(alert).toHaveTextContent('Sign-out could not be confirmed')
+    expect(alert).toHaveTextContent(/still be signed in on the server/)
+    expect(server.session).toBe('a') // nothing was revoked, and the screen does not pretend otherwise
+    expect(screen.queryByRole('heading', { name: 'Sign in to your workspace' })).not.toBeInTheDocument()
+
+    server.handlers['POST /auth/logout'] = original
+    await user.click(screen.getByRole('button', { name: 'Retry sign-out' }))
+    expect(await screen.findByRole('heading', { name: 'Sign in to your workspace' })).toBeInTheDocument()
+    expect(server.session).toBeNull()
+  })
+})
+
 describe('unsaved-changes guard for reload/close', () => {
   const fire = () => {
     const event = new Event('beforeunload', { cancelable: true })
@@ -218,6 +243,36 @@ describe('conflict', () => {
     expect(status()).toHaveTextContent('All changes saved')
     expect(screen.getByText('Saved revision 2')).toBeInTheDocument()
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
+  })
+
+  it('pauses editing while the confirmed reload is pending, so a new edit cannot be silently overwritten (UI-019)', async () => {
+    const { input, user, alert } = await conflictState()
+    const gate = deferred<Response>()
+    server.getHook = () => gate.promise
+    await user.click(within(alert).getByRole('button', { name: 'Reload latest' }))
+    await user.click(screen.getByRole('button', { name: 'Discard and reload' }))
+    await waitFor(() => expect(status()).toHaveTextContent('editing is paused'))
+    expect(input).toBeDisabled()
+    expect(save()).toBeDisabled()
+    expect(cancel()).toBeDisabled()
+    expect(document.getElementById('workspace-canvas')?.closest('[inert]')).not.toBeNull()
+    gate.resolve(json(200, { id: 'ws-a', revision: 2, updatedAt: 'x', config: server.users.a.config }))
+    await waitFor(() => expect(input).toHaveValue('Their edit'))
+    expect(input).toBeEnabled()
+    expect(status()).toHaveTextContent('All changes saved')
+  })
+
+  it('a failed reload leaves the draft and the controls available again', async () => {
+    const { input, user, alert } = await conflictState()
+    const gate = deferred<Response>()
+    server.getHook = () => gate.promise
+    await user.click(within(alert).getByRole('button', { name: 'Reload latest' }))
+    await user.click(screen.getByRole('button', { name: 'Discard and reload' }))
+    await waitFor(() => expect(input).toBeDisabled())
+    gate.resolve(apiError(500, 'server_error'))
+    await waitFor(() => expect(input).toBeEnabled())
+    expect(input).toHaveValue('My edit')
+    expect(status()).toHaveTextContent('Unsaved changes')
   })
 })
 

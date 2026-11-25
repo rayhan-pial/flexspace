@@ -5,7 +5,7 @@ import { createPortal } from 'react-dom'
 const FOCUSABLE =
   'a[href], button:not([disabled]), input:not([disabled]):not([type="hidden"]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
-const SIZES = { sm: 'max-w-sm', md: 'max-w-xl', lg: 'max-w-4xl' } as const
+const SIZES = { sm: 'max-w-sm', md: 'max-w-xl', lg: 'max-w-4xl', xl: 'max-w-[960px]' } as const
 
 // Open dialogs, topmost last. Only the topmost reacts to the keyboard.
 const stack: symbol[] = []

@@ -24,9 +24,9 @@ def kind_of(template: Template) -> str:
 
 
 def list_templates(db: Session, user_id: str) -> list[Template]:
-    """System templates in their documented order, then the caller's own, newest first."""
+    """System templates in their documented order, then the caller's own, newest first (equal creation times by id ascending)."""
     order = {key: n for n, key in enumerate(SYSTEM_TEMPLATE_NAMES)}
-    visible = templates.list_visible(db, user_id)  # already newest first
+    visible = templates.list_visible(db, user_id)  # already newest first, ties by id (see the repository)
     system = sorted((t for t in visible if t.system_key is not None), key=lambda t: order.get(t.system_key, len(order)))
     return system + [t for t in visible if t.system_key is None]
 

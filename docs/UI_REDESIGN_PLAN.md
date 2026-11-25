@@ -2,6 +2,8 @@
 
 Status: planning only, 2026-11-24. No application source changes are part of this handoff. Read [UI design specification](UI_DESIGN_SPEC.md), execute [redesign tasks](UI_REDESIGN_TASKS.md), and use the [acceptance checklist](UI_ACCEPTANCE_CHECKLIST.md).
 
+**Current revision, 2026-11-25:** the audit below describes the pre-redesign baseline. UI-001–UI-018 now have implementation evidence, but independent review and user testing found unmet acceptance and two reproducible behavioral bugs. The next implementation starts at **UI-019**, not UI-001. The corrective plan in section 7 and revised spec take precedence over old completion labels. This documentation update does not implement fixes.
+
 ## 1. Evidence and current state
 
 The repository contains a complete React/FastAPI application, six widget implementations, shared sorting, schema validation, and extensive test coverage. [handoff.md](handoff.md) and [tasks.md](tasks.md) record completion of FS-001–FS-028, including Undo/Redo. The handoff records **264 backend tests, 754 frontend tests in 51 files, clean typecheck/lint, a successful build, and 15 passing browser scripts on 2026-11-23**, including a fresh-copy run. The build retained a chunk-size advisory. These are recorded implementation results, not tests rerun during this design audit.
@@ -74,10 +76,29 @@ Use fixed component radius/spacing tokens, not new persisted properties. No dark
 | P5: remaining surfaces | UI-015–UI-017 | Authentication, responsive behavior, keyboard access and final visual polish are coherent. |
 | P6: regression and demo | UI-018 | Integrated functional, persistence, visual and accessibility evidence is complete. |
 
-Claude should start with **P0 / UI-001**. Capture the functional baseline before changing tokens or moving controls. Keep each task's evidence in the new redesign task list; preserve the original FS completion history.
+For the initial redesign, P0 / UI-001 established the baseline. For the current corrective pass start at **UI-019**. Preserve the original FS history and UI-001–UI-018 evidence; do not reuse their passing results as proof that the corrective work is complete.
 
 ## 6. Regression prevention
 
 Prioritize theme leakage, canvas width changes, nested drag conflicts, inaccessible modal layering, hidden inspector controls, changed browser locators, and accidental state resets during panel changes. Keep stable data IDs and meaningful accessible names. Existing tests may need selector updates for intentional presentation changes; assert the same behavior instead of deleting coverage.
 
 Run targeted checks after each task and broader integration checks at phase boundaries. Final verification includes typecheck, lint, build, frontend tests, backend tests, and all existing browser scripts against a scratch database. Add screenshots and manual review for visual quality; a passing build is insufficient evidence of layout/accessibility. No screenshot or prior recorded test run proves the redesigned application works.
+
+## 7. Corrective pass after user feedback (2026-11-25)
+
+Independent verification passed 801 frontend tests, 264 backend tests, all 18 browser scripts, typecheck/lint/build. Additional browser probes reproduced failed logout retaining a valid session, delayed Reload latest discarding newly typed edits, and minimum-size Welcome clipping. Recorded evidence is local under `artifacts/ui-review/independent-audit-20261125/`; the cases below describe the reproduction so the plan does not depend on untracked screenshots.
+
+| Work | Current cause / required change | Tasks |
+| --- | --- | --- |
+| Safe recovery | `workspaceSync.reloadLatest` guards owner/epoch but not edits made during its GET. `sessionStore.logout` clears local state and swallows revocation failure. Prevent silent data loss and false sign-out; preserve session security and explicit retry. | UI-019–UI-020 |
+| Expected occupied-drop behavior | `GridSection` uses `getCompactor(null, false, true)`, intentionally blocking collisions. Adopt same-section transient native pushing/reflow, then validate/commit full geometry and order once. Keep idle saved layouts unchanged; changing this interaction requires updating the old collision-blocking browser assertion, not weakening final overlap validation. | UI-021 |
+| Useful action availability | `GridStepControls` currently waits for a rejected click; Save omits some known blockers; Preview navigation can target hidden sections. Derive disabled states and accessible reasons from real command capability without mutating the store. | UI-022 |
+| Predictable visible Add | `LibraryPanel` can choose a hidden section, chooses destinations implicitly and scrolls only its success notice. Add a visible-section selector, confirm destination, then close library/reveal/focus/select the created widget. | UI-023 |
+| Clear palette scope | `.fs-themed` is a small rounded region; user nav labels are all primary-colored. Fill the complete user-owned stage and map background/surface/text/accent consistently, including user navigation. Keep permanent editor chrome protected and label this distinction. | UI-024 |
+| Finish promised design | Fix Welcome at its supported minimum; implement actual large template gallery and library dialog; add inspector hide/show and missing Back/toolbar affordances. Reuse the completed shell, shared Dialog and registry rather than rebuild the application. | UI-025–UI-027 |
+| Deterministic template ties | Define an equal-created-at tie policy and test it explicitly. A random UUID tie-breaker cannot promise insertion chronology. A narrow repository/service/test fix is allowed; do not rewrite backend, auth or schema. | UI-028 |
+| Honest acceptance | Resolve or accurately block remaining keyboard readiness, real browser zoom, screen-reader and visual-state checks. Rerun regressions against revised interactions and perform human review of the design. | UI-029–UI-030 |
+
+No new libraries, endpoint, persisted appearance field or workspace schema version is needed. Preserve user/owner boundaries, JSON data and explicit Save/Cancel. Existing behavior is protected except for the explicitly changed interaction contracts. The narrow backend ordering fix in UI-028 is an exception to the initial frontend-only constraint, not permission for an architectural rewrite.
+
+For palettes, “side” has two meanings: **personal workspace navigation changes with the workspace palette; application navigation does not.** Do not spread workspace variables into the app rail, inspector, toolbar or dialogs to imitate whole-app theming. If a separate editor theme is requested later, plan it separately rather than mixing it with per-user workspace JSON.

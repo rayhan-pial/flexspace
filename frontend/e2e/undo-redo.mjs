@@ -4,7 +4,7 @@
 // grid-gesture.mjs. Run: npm run test:browser
 import assert from 'node:assert/strict'
 import { chromium } from 'playwright-core'
-import { goTo, inspector } from './shell.mjs'
+import { goTo, inspector, templates } from './shell.mjs'
 
 const executablePath = process.env.E2E_BROWSER ?? 'C:/Program Files (x86)/Microsoft/Edge/Application/msedge.exe'
 const baseUrl = process.env.E2E_BASE_URL ?? 'http://localhost:5173'
@@ -103,11 +103,14 @@ try {
   log('applying a template is one step; Undo brings back the very same widgets')
   const before = await ids()
   await goTo(page, 'Templates')
-  await settings.getByRole('radio', { name: /Creative/ }).check()
-  await settings.getByRole('button', { name: 'Apply Creative' }).click()
-  const confirm = page.getByRole('alertdialog')
-  if (await confirm.isVisible().catch(() => false)) await confirm.getByRole('button', { name: 'Replace my draft' }).click()
-  await settings.getByText(/Creative is now in your draft/).waitFor()
+  const gallery = templates(page)
+  await gallery.getByRole('radio', { name: /Creative/ }).check()
+  await gallery.getByRole('button', { name: 'Apply Creative' }).click()
+  const confirm = page.getByRole('region', { name: 'Replace your unsaved changes?' }).getByRole('button', { name: 'Replace my draft' })
+  if (await confirm.isVisible().catch(() => false)) await confirm.click()
+  await gallery.getByText(/Creative is now in your draft/).waitFor()
+  await page.keyboard.press('Escape')
+  await gallery.waitFor({ state: 'hidden' })
   assert.deepEqual(await sectionTitles(), ['Studio', 'Ideas', 'Archive'])
   await undo.click()
   assert.deepEqual(await sectionTitles(), ['Today', 'Reference'])

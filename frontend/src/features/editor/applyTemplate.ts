@@ -7,9 +7,10 @@ import type { EditorState } from './editorStore'
 export type ApplyTemplateResult = { ok: true } | { ok: false; message: string }
 
 /** Why the workspace cannot be replaced right now, or `null` when it can. */
-export function replacementBlocker(state: Pick<EditorState, 'draftConfig' | 'frozen' | 'saveStatus' | 'interaction'>): string | null {
+export function replacementBlocker(state: Pick<EditorState, 'draftConfig' | 'frozen' | 'saveStatus' | 'interaction'> & { reloading?: boolean }): string | null {
   if (!state.draftConfig) return 'No workspace is loaded.'
   if (state.frozen) return 'Your session expired. Sign in again to continue.'
+  if (state.reloading) return 'Wait for the latest saved workspace to load first.'
   if (state.saveStatus.state === 'saving') return 'Wait for the save to finish before replacing the workspace.'
   if (state.interaction.gesture) return 'Finish the drag in progress first.'
   return null

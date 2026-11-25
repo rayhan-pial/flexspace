@@ -208,22 +208,84 @@ describe('logout', () => {
     await store().login('a@example.com', 'correct horse battery')
     await flush()
     const loggingOut = store().logout()
-    expect(store()).toMatchObject({ status: 'anonymous', user: null, csrfToken: null, workspace: { status: 'idle' } })
+    expect(store()).toMatchObject({ status: 'signing_out', user: null, csrfToken: null, workspace: { status: 'idle' } })
+    expect(editor().draftConfig).toBeNull() // private content is hidden while pending
     expect(calls.at(-1)?.headers['X-CSRF-Token']).toBe('csrf-a')
     logoutRequest.resolve(noContent())
     await loggingOut
+    expect(store().status).toBe('anonymous')
   })
 
-  it('still ends the local session if the server cannot be reached', async () => {
-    installFetch({
+  const signedIn = async (logoutHandler: () => Promise<Response> | Response) => {
+    const installed = installFetch({
       'POST /auth/login': () => json(200, authResponse('a')),
       'GET /workspace': () => json(200, workspaceEnvelope('A workspace')),
-      'POST /auth/logout': () => Promise.reject(new TypeError('down')),
+      'POST /auth/logout': logoutHandler,
     })
     await store().login('a@example.com', 'correct horse battery')
     await flush()
+    return installed
+  }
+
+  it('never reports success when the server cannot be reached: it says so and offers Retry', async () => {
+    await signedIn(() => Promise.reject(new TypeError('down')))
+    await store().logout()
+    expect(store().status).toBe('signout_failed')
+    expect(store().signOutError).toMatch(/reach the server/)
+    expect(store()).toMatchObject({ user: null, csrfToken: null })
+    expect(editor().draftConfig).toBeNull()
+  })
+
+  it('a 500 is also a failure, and Retry reuses the same CSRF token until the server confirms', async () => {
+    let fail = true
+    const { calls } = await signedIn(() => (fail ? apiError(500, 'server_error') : noContent()))
+    await store().logout()
+    expect(store().status).toBe('signout_failed')
+    fail = false
+    await store().retryLogout()
+    expect(store()).toMatchObject({ status: 'anonymous', signOutError: null })
+    const posts = calls.filter((c) => c.path === '/auth/logout')
+    expect(posts).toHaveLength(2)
+    expect(posts.map((c) => c.headers['X-CSRF-Token'])).toEqual(['csrf-a', 'csrf-a'])
+  })
+
+  it('a 401 means the session is already gone, so sign-out is confirmed', async () => {
+    await signedIn(() => apiError(401, 'unauthenticated'))
     await store().logout()
     expect(store().status).toBe('anonymous')
+  })
+
+  it('a duplicate activation while pending shares one request', async () => {
+    const gate = deferred<Response>()
+    const { calls } = await signedIn(() => gate.promise)
+    const first = store().logout()
+    const second = store().logout()
+    gate.resolve(noContent())
+    await Promise.all([first, second])
+    expect(calls.filter((c) => c.path === '/auth/logout')).toHaveLength(1)
+    expect(store().status).toBe('anonymous')
+  })
+
+  it('a late response from a failed attempt cannot overwrite a newer retry', async () => {
+    const first = deferred<Response>()
+    const second = deferred<Response>()
+    const queue = [first, second]
+    await signedIn(() => queue.shift()!.promise)
+    const initial = store().logout()
+    first.resolve(apiError(500, 'server_error'))
+    await initial
+    expect(store().status).toBe('signout_failed')
+    const retry = store().retryLogout()
+    expect(store().status).toBe('signing_out')
+    second.resolve(noContent())
+    await retry
+    expect(store().status).toBe('anonymous')
+  })
+
+  it('Retry does nothing unless a sign-out failed', async () => {
+    await signedIn(() => noContent())
+    await store().retryLogout()
+    expect(store().status).toBe('authenticated')
   })
 })
 
