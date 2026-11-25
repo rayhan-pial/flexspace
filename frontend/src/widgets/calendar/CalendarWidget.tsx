@@ -13,16 +13,16 @@ const WEEKDAYS = [['Sun', 'Sunday'], ['Mon', 'Monday'], ['Tue', 'Tuesday'], ['We
 
 function AgendaEntry({ event, handle }: { event: CalendarEvent; handle?: ReactNode }) {
   return (
-    <div className="flex items-baseline gap-2 text-sm">
+    <div className="flex items-baseline gap-2 py-0.5 text-sm">
       {handle}
-      <time dateTime={event.date} className="shrink-0 text-xs tabular-nums opacity-70">{formatDate(event.date)}</time>
+      <time dateTime={event.date} className="w-24 shrink-0 text-xs tabular-nums opacity-70">{formatDate(event.date)}</time>
       <span className="min-w-0 break-words">{event.title}</span>
     </div>
   )
 }
 
 const navButton =
-  'rounded p-1 hover:bg-black/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-40'
+  'ui-focus rounded p-1 hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40 [@media(pointer:coarse)]:p-3'
 
 /**
  * A month grid plus the agenda. The grid is always chronological; the agenda lists the saved
@@ -46,7 +46,7 @@ export default function CalendarWidget({ widgetId, title, props, mode }: WidgetR
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 overflow-y-auto">
+    <div className="@container fs-scroll flex h-full min-h-0 flex-col gap-3 overflow-x-hidden overflow-y-auto">
       <div>
         <div className="flex items-center justify-between gap-2">
           <button type="button" disabled={previous === null} onClick={() => go(previous)} aria-label="Previous month" className={navButton}>
@@ -58,7 +58,7 @@ export default function CalendarWidget({ widgetId, title, props, mode }: WidgetR
           </button>
         </div>
         {shown !== props.displayMonth && (
-          <button type="button" onClick={() => setBrowse(null)} className="mt-1 text-xs underline focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500">
+          <button type="button" onClick={() => setBrowse(null)} className="ui-focus mt-1 text-xs underline">
             Back to {monthTitle(props.displayMonth)}
           </button>
         )}
@@ -67,7 +67,10 @@ export default function CalendarWidget({ widgetId, title, props, mode }: WidgetR
           <thead>
             <tr>
               {WEEKDAYS.map(([short, full]) => (
-                <th key={short} scope="col" className="pb-1 font-medium opacity-70"><abbr title={full} className="no-underline">{short}</abbr></th>
+                <th key={short} scope="col" className="pb-1 text-[10px] font-medium opacity-70 @[15rem]:text-xs"><abbr title={full} className="no-underline">
+                    <span aria-hidden="true" className="@[15rem]:hidden">{short.slice(0, 2)}</span>
+                    <span className="hidden @[15rem]:inline">{short}</span>
+                  </abbr></th>
               ))}
             </tr>
           </thead>
@@ -78,8 +81,8 @@ export default function CalendarWidget({ widgetId, title, props, mode }: WidgetR
                   if (!cell) return <td key={column} />
                   const events = eventsByDate.get(cell.date)
                   return (
-                    <td key={column} title={events?.join(', ')} className="p-0.5">
-                      <span className={`relative mx-auto flex size-7 items-center justify-center rounded-full tabular-nums ${events ? 'bg-[var(--fs-primary,#6366f1)] font-semibold text-white' : ''}`}>
+                    <td key={column} title={events?.join(', ')} className="p-0 @[15rem]:p-0.5">
+                      <span className={`relative mx-auto flex size-5 items-center text-[10px] @[15rem]:size-7 @[15rem]:text-xs justify-center rounded-full tabular-nums ${events ? 'bg-[var(--fs-primary,#6366f1)] font-semibold text-white' : ''}`}>
                         {cell.day}
                         {events && <span className="sr-only">, {events.length === 1 ? '1 event' : `${events.length} events`}</span>}
                       </span>
@@ -92,7 +95,7 @@ export default function CalendarWidget({ widgetId, title, props, mode }: WidgetR
         </table>
       </div>
 
-      <div>
+      <div className="fs-rule border-t pt-3">
         <p className="text-xs font-semibold uppercase tracking-wide opacity-70">Agenda</p>
         {mode === 'edit' && hasSorting ? (
           // The agenda is the editable, reorderable group: it follows the saved array, not the dates.
@@ -104,7 +107,7 @@ export default function CalendarWidget({ widgetId, title, props, mode }: WidgetR
             orientation="vertical"
             label={`${title || 'Calendar'} agenda`}
             emptyLabel="No events yet. Select this widget and add some in Properties."
-            className="mt-1 gap-1"
+            className="mt-1 gap-0.5"
             renderItem={(id, { handleRef }) => {
               const event = props.events.find((entry) => entry.id === id)
               return event ? <AgendaEntry event={event} handle={<SortHandle handleRef={handleRef} label={`Reorder event ${event.title}`} />} /> : null

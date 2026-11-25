@@ -10,14 +10,14 @@ import { barPercent, formatValue } from './bars'
 function MetricCard({ metric, max, handle }: { metric: Metric; max: number; handle?: ReactNode }) {
   return (
     <div className="min-w-0">
-      <div className="flex items-baseline justify-between gap-3">
+      <div className="flex items-end justify-between gap-3">
         <span className="flex min-w-0 items-center gap-1">
           {handle}
-          <span title={metric.label} className="min-w-0 truncate text-sm">{metric.label}</span>
+          <span title={metric.label} className="min-w-0 truncate text-xs font-medium uppercase tracking-wide opacity-75">{metric.label}</span>
         </span>
-        <span className="shrink-0 text-lg font-semibold tabular-nums">{formatValue(metric.value)}</span>
+        <span className="shrink-0 text-xl font-bold leading-none tabular-nums">{formatValue(metric.value)}</span>
       </div>
-      <div aria-hidden="true" className="mt-1 h-2 overflow-hidden rounded-full bg-black/10">
+      <div aria-hidden="true" className="fs-track mt-1.5 h-2.5 overflow-hidden rounded-full">
         <div data-bar className="h-full rounded-full bg-[var(--fs-primary,#6366f1)]" style={{ width: `${barPercent(metric.value, max)}%` }} />
       </div>
     </div>
@@ -43,7 +43,7 @@ export default function AnalyticsWidget({ widgetId, title, props, mode }: Widget
         orientation="vertical"
         label={`${title || 'Analytics'} metrics`}
         emptyLabel="No metrics yet. Select this widget and add some in Properties."
-        className="h-full min-h-0 gap-3 overflow-y-auto"
+        className="fs-scroll h-full min-h-0 gap-3 overflow-y-auto"
         renderItem={(id, { handleRef }) => {
           const metric = props.metrics.find((entry) => entry.id === id)
           return metric ? <MetricCard metric={metric} max={max} handle={<SortHandle handleRef={handleRef} label={`Reorder metric ${metric.label}`} />} /> : null
@@ -61,7 +61,7 @@ export default function AnalyticsWidget({ widgetId, title, props, mode }: Widget
   }
 
   return (
-    <ul aria-label={`${title || 'Analytics'} metrics`} className="h-full min-h-0 space-y-3 overflow-y-auto">
+    <ul aria-label={`${title || 'Analytics'} metrics`} className="fs-scroll h-full min-h-0 space-y-3 overflow-y-auto">
       {props.metrics.map((metric) => (
         <li key={metric.id} className="min-w-0">
           <MetricCard metric={metric} max={max} />

@@ -7,6 +7,7 @@ import type { Section, Widget } from '../../domain/workspace/types'
 import Button from '../../shared/ui/Button'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
 import Group from '../../shared/ui/Group'
+import GridStepControls from './GridStepControls'
 import MoveButtons from '../sorting/MoveButtons'
 import { outlineContainerId, SECTIONS_ROOT, stackContainerId, workspaceAdapter } from '../sorting/workspaceAdapter'
 import { isKnownWidgetType } from '../workspace/registry'
@@ -41,11 +42,12 @@ export function WidgetActions({ widget, section, sections }: { widget: Widget; s
     <>
       <Group title="Layout">
         {rect && (
-          <p className="text-sm text-ui-text">
+          <p aria-live="polite" className="text-sm text-ui-text">
             Column {rect.x + 1}, row {rect.y + 1}, {rect.w} columns wide, {rect.h} rows tall.
             <span className="mt-1 block text-xs text-ui-muted">Drag the widget by its handle, or focus the handle and use the arrow keys to move and Shift with the arrow keys to resize.</span>
           </p>
         )}
+        {rect && <GridStepControls widgetId={widget.id} title={widget.title || 'widget'} />}
         {section.kind === 'grid' && (
           <fieldset className="space-y-2">
             <legend className="text-xs font-medium text-ui-muted">Order</legend>

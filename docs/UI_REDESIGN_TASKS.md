@@ -1,6 +1,6 @@
 # FlexSpace UI redesign tasks
 
-UI-001 to UI-010 (Phases 0 to 3) complete; UI-011 onward pending. Do not alter backend/schema or original [development tasks](tasks.md) for this redesign. Read [design spec](UI_DESIGN_SPEC.md), [audit/plan](UI_REDESIGN_PLAN.md), and [acceptance checklist](UI_ACCEPTANCE_CHECKLIST.md) first. Existing paths below are relative to the repository root; proposed new files are explicitly labeled.
+UI-001 to UI-014 (Phases 0 to 4) complete; UI-015 onward pending. Do not alter backend/schema or original [development tasks](tasks.md) for this redesign. Read [design spec](UI_DESIGN_SPEC.md), [audit/plan](UI_REDESIGN_PLAN.md), and [acceptance checklist](UI_ACCEPTANCE_CHECKLIST.md) first. Existing paths below are relative to the repository root; proposed new files are explicitly labeled.
 
 Execute one bounded task at a time. Run the stated focused checks, fix regressions, record exact commands/results and screenshots, then mark it complete. A build alone is insufficient evidence for an interaction change. Keep an evidence entry with task ID, commit/ref if available, commands, outcomes, screenshot paths, and remaining limitations. Tests below are verification work for Claude during implementation, not tests run in this planning step.
 
@@ -96,7 +96,7 @@ Execute one bounded task at a time. Run the stated focused checks, fix regressio
 
 ### UI-011 — Refine common widget chrome, Welcome, Tasks and Notes
 
-- **Status:** Pending. **Depends on:** UI-010.
+- **Status: ✅ Complete (2026-11-25)), with limits.** Card headers carry a code-owned type icon (`findWidgetPresentation`); the selected card has an editor-accent outline plus a visible "Selected" word; hover shows a quiet ring. Controls inside widgets (Tasks inputs, Notes textarea) follow the widget's own text color (`.fs-field`) so dark themes are legible; checkboxes use the workspace primary. Welcome gets a left accent border (no extra height). IDs, headings, handlers and appearance overrides are unchanged. Limit: Welcome at its minimum 3x2 size still clips its large greeting (unchanged from before; the domain minimum is not altered). **Depends on:** UI-010.
 - **Files:** `frontend/src/features/workspace/{WidgetShell,WidgetRenderer}.tsx`, neighboring `registry.ts`, `frontend/src/widgets/{welcome,tasks,notes}/*`.
 - **Work:** align header icons, title rhythm, selection/hover states and padding; refine actual greeting/checklist/textarea rendering. Retain real content, common shell, IDs/headings, appearance overrides and event handlers.
 - **Accept:** existing minimum sizes and long/empty text remain usable; no static replacement of widgets, hardcoded user names or forced palette. Unknown widgets preserve data/placeholders. Task checks/Notes continue updating draft in Preview, with app save status.
@@ -104,7 +104,7 @@ Execute one bounded task at a time. Run the stated focused checks, fix regressio
 
 ### UI-012 — Refine Gallery, Analytics and Calendar
 
-- **Status:** Pending. **Depends on:** UI-011.
+- **Status: ✅ Complete (2026-11-25)), with limits.** Gallery tiles and captions have clearer composition; Analytics has label/value hierarchy (small caps label, large value) with a thicker bar on a theme-neutral track; Calendar has a divided agenda with aligned dates and, at narrow widths, compact weekday names and cells (container query) so nothing overflows sideways. Tasks rows and the add form wrap at minimum width. In-widget scrollbars are thin and theme-neutral. No new data, charts, filters or uploads. Limit: Tasks at 3 columns is cramped by nature (it wraps rather than hides controls). **Depends on:** UI-011.
 - **Files:** `frontend/src/widgets/{gallery,analytics,calendar}/*`, existing asset resolver and widget inspectors.
 - **Work:** improve image/caption composition, KPI hierarchy/bar visualization and calendar/agenda spacing. Keep current sample data semantics and input inspectors.
 - **Accept:** real bundled image keys/alt text, editable values and dates/order persist; minimum grid sizes do not clip actions; long lists have intentional scrolling. No new live charts, growth/time-filter controls, uploads, external data, or calendar-day sorting.
@@ -112,7 +112,7 @@ Execute one bounded task at a time. Run the stated focused checks, fix regressio
 
 ### UI-013 — Standardize semantic drag feedback across all adapters
 
-- **Status:** Pending. **Depends on:** UI-012.
+- **Status: ✅ Complete (2026-11-25)), with limits.** Shared grips are at least 24 px (44 px on coarse pointers) and become fully visible on hover or focus; the dragged item is raised with a solid accent outline (`data-dragging`); drop targets and empty containers use accent outlines; Move up/down/to buttons use the shared Button. Sorting internals, providers, refs, announcements and commit/cancel logic are untouched. Limits: the feedback is an outlined item at its preview position, not a separate insertion line; coarse-pointer sizes were not tried on a real touch device. **Depends on:** UI-012.
 - **Files:** `frontend/src/features/sorting/{SortableSection,SortHandle,MoveButtons,SortProvider}.tsx`, sorting styles; `workspaceAdapter.ts`, `resolveDrop.ts` read/reuse.
 - **Work:** consistent grips/hover/selected/insertion/empty/invalid feedback and readable Move controls. Preserve current refs, keyboard plugin choice, transient previews, IDs, announcements and commit/cancel logic; do not replace sorting internals for appearance.
 - **Accept:** every supported group and four cross-container transfer families follows the spec's compatibility matrix. Invalid/outside/Escape drops do not dirty a clean workspace; nested gestures never move parents. Move alternatives remain reachable on keyboard and touch.
@@ -120,7 +120,7 @@ Execute one bounded task at a time. Run the stated focused checks, fix regressio
 
 ### UI-014 — Refine grid handles and add click move/resize alternatives
 
-- **Status:** Pending. **Depends on:** UI-013.
+- **Status: ✅ Complete (2026-11-25)).** The resize corner is a visible 24 px accent corner (44 px coarse), the drag placeholder is a dashed translucent rectangle, and a dragged or resized widget is raised. The Layout group gains Position (Left, Right, Up, Down) and Size (Narrower, Wider, Shorter, Taller) buttons that call the existing `nudgeWidget`; refusals (outside the grid, too small, space taken) appear beside the buttons and leave the draft unchanged. Domain placement, RGL units and stop-only commits are unchanged. **Depends on:** UI-013.
 - **Files:** `frontend/src/features/workspace/{GridSection,GridHandle}.tsx`, `features/editor/WidgetProperties.tsx` or proposed layout group, `index.css`; `domain/workspace/grid.ts` read/reuse.
 - **Work:** style spatial placeholder/resize grips and add labeled position/size step buttons wired to existing `nudgeWidget`. Do not change domain placement algorithms or React Grid Layout config units. Keep semantic outline order synchronization.
 - **Accept:** grid can move/resize by pointer drag, keyboard and simple clicks; collisions/minimum/bounds errors keep draft unchanged. Stop-only grid commits, hidden rect preservation, outline repacking and cross-engine isolation remain. Panel resizing/measurement makes no persistence write or dirty state.

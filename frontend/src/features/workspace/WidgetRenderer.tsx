@@ -9,7 +9,12 @@ import { useEffectiveMode } from '../editor/useEffectiveMode'
 import GridHandle from './GridHandle'
 import { InvalidWidgetBody, UnsupportedWidget } from './WidgetPlaceholders'
 import WidgetShell from './WidgetShell'
-import { getWidgetDefinition, widgetTypeLabel } from './registry'
+import { getWidgetDefinition, findWidgetPresentation, widgetTypeLabel } from './registry'
+
+function TypeIcon({ type }: { type: string }) {
+  const Icon = findWidgetPresentation(type)?.Icon
+  return Icon ? <Icon /> : null
+}
 
 /**
  * Resolves a widget's `type` through the code-owned registry and renders it inside the common
@@ -48,6 +53,7 @@ function WidgetRenderer({ widget, inGrid = false, sortHandle }: { widget: Widget
   const title = widget.title || label
   const shell = (body: React.ReactNode) => (
     <WidgetShell widgetId={widget.id} title={title} mode={mode} selected={selected} appearance={widget.appearance} onSelect={onSelect}
+      icon={<TypeIcon type={widget.type} />}
       handle={sortHandle ?? (inGrid ? <GridHandle widgetId={widget.id} title={title} /> : undefined)}>
       {body}
     </WidgetShell>

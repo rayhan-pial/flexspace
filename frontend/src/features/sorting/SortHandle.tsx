@@ -13,7 +13,7 @@ export default function SortHandle({ handleRef, label }: { handleRef: (element: 
       role="button"
       tabIndex={0}
       aria-label={label}
-      className="inline-flex shrink-0 cursor-grab touch-none rounded p-0.5 text-slate-500 hover:bg-black/5 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 active:cursor-grabbing"
+      className="ui-focus inline-flex min-h-6 min-w-6 shrink-0 cursor-grab touch-none items-center justify-center rounded p-0.5 opacity-60 hover:bg-black/10 hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11"
     >
       <GripVertical aria-hidden="true" className="size-4" />
     </span>

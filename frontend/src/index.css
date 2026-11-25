@@ -98,14 +98,64 @@ body {
   }
 }
 
-/* React Grid Layout (Edit mode, desktop): drag placeholder and resize grip in the editor's accent colour. */
+/* Controls drawn inside a user's widget follow the widget's own text color (never the editor palette). */
+.fs-field {
+  color: inherit;
+  background: color-mix(in srgb, currentColor 3%, transparent);
+  border: 1px solid color-mix(in srgb, currentColor 30%, transparent);
+}
+.fs-field::placeholder {
+  color: inherit;
+  opacity: 0.55;
+}
+.fs-field:focus-visible {
+  outline: 2px solid var(--ui-primary);
+  outline-offset: 1px;
+}
+.fs-scroll {
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, currentColor 35%, transparent) transparent;
+}
+.fs-track {
+  background: color-mix(in srgb, currentColor 14%, transparent);
+}
+.fs-rule {
+  border-color: color-mix(in srgb, currentColor 14%, transparent);
+}
+
+/* React Grid Layout (Edit mode, desktop): a bounded translucent rectangle while dragging, and a visible resize corner. */
 .react-grid-item.react-grid-placeholder {
   background: var(--ui-primary);
+  border: 2px dashed var(--ui-primary);
   border-radius: 1rem;
-  opacity: 0.18;
+  opacity: 0.16;
 }
 .react-grid-item > .react-resizable-handle {
-  opacity: 0.6;
+  width: 24px;
+  height: 24px;
+  opacity: 0.8;
+  background-image: none;
+  border-radius: 0 0 1rem 0;
+}
+.react-grid-item > .react-resizable-handle::after {
+  right: 6px;
+  bottom: 6px;
+  width: 9px;
+  height: 9px;
+  border-right: 3px solid var(--ui-primary);
+  border-bottom: 3px solid var(--ui-primary);
+}
+.react-grid-item.resizing,
+.react-grid-item.react-draggable-dragging {
+  z-index: 3;
+  box-shadow: var(--ui-shadow-dialog);
+  border-radius: 1rem;
+}
+@media (pointer: coarse) {
+  .react-grid-item > .react-resizable-handle {
+    width: 44px;
+    height: 44px;
+  }
 }
 
 /* Respect the system "reduce motion" setting: no animated transitions, drop animations or smooth scrolling. */

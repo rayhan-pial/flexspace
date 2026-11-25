@@ -179,3 +179,33 @@ Right after a viewport resize the grid still shows its previous width for a mome
 - Palettes and contrast thresholds are suggestions, not validated by a user study. Primary on cards uses the 3:1 non-text threshold; The Midnight palette was applied in the browser and its theme values read back, but its screenshot was not inspected by eye.
 - Screen reader and coarse-pointer behavior of the new controls were not tested. The palette buttons and category chips use the same 44px coarse-pointer rule as other controls, unverified on a touch device.
 - Late-response races for thumbnails are covered by the existing alive/request guards and unit tests, not by an artificial slow-network browser run.
+
+## Phase 4 — Widgets and manipulation (UI-011 to UI-014, 2026-11-25)
+
+### Results
+
+- `npm run typecheck` clean. `npm run lint` clean. `npm test` 794 passed in 56 files (787 before; 7 new in `WidgetChromeGridSteps.test.tsx`; two `NotesWidget.test.tsx` assertions updated from the old rose/slate class names to the new red/opacity ones, intent unchanged). `npm run build` OK (CSS 43.33 kB, JS 585.90 kB, same chunk-size advisory). `npm run test:browser` 17 of 17 OK, including the new `e2e/widget-chrome-grid-steps.mjs`. Backend untouched.
+- Mutation checks (each reverted): making step controls swallow refusals, removing the Selected label and drawing the Welcome accent for empty Welcome each made a new test fail.
+
+### Browser checks performed (Playwright MCP, Edge, scratch DB, account phase4)
+
+- Baselines before any change (`before/phase4-*.png`): canvas, selected Tasks with Properties, a task drag in progress, a grid drag in progress.
+- After: icons and "Selected" word on the chosen card (screenshot read); a real pointer drag of a task grip marks the dragged item (`data-dragging`) with the accent outline, Escape cancels and the status stays "All changes saved".
+- Grid with real pointer gestures: the resize corner narrowed Tasks 297 to 192 px wide; Notes was dragged left into the freed space (committed, status "Unsaved changes"); dragging Notes down onto the Calendar was refused and snapped back unchanged; the outline order stayed consistent; Save and reload kept both geometries.
+- Step buttons: Shorter changed Welcome from 3 to 2 rows and the Layout text updated; Left at column 1 showed "That is outside the grid." beside the buttons; the draft was unchanged by refusals.
+- Minimum sizes: all six widgets shrunk to their minimums with the step buttons. Found and fixed: Calendar weekday names colliding and a horizontal scrollbar, Tasks rows and add form overflowing sideways. Final measurement: no sideways overflow in Tasks or Calendar (`phase4-min-size-dark.png`).
+- Dark theme (Midnight palette): widget inputs, note field, scrollbars and chips legible (`phase4-dark-theme-widgets.png`, `phase4-min-size-dark.png`).
+- Console: no errors or warnings on the page during the final checks (the pre-login 401s were not re-captured in this phase).
+
+### Screenshots (`artifacts/ui-review/after/`)
+
+`phase4-canvas.png`, `phase4-selected-properties.png`, `phase4-layout-steps.png`, `phase4-task-drag-feedback.png`, `phase4-grid-drag-feedback.png`, `phase4-resize-feedback.png`, `phase4-step-controls-error.png`, `phase4-after-grid-gestures.png`, `phase4-min-size-widgets.png`, `phase4-min-size-tasks-calendar.png`, `phase4-min-size-dark.png`, `phase4-dark-theme-widgets.png`.
+
+### Not verified or not built in this phase
+
+- Welcome at its minimum 3x2 size still clips its large greeting (also true before; the domain minimum was not changed).
+- Tasks at its minimum width is cramped (controls wrap, nothing hides).
+- Gallery drag and cross-widget task moves were exercised only by the existing browser scripts (`lists-sorting.mjs` and others), not by new manual gestures in this phase.
+- Semantic drag feedback is an outlined, raised item at its preview position; there is no separate insertion line.
+- Coarse-pointer 44 px grips and resize corner, and screen reader announcements of the new step buttons, were not tested on real devices.
+- The static `phase4-min-size-widgets.png` is a full-page capture with sticky panels, so its side panel position is a capture artifact.

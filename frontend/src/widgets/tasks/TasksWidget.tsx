@@ -12,8 +12,7 @@ import { useOptionalSortContext } from '../../features/sorting/sortContext'
 import { listContainerId, lookupListItem, TASK_ITEM_TYPE } from '../../features/sorting/workspaceAdapter'
 import type { WidgetRenderProps } from '../types'
 
-const inputClass =
-  'min-w-0 flex-1 rounded-lg border border-slate-300 bg-white/70 px-2 py-1 text-[length:inherit] text-inherit placeholder:text-slate-400 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500'
+const inputClass = 'fs-field min-w-[3.5rem] flex-1 rounded-lg px-2 py-1 text-[length:inherit]'
 
 interface RowProps {
   item: TaskItem
@@ -37,14 +36,15 @@ function TaskRow({ item, editing, handle, onDone, onRename, onDelete }: RowProps
   }
 
   return (
-    <div className="flex items-center gap-2">
+    // Wraps instead of squeezing the text field to nothing when the widget is at its narrowest.
+    <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
       {handle}
       <input
         type="checkbox"
         checked={item.done}
         onChange={(event) => onDone(event.target.checked)}
         aria-label={`Mark "${item.text}" ${item.done ? 'not done' : 'done'}`}
-        className="size-4 shrink-0 rounded border-slate-300"
+        className="size-4 shrink-0 accent-[var(--fs-primary,#6366f1)]"
       />
       {editing ? (
         <input
@@ -68,7 +68,7 @@ function TaskRow({ item, editing, handle, onDone, onRename, onDelete }: RowProps
           type="button"
           onClick={onDelete}
           aria-label={`Delete task "${item.text}"`}
-          className="shrink-0 rounded p-1 text-slate-500 hover:bg-black/5 hover:text-rose-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-rose-500"
+          className="ui-focus shrink-0 rounded p-1 opacity-60 hover:bg-black/5 hover:text-red-700 hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:p-3"
         >
           <Trash2 aria-hidden="true" className="size-4" />
         </button>
@@ -117,7 +117,7 @@ export default function TasksWidget({ widgetId, title, props, mode, dispatch }: 
   )
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-2 overflow-y-auto">
+    <div className="fs-scroll flex h-full min-h-0 flex-col gap-2 overflow-y-auto">
       {props.items.length > 0 && <p className="text-xs opacity-70" aria-live="polite">{done} of {props.items.length} done</p>}
 
       {sortable ? (
@@ -146,7 +146,7 @@ export default function TasksWidget({ widgetId, title, props, mode, dispatch }: 
       )}
 
       {editing && (
-        <form onSubmit={onAdd} className="mt-auto flex gap-2 pt-1">
+        <form onSubmit={onAdd} className="mt-auto flex flex-wrap gap-2 pt-1">
           <label htmlFor={formId} className="sr-only">New task</label>
           <input
             id={formId}
@@ -161,13 +161,13 @@ export default function TasksWidget({ widgetId, title, props, mode, dispatch }: 
           <button
             type="submit"
             disabled={draft.trim() === '' || props.items.length >= MAX_LIST_ITEMS}
-            className="shrink-0 rounded-lg bg-indigo-600 px-3 py-1 text-sm font-medium text-white hover:bg-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50"
+            className="ui-focus shrink-0 rounded-lg bg-ui-primary px-3 py-1 text-sm font-medium text-white hover:bg-ui-primary-hover disabled:cursor-not-allowed disabled:opacity-50 [@media(pointer:coarse)]:min-h-11"
           >
             Add
           </button>
         </form>
       )}
-      {error && <p role="alert" className="text-sm text-rose-700">{error}</p>}
+      {error && <p role="alert" className="text-sm font-medium text-red-700">{error}</p>}
     </div>
   )
 }

@@ -13,6 +13,8 @@ interface Props {
   onSelect: () => void
   /** Grid move/resize handle, shown in Edit on grid sections only. */
   handle?: ReactNode
+  /** Code-owned icon for the widget type (decorative), shown before the title. */
+  icon?: ReactNode
   children: ReactNode
 }
 
@@ -21,7 +23,7 @@ interface Props {
  * FS-015. Clicking anywhere in the card (including its own controls) selects it; Enter/Space
  * select only when the card itself has focus, so typing inside a widget never re-selects.
  */
-export default function WidgetShell({ widgetId, title, mode, selected, appearance, onSelect, handle, children }: Props) {
+export default function WidgetShell({ widgetId, title, mode, selected, appearance, onSelect, handle, icon, children }: Props) {
   const headingId = useId()
   const editing = mode === 'edit'
 
@@ -41,13 +43,18 @@ export default function WidgetShell({ widgetId, title, mode, selected, appearanc
       onClick={editing ? onSelect : undefined}
       onKeyDown={onKeyDown}
       style={safeAppearanceStyle(appearance)}
-      className={`flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-[var(--fs-surface,#ffffff)] p-4 shadow-sm ring-1 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 ${
-        editing && selected ? 'ring-2 ring-indigo-500' : 'ring-slate-200'
+      className={`ui-focus flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-[var(--fs-surface,#ffffff)] p-4 ring-1 transition-shadow ${
+        editing && selected ? 'shadow-md ring-2 ring-ui-primary' : editing ? 'shadow-sm ring-black/10 hover:ring-ui-control' : 'shadow-sm ring-black/10'
       }`}
     >
-      <div className="mb-2 flex shrink-0 items-center gap-1">
+      <div className="mb-2 flex shrink-0 items-center gap-1.5">
         {editing && handle}
+        {icon && <span aria-hidden="true" className="flex shrink-0 opacity-70 [&_svg]:size-4">{icon}</span>}
         <h3 id={headingId} className="min-w-0 truncate text-sm font-semibold tracking-wide">{title}</h3>
+        {editing && selected && (
+          // A word as well as a colour, so the selection is not conveyed by colour alone.
+          <span data-selected-label className="ml-auto shrink-0 rounded-full bg-ui-primary px-2 py-0.5 text-[11px] font-medium leading-none text-white">Selected</span>
+        )}
       </div>
       <div className="min-h-0 flex-1">{children}</div>
     </article>

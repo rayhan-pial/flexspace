@@ -1,9 +1,7 @@
 import { useState } from 'react'
+import Button from '../../shared/ui/Button'
 import { movedByButton } from './announce'
 import type { MoveOutcome, SortAdapter } from './types'
-
-const button =
-  'rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50'
 
 interface Props {
   adapter: SortAdapter
@@ -39,16 +37,16 @@ export default function MoveButtons({ adapter, itemId, containerId, otherContain
   return (
     <div>
       <div className="flex flex-wrap gap-2">
-        <button type="button" disabled={index <= 0} onClick={() => move(containerId, index - 1)} aria-label={name('Move up')} className={button}>Move up</button>
-        <button type="button" disabled={index === -1 || index >= items.length - 1} onClick={() => move(containerId, index + 1)} aria-label={name('Move down')} className={button}>Move down</button>
+        <Button disabled={index <= 0} onClick={() => move(containerId, index - 1)} aria-label={name('Move up')}>Move up</Button>
+        <Button disabled={index === -1 || index >= items.length - 1} onClick={() => move(containerId, index + 1)} aria-label={name('Move down')}>Move down</Button>
         {otherContainers.map((container) => (
-          <button key={container.id} type="button" onClick={() => move(container.id, adapter.readItems(container.id)?.length ?? 0)} aria-label={name(`Move to ${container.label}`)} className={button}>
+          <Button key={container.id} onClick={() => move(container.id, adapter.readItems(container.id)?.length ?? 0)} aria-label={name(`Move to ${container.label}`)}>
             Move to {container.label}
-          </button>
+          </Button>
         ))}
       </div>
       <p role="status" aria-live="polite" className="sr-only">{status}</p>
-      {error && <p role="alert" className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">{error}</p>}
+      {error && <p role="alert" className="mt-2 rounded-ui-control bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200">{error}</p>}
     </div>
   )
 }

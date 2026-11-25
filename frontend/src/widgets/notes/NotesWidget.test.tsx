@@ -70,12 +70,12 @@ describe('NotesWidget', () => {
       setup(body(10_000), 'edit')
       const counter = screen.getByText(/10,000 \/ 10,000/)
       expect(counter).toHaveTextContent('Limit reached')
-      expect(counter.className).toContain('text-rose-700')
+      expect(counter.className).toContain('text-red-700')
     })
 
     it('stays quiet below 90%: neutral in Edit, absent in Preview', () => {
       setup(body(8999), 'edit')
-      expect(screen.getByText('8,999 / 10,000').className).toContain('text-slate-500')
+      expect(screen.getByText('8,999 / 10,000').className).toContain('opacity-70')
       cleanup()
       setup(body(8999), 'preview')
       expect(screen.queryByText(/10,000/)).not.toBeInTheDocument()

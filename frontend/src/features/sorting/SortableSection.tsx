@@ -58,7 +58,8 @@ function SortableItem({ id, index, containerId, itemType, accepts, renderItem }:
     transition: null, // no DOM transitions: React re-renders the preview order directly
     accept: acceptFor(itemType, accepts),
   })
-  return <li ref={ref} className={isDragging ? 'opacity-50' : undefined}>{renderItem(id, { index, isDragging, handleRef })}</li>
+  // While dragged, the item shows where it will land in the transient preview order: raised, with a solid accent outline.
+  return <li ref={ref} data-dragging={isDragging ? 'true' : undefined} className={isDragging ? 'rounded-md bg-ui-selected/60 opacity-90 shadow-ui-surface ring-2 ring-ui-primary' : undefined}>{renderItem(id, { index, isDragging, handleRef })}</li>
 }
 
 /**
@@ -84,12 +85,12 @@ export default function SortableSection({ containerId, items, itemType, orientat
       ref={ref}
       aria-label={label}
       data-container-id={containerId}
-      className={`${orientation === 'horizontal' ? 'flex flex-row flex-wrap gap-1' : orientation === 'vertical' ? 'flex flex-col gap-1' : 'grid'} ${isDropTarget ? 'rounded-lg ring-2 ring-indigo-300' : ''} ${className ?? ''}`}
+      className={`${orientation === 'horizontal' ? 'flex flex-row flex-wrap gap-1' : orientation === 'vertical' ? 'flex flex-col gap-1' : 'grid'} ${isDropTarget ? 'rounded-lg ring-2 ring-ui-primary/60' : ''} ${className ?? ''}`}
     >
       {shown.map((id, index) => (
         <SortableItem key={id} id={id} index={index} containerId={containerId} itemType={itemType} accepts={accepts} renderItem={renderItem} />
       ))}
-      {shown.length === 0 && <li className="rounded-lg border border-dashed border-slate-300 px-3 py-2 text-xs opacity-70">{emptyLabel}</li>}
+      {shown.length === 0 && <li className={`rounded-lg border border-dashed px-3 py-2 text-xs ${isDropTarget ? 'border-ui-primary bg-ui-selected/50' : 'fs-rule opacity-80'}`}>{emptyLabel}</li>}
     </ul>
   )
 }

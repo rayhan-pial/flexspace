@@ -72,3 +72,5 @@ const PRESENTATION: Record<KnownWidgetType, WidgetPresentation> = {
 }
 
 export const widgetPresentation = (type: KnownWidgetType): WidgetPresentation => PRESENTATION[type]
+/** Same lookup for a type that might be unknown: undefined instead of a crash. */
+export const findWidgetPresentation = (type: string): WidgetPresentation | undefined => (isKnownWidgetType(type) ? PRESENTATION[type as KnownWidgetType] : undefined)

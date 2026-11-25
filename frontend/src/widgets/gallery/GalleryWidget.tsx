@@ -7,7 +7,7 @@ import { GALLERY_ITEM_TYPE, listContainerId, lookupListItem } from '../../featur
 import type { WidgetRenderProps } from '../types'
 import { galleryAsset } from './assets'
 
-const GRID = 'grid h-full min-h-0 grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] content-start gap-3 overflow-y-auto'
+const GRID = 'grid h-full min-h-0 grid-cols-[repeat(auto-fill,minmax(8rem,1fr))] content-start gap-3 overflow-y-auto fs-scroll'
 
 function Tile({ item, handle }: { item: GalleryItem; handle?: ReactNode }) {
   const asset = galleryAsset(item.assetKey)
@@ -19,14 +19,14 @@ function Tile({ item, handle }: { item: GalleryItem; handle?: ReactNode }) {
           alt={item.alt}
           loading="lazy"
           draggable={false}
-          className="aspect-[4/3] w-full rounded-lg bg-black/5 object-cover"
+          className="aspect-[4/3] w-full rounded-lg object-cover ring-1 ring-black/10"
         />
       ) : (
-        <div className="flex aspect-[4/3] w-full items-center justify-center rounded-lg bg-black/5 text-xs opacity-70">Image unavailable</div>
+        <div className="fs-track flex aspect-[4/3] w-full items-center justify-center rounded-lg text-xs opacity-70">Image unavailable</div>
       )}
-      {handle && <span className="absolute left-1 top-1 rounded bg-white/90 shadow-sm ring-1 ring-slate-200">{handle}</span>}
+      {handle && <span className="absolute left-1.5 top-1.5 rounded-md bg-ui-surface shadow-sm ring-1 ring-ui-border">{handle}</span>}
       {item.caption !== '' && (
-        <figcaption title={item.caption} className="mt-1 line-clamp-2 break-words text-xs opacity-80">{item.caption}</figcaption>
+        <figcaption title={item.caption} className="mt-1.5 line-clamp-2 break-words text-xs font-medium leading-snug opacity-85">{item.caption}</figcaption>
       )}
     </figure>
   )

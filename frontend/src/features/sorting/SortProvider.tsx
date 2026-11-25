@@ -133,7 +133,7 @@ export default function SortProvider({ adapter, children }: { adapter: SortAdapt
         {status}
       </p>
       {message && (
-        <p role="alert" className="mt-2 rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">
+        <p role="alert" className="mt-2 rounded-ui-control bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200">
           {message}
         </p>
       )}
