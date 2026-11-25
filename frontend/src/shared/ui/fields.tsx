@@ -67,10 +67,11 @@ const HEX = /^#[0-9a-fA-F]{6}$/
  * colour is not set (per-widget overrides); `onReset` then offers to return to the theme colour.
  */
 export function ColorField({
-  label: text, value, onChange, onReset,
-}: { label: string; value: string | undefined; onChange: (value: string) => void; onReset?: () => void }) {
+  label: text, value, onChange, onReset, hint,
+}: { label: string; value: string | undefined; onChange: (value: string) => void; onReset?: () => void; hint?: string }) {
   const id = useId()
   const errorId = useId()
+  const hintId = useId()
   const [typed, setTyped] = useState<string | null>(null)
   const [picking, setPicking] = useState(false)
   const shown = typed ?? value ?? ''
@@ -97,12 +98,13 @@ export function ColorField({
           maxLength={7}
           placeholder={value === undefined ? 'Theme default' : '#rrggbb'}
           aria-invalid={invalid ? true : undefined}
-          aria-describedby={invalid ? errorId : undefined}
+          aria-describedby={[invalid ? errorId : null, hint ? hintId : null].filter(Boolean).join(' ') || undefined}
           onChange={(e) => onType(e.target.value)}
           onBlur={() => setTyped(null)}
           className={`${input} mt-0 font-mono`}
         />
       </div>
+      {hint && <p id={hintId} className="mt-1 text-xs text-ui-muted">{hint}</p>}
       {invalid && <p id={errorId} role="alert" className={errorText}>Use a colour like #1a2b3c (six hex digits).</p>}
       <div className="mt-1 flex gap-2">
         <button type="button" aria-expanded={picking} onClick={() => setPicking((open) => !open)} className={small}>

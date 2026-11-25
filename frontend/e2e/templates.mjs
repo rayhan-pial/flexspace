@@ -87,7 +87,7 @@ try {
 
   log('the Templates tab lists the three curated designs from the real API, Productivity first')
   await openTemplates()
-  const names = await settings.getByRole('radio').evaluateAll((els) => els.map((e) => e.closest('label').querySelector('span span').textContent))
+  const names = await settings.getByRole('radio').evaluateAll((els) => els.map((e) => e.nextElementSibling.firstElementChild.textContent))
   assert.deepEqual(names, ['Productivity', 'Analytics', 'Creative'])
   await settings.getByText(/Key metrics and engagement figures/).waitFor()
 

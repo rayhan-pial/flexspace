@@ -3,10 +3,14 @@ import { ApiError } from '../../api/client'
 import { createTemplate, deleteTemplate, getTemplate, listTemplates } from '../../api/templates'
 import type { TemplateSummary as TemplateListItem } from '../../api/templates'
 import { parseWorkspaceConfig } from '../../domain/workspace/parse'
+import type { WorkspaceConfig } from '../../domain/workspace/types'
+import Button from '../../shared/ui/Button'
 import ConfirmDialog from '../../shared/ui/ConfirmDialog'
+import Group from '../../shared/ui/Group'
 import { useSessionStore } from '../auth/sessionStore'
 import { applyTemplateConfig, replacementBlocker } from './applyTemplate'
 import { selectIsDirty, useEditorStore } from './editorStore'
+import TemplateThumbnail from './TemplateThumbnail'
 import { describePlacement, summarizeTemplate } from './templateSummary'
 import type { TemplateSummary } from './templateSummary'
 
@@ -17,13 +21,8 @@ const DESCRIPTIONS: Record<string, string> = {
   Creative: 'Image boards, a studio to-do list and an exhibition schedule.',
 }
 
-const button =
-  'rounded-lg border border-slate-300 px-3 py-1.5 text-sm font-medium text-slate-700 hover:bg-slate-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50'
-const primaryButton =
-  'rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-500 focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500 disabled:cursor-not-allowed disabled:opacity-50'
-
 type ListState = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; items: TemplateListItem[] }
-type Preview = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; summary: TemplateSummary; config: unknown }
+type Preview = { status: 'loading' } | { status: 'error'; message: string } | { status: 'ready'; summary: TemplateSummary; parsed: WorkspaceConfig }
 
 function failureMessage(error: unknown, what: string): string {
   if (error instanceof ApiError) {
@@ -54,6 +53,8 @@ export default function TemplatesPanel() {
   const [notice, setNotice] = useState<{ tone: 'ok' | 'error'; text: string } | null>(null)
   const [confirm, setConfirm] = useState<{ templateId: string; label: string } | null>(null)
   const [busy, setBusy] = useState(false)
+  // Parsed configs for drawing thumbnails: ready-made ones load up front, custom ones when chosen.
+  const [configs, setConfigs] = useState<Record<string, WorkspaceConfig>>({})
   const alive = useRef(true)
   const previewRequest = useRef(0)
 
@@ -77,7 +78,21 @@ export default function TemplatesPanel() {
 
   const load = useCallback(() => {
     listTemplates().then(
-      (items) => alive.current && setList({ status: 'ready', items }),
+      (items) => {
+        if (!alive.current) return
+        setList({ status: 'ready', items })
+        for (const item of items) {
+          if (item.kind !== 'system') continue
+          // Thumbnails are a nicety: a failed or unreadable one simply leaves the card without a picture.
+          getTemplate(item.id).then(
+            (detail) => {
+              const parsed = parseWorkspaceConfig(detail.config)
+              if (alive.current && parsed.ok) setConfigs((current) => ({ ...current, [item.id]: parsed.config }))
+            },
+            () => undefined,
+          )
+        }
+      },
       (error) => {
         if (!alive.current || expired(error)) return
         setList({ status: 'error', message: failureMessage(error, "the templates couldn't be loaded") })
@@ -93,15 +108,21 @@ export default function TemplatesPanel() {
   function select(id: string) {
     setSelected(id)
     setNotice(null)
-    setPreview({ status: 'loading' })
     const request = ++previewRequest.current
+    const known = configs[id]
+    if (known) {
+      setPreview({ status: 'ready', summary: summarizeTemplate(known), parsed: known })
+      return
+    }
+    setPreview({ status: 'loading' })
     getTemplate(id).then(
       (detail) => {
         if (!alive.current || request !== previewRequest.current) return // a newer choice replaced this one
         const parsed = parseWorkspaceConfig(detail.config)
+        if (parsed.ok) setConfigs((current) => ({ ...current, [id]: parsed.config }))
         setPreview(
           parsed.ok
-            ? { status: 'ready', summary: summarizeTemplate(parsed.config), config: detail.config }
+            ? { status: 'ready', summary: summarizeTemplate(parsed.config), parsed: parsed.config }
             : { status: 'error', message: 'This template could not be read by this version of FlexSpace.' },
         )
       },
@@ -178,123 +199,130 @@ export default function TemplatesPanel() {
     else void apply(templateId, label)
   }
 
-  if (list.status === 'loading') return <p className="text-sm text-slate-500">Loading templates…</p>
+
+  const errorBox = 'rounded-ui-control bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200'
+
+  if (list.status === 'loading') return <p role="status" className="text-sm text-ui-muted">Loading templates…</p>
   if (list.status === 'error') {
     return (
       <div className="space-y-2">
-        <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">{list.message}</p>
-        <button
-          type="button"
+        <p role="alert" className={errorBox}>{list.message}</p>
+        <Button
           onClick={() => {
             setList({ status: 'loading' })
             load()
           }}
-          className={button}
         >
           Try again
-        </button>
+        </Button>
       </div>
     )
   }
 
   const system = list.items.filter((item) => item.kind === 'system')
   const custom = list.items.filter((item) => item.kind === 'custom')
-  if (list.items.length === 0) return <p className="text-sm text-slate-500">There are no templates to choose from yet.</p>
+  if (list.items.length === 0) return <p className="text-sm text-ui-muted">There are no templates to choose from yet.</p>
 
   const chosen = list.items.find((item) => item.id === selected)
   // The first system template is the default design (the API lists them in a fixed order).
   const defaultTemplate = system[0]
 
-  const group = (label: string, items: TemplateListItem[]) =>
-    items.length === 0 ? null : (
-      <fieldset className="space-y-1.5">
-        <legend className="text-xs font-medium uppercase tracking-wide text-slate-500">{label}</legend>
-        {items.map((item) => (
-          <div key={item.id} className="flex items-start gap-1.5">
-            <label className={`flex min-w-0 flex-1 cursor-pointer items-start gap-2 rounded-lg p-2 ring-1 ${selected === item.id ? 'bg-indigo-50 ring-indigo-300' : 'ring-slate-200 hover:bg-slate-50'}`}>
-              <input type="radio" name="template" value={item.id} checked={selected === item.id} onChange={() => select(item.id)} className="mt-1" />
+  const cards = (label: string, items: TemplateListItem[]) => (
+    <fieldset className="space-y-2">
+      <legend className="sr-only">{label}</legend>
+      {items.map((item) => (
+        <div key={item.id} className="flex items-start gap-1.5">
+          <label className={`flex min-w-0 flex-1 cursor-pointer flex-col gap-2 rounded-ui-control p-2 ring-1 has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ui-primary ${selected === item.id ? 'bg-ui-selected ring-ui-primary' : 'bg-ui-surface ring-ui-border hover:bg-ui-subtle'}`}>
+            {configs[item.id] && <TemplateThumbnail config={configs[item.id]} />}
+            <span className="flex items-start gap-2">
+              <input type="radio" name="template" value={item.id} checked={selected === item.id} onChange={() => select(item.id)} className="mt-1 accent-ui-primary" />
               <span className="min-w-0">
-                <span className="block break-words text-sm font-medium text-slate-900">{item.name}</span>
-                {DESCRIPTIONS[item.name] && item.kind === 'system' && <span className="block text-xs text-slate-600">{DESCRIPTIONS[item.name]}</span>}
+                <span className="block break-words text-sm font-medium text-ui-text">{item.name}</span>
+                {DESCRIPTIONS[item.name] && item.kind === 'system' && <span className="block text-xs text-ui-muted">{DESCRIPTIONS[item.name]}</span>}
               </span>
-            </label>
-            {item.kind === 'custom' && (
-              <button type="button" disabled={busy} onClick={() => setRemoval({ id: item.id, name: item.name })} aria-label={`Delete template ${item.name}`} className={button}>
-                Delete
-              </button>
-            )}
-          </div>
-        ))}
-      </fieldset>
-    )
+            </span>
+          </label>
+          {item.kind === 'custom' && (
+            <Button disabled={busy} onClick={() => setRemoval({ id: item.id, name: item.name })} aria-label={`Delete template ${item.name}`}>
+              Delete
+            </Button>
+          )}
+        </div>
+      ))}
+    </fieldset>
+  )
 
   return (
-    <div className="space-y-4">
-      <p className="text-sm text-slate-600">
+    <div>
+      <p className="text-sm text-ui-muted">
         Start from a ready-made design. Applying one replaces your draft; nothing is saved until you press Save, and Cancel brings back your last saved version.
       </p>
 
-      {group('Ready-made', system)}
-      {group('Your templates', custom)}
-      {custom.length === 0 && <p className="text-xs text-slate-500">You have no saved templates yet. Save your current design below to reuse it later.</p>}
+      {system.length > 0 && <Group title="Ready-made">{cards('Ready-made', system)}</Group>}
+      <Group title="My templates">
+        {custom.length > 0 ? cards('My templates', custom) : <p className="text-xs text-ui-muted">You have no saved templates yet. Save your current design below to reuse it later.</p>}
+      </Group>
 
-      <form onSubmit={saveSnapshot} className="space-y-1.5 rounded-xl p-3 ring-1 ring-slate-200">
-        <label className="block text-xs font-medium uppercase tracking-wide text-slate-500" htmlFor="template-name">
-          Template name
-        </label>
-        <input
-          id="template-name"
-          value={name}
-          maxLength={80}
-          onChange={(event) => setName(event.target.value)}
-          className="w-full rounded-lg border border-slate-300 px-2 py-1.5 text-sm focus:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500"
-        />
-        <button type="submit" disabled={saving || !hasDraft || name.trim() === ''} className={button}>
-          Save current design as template
-        </button>
-        <p className="text-xs text-slate-500">Keeps a private copy of your draft as it is now, including unsaved changes. It does not change or save your workspace.</p>
-      </form>
-
-      {chosen && preview?.status === 'loading' && <p className="text-sm text-slate-500">Loading {chosen.name}…</p>}
-      {chosen && preview?.status === 'error' && (
-        <p role="alert" className="rounded-lg bg-rose-50 px-3 py-2 text-sm text-rose-900 ring-1 ring-rose-200">{preview.message}</p>
-      )}
+      {chosen && preview?.status === 'loading' && <p role="status" className="mt-4 text-sm text-ui-muted">Loading {chosen.name}…</p>}
+      {chosen && preview?.status === 'error' && <p role="alert" className={`mt-4 ${errorBox}`}>{preview.message}</p>}
       {chosen && preview?.status === 'ready' && (
-        <section aria-label={`${chosen.name} preview`} className="space-y-3 rounded-xl bg-slate-50 p-3 ring-1 ring-slate-200">
-          <h3 className="text-sm font-semibold text-slate-900">{chosen.name}</h3>
+        <section aria-label={`${chosen.name} preview`} className="mt-4 space-y-3 rounded-ui-card bg-ui-subtle p-3 ring-1 ring-ui-border">
+          <h3 className="text-sm font-semibold text-ui-text">{chosen.name}</h3>
+          <TemplateThumbnail config={preview.parsed} />
           <div className="flex items-center gap-1.5" aria-label="Theme colors">
             {(['primary', 'background', 'surface', 'text'] as const).map((name) => (
-              <span key={name} title={`${name} ${preview.summary.theme[name]}`} className="size-5 rounded-full ring-1 ring-slate-300" style={{ backgroundColor: preview.summary.theme[name] }} />
+              <span key={name} title={`${name} ${preview.summary.theme[name]}`} className="size-5 rounded-full ring-1 ring-ui-control" style={{ backgroundColor: preview.summary.theme[name] }} />
             ))}
-            <span className="ml-1 text-xs text-slate-600">{preview.summary.theme.fontFamily} font</span>
+            <span className="ml-1 text-xs text-ui-text">{preview.summary.theme.fontFamily} font</span>
           </div>
-          <p className="text-xs text-slate-600">
+          <p className="text-xs text-ui-text">
             {preview.summary.sections.length} sections, {preview.summary.widgetCount} widgets, navigation in the {describePlacement(preview.summary.placement)}: {preview.summary.navigation.join(', ') || 'none'}.
           </p>
-          <ul className="space-y-1.5 text-xs text-slate-700">
+          <ul className="space-y-1.5 text-xs text-ui-text">
             {preview.summary.sections.map((section, index) => (
               <li key={index}>
-                <span className="font-medium">{section.title}</span> <span className="text-slate-500">({section.kind === 'grid' ? 'dashboard grid' : 'stack'})</span>
-                <span className="block text-slate-600">{section.widgets.join(', ')}</span>
+                <span className="font-medium">{section.title}</span> ({section.kind === 'grid' ? 'dashboard grid' : 'stack'})
+                <span className="block">{section.widgets.join(', ')}</span>
               </li>
             ))}
           </ul>
-          <button type="button" disabled={busy || blocker !== null} onClick={() => request(chosen.id, chosen.name)} className={primaryButton}>
+          <Button variant="primary" disabled={busy || blocker !== null} onClick={() => request(chosen.id, chosen.name)}>
             Apply {chosen.name}
-          </button>
+          </Button>
         </section>
       )}
 
-      <div className="space-y-1.5 border-t border-slate-200 pt-3">
-        <button type="button" disabled={busy || blocker !== null || !defaultTemplate} onClick={() => defaultTemplate && request(defaultTemplate.id, `The default ${defaultTemplate.name} design`)} className={button}>
-          Restore default
-        </button>
-        <p className="text-xs text-slate-500">Replaces your draft with the default {defaultTemplate?.name ?? ''} design, with new ids. Nothing is saved until you press Save.</p>
-      </div>
+      <Group title="Save current design">
+        <form onSubmit={saveSnapshot} className="space-y-2">
+          <div>
+            <label className="block text-sm font-medium text-ui-text" htmlFor="template-name">
+              Template name
+            </label>
+            <input
+              id="template-name"
+              value={name}
+              maxLength={80}
+              onChange={(event) => setName(event.target.value)}
+              className="ui-focus mt-1 block w-full rounded-ui-control border border-ui-control bg-ui-surface px-3 py-1.5 text-sm text-ui-text focus:border-ui-primary [@media(pointer:coarse)]:min-h-11"
+            />
+          </div>
+          <Button type="submit" disabled={saving || !hasDraft || name.trim() === ''}>
+            Save current design as template
+          </Button>
+          <p className="text-xs text-ui-muted">Keeps a private copy of your draft as it is now, including unsaved changes. It does not change or save your workspace.</p>
+        </form>
+      </Group>
 
-      {blocker && <p className="text-xs text-amber-800">{blocker}</p>}
+      <Group title="Restore default">
+        <Button disabled={busy || blocker !== null || !defaultTemplate} onClick={() => defaultTemplate && request(defaultTemplate.id, `The default ${defaultTemplate.name} design`)}>
+          Restore default
+        </Button>
+        <p className="text-xs text-ui-muted">Replaces your draft with the default {defaultTemplate?.name ?? ''} design, with new ids. Nothing is saved until you press Save.</p>
+      </Group>
+
+      {blocker && <p className="mt-3 text-xs text-ui-warning">{blocker}</p>}
       {notice && (
-        <p aria-live="polite" role={notice.tone === 'error' ? 'alert' : undefined} className={`rounded-lg px-3 py-2 text-sm ring-1 ${notice.tone === 'error' ? 'bg-rose-50 text-rose-900 ring-rose-200' : 'bg-emerald-50 text-emerald-900 ring-emerald-200'}`}>
+        <p aria-live="polite" role={notice.tone === 'error' ? 'alert' : undefined} className={`mt-3 rounded-ui-control px-3 py-2 text-sm ring-1 ${notice.tone === 'error' ? 'bg-red-50 text-red-900 ring-red-200' : 'bg-emerald-50 text-emerald-900 ring-emerald-200'}`}>
           {notice.text}
         </p>
       )}

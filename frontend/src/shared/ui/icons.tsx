@@ -66,3 +66,46 @@ export const BrandMark = () => (
     <rect x="17" y="17" width="8" height="8" rx="2" fill="#fff" fillOpacity=".7" />
   </svg>
 )
+
+export const WelcomeWidgetIcon = () => (
+  <Icon>
+    <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+    <path d="M9 22V12h6v10" />
+  </Icon>
+)
+
+export const TasksWidgetIcon = () => (
+  <Icon>
+    <path d="m9 11 3 3L22 4" />
+    <path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11" />
+  </Icon>
+)
+
+export const NotesWidgetIcon = () => (
+  <Icon>
+    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z" />
+    <path d="M14 2v5h6M8 13h8M8 17h5" />
+  </Icon>
+)
+
+export const GalleryWidgetIcon = () => (
+  <Icon>
+    <rect width="18" height="18" x="3" y="3" rx="2" />
+    <circle cx="9" cy="9" r="2" />
+    <path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21" />
+  </Icon>
+)
+
+export const AnalyticsWidgetIcon = () => (
+  <Icon>
+    <path d="M3 3v16a2 2 0 0 0 2 2h16" />
+    <path d="M18 17V9M13 17V5M8 17v-3" />
+  </Icon>
+)
+
+export const CalendarWidgetIcon = () => (
+  <Icon>
+    <rect width="18" height="18" x="3" y="4" rx="2" />
+    <path d="M16 2v4M8 2v4M3 10h18" />
+  </Icon>
+)

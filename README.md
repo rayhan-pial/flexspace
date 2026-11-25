@@ -59,7 +59,7 @@ Open http://localhost:5173 and create an account. Use `http://localhost:5173` or
 # Backend: 264 tests on temporary SQLite databases
 cd backend; .venv\Scripts\python -m pytest; cd ..
 
-# Frontend: type check, lint, 754 unit/UI tests, production build
+# Frontend: type check, lint, 787 unit/UI tests, production build
 cd frontend
 npm run typecheck
 npm run lint
@@ -69,7 +69,7 @@ npm run build
 
 Use PowerShell for these commands; running Vitest from Git Bash with an absolute `/c/...` path can break module resolution.
 
-### Real-browser suite (15 scripts)
+### Real-browser suite (16 scripts)
 
 `npm run test:browser` drives a real Chromium-family browser through every feature, including the brief's full demonstration run with two accounts and two tabs (`e2e/acceptance.mjs`). It registers throwaway accounts, so use a scratch database, and it needs the API and the dev server running:
 

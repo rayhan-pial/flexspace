@@ -145,3 +145,37 @@ Right after a viewport resize the grid still shows its previous width for a mome
 - Saving, error and conflict banners were restyled but not screenshotted.
 - Dragging in the browser was verified only through the existing scripts (grid move and resize, all sorting families, outline), not by hand through the MCP browser.
 - README line on Edit mode was updated; `docs/handoff.md` still describes the old panels and is left as a dated record.
+
+## Phase 3 — Discovery and workspace styling (UI-008 to UI-010, 2026-11-25)
+
+### Results
+
+- `npm run typecheck` clean. `npm run lint` clean. `npm test` 787 passed in 55 files (773 before; 14 new in `ComponentsAppearanceGallery.test.tsx`, two existing `Templates.test.tsx` tests adapted, see below). `npm run build` OK (CSS 39.70 kB, JS 584.05 kB, same chunk-size advisory). `npm run test:browser` 16 of 16 OK, including the new `e2e/components-appearance-gallery.mjs`. Backend untouched (last run: Phase 0, 264 passed).
+- Mutation checks (each reverted afterwards): removing `disabled` on Add at the widget limit, applying only one palette color, and ignoring the loaded config when choosing a template each made a new test fail.
+
+### Test changes worth knowing
+
+- `Templates.test.tsx` "previews a design without applying it" now expects each ready-made design to be fetched once (for its thumbnail) and choosing one not to fetch again; "reports a template that cannot be loaded" now makes the failure exist before the panel opens (the thumbnail fetch would otherwise have already cached the design).
+- `e2e/templates.mjs` reads the template name from the radio's sibling instead of the label's first nested span (the label now holds a thumbnail first).
+
+### Browser checks performed (Playwright MCP, Edge, scratch DB, account phase3)
+
+- Baseline screenshots of Components, Appearance and Templates before any change (`before/phase3-*.png`).
+- Components: search narrows to one item without dirtying; each of the six types added with one click (11 to 17 widgets), selected, "Edit properties" opens Properties on the last one; Save then reload keeps 17; the confirmation is scrolled into view when the list is scrolled down.
+- Appearance: Midnight palette sets only the four colors; white-on-white workspace colors leave the rail, inspector and toolbar readable (screenshot) and show the contrast advice; an invalid `#12` is refused and the previous color kept; four Undos return to the original; Forest saved and kept after reload; Sunset then Cancel returns to Forest.
+- Templates: panel opened/closed three times with no stale state; three thumbnails (left sidebar indigo, top bar blue, right sidebar pink) are visibly distinct; previewing and snapshotting leave "All changes saved"; applying Creative goes to "Unsaved changes" and Cancel restores the saved colors; a custom template loads on selection and gets a thumbnail; delete confirmation focuses "Keep template", Escape closes it and focus returns to the Delete button; delete removes it.
+- 1024px: Components, Appearance and Templates have no horizontal overflow (inspector 265px content width, page not wider than the window); palette list drops to one column below 1280px so names are not truncated.
+- Console: no errors or warnings during the above.
+
+### Screenshots (`artifacts/ui-review/after/`)
+
+`phase3-components.png`, `phase3-components-added.png`, `phase3-appearance.png`, `phase3-appearance-midnight.png`, `phase3-appearance-extreme-low-contrast.png`, `phase3-appearance-1024.png`, `phase3-components-1024.png`, `phase3-templates.png`, `phase3-templates-gallery-crop.png`, `phase3-templates-applied.png`, `phase3-templates-after-delete.png`, `phase3-templates-1024.png`.
+
+### Not verified or not built in this phase
+
+- The template gallery lives in the inspector, not a dialog, so there is no gallery-dialog focus trap to test (the delete/replace confirmations were tested).
+- The three ready-made configs are refetched each time the Templates view opens (twice in dev because of React StrictMode); no cross-open cache.
+- Thumbnails approximate layout and colors; they are not pixel renders and carry no text.
+- Palettes and contrast thresholds are suggestions, not validated by a user study. Primary on cards uses the 3:1 non-text threshold; The Midnight palette was applied in the browser and its theme values read back, but its screenshot was not inspected by eye.
+- Screen reader and coarse-pointer behavior of the new controls were not tested. The palette buttons and category chips use the same 44px coarse-pointer rule as other controls, unverified on a touch device.
+- Late-response races for thumbnails are covered by the existing alive/request guards and unit tests, not by an artificial slow-network browser run.

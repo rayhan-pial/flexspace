@@ -7,6 +7,11 @@ import { notesWidget } from '../../widgets/notes'
 import { tasksWidget } from '../../widgets/tasks'
 import { welcomeWidget } from '../../widgets/welcome'
 import type { WidgetDefinition } from '../../widgets/types'
+import type { ComponentType } from 'react'
+import type { KnownWidgetType } from '../../domain/workspace/types'
+import {
+  AnalyticsWidgetIcon, CalendarWidgetIcon, GalleryWidgetIcon, NotesWidgetIcon, TasksWidgetIcon, WelcomeWidgetIcon,
+} from '../../shared/ui/icons'
 
 /*
  * Code-owned widget registry. Configuration selects an entry by its `type` string and never
@@ -43,3 +48,27 @@ export const isKnownWidgetType = (type: string): boolean => (KNOWN_WIDGET_TYPES 
 
 /** Human label for a known type, used by the "coming soon" card. */
 export const widgetTypeLabel = (type: string): string => registry.get(type)?.label ?? type.charAt(0).toUpperCase() + type.slice(1)
+
+export const LIBRARY_CATEGORIES = ['Content', 'Productivity', 'Data'] as const
+export type LibraryCategory = (typeof LIBRARY_CATEGORIES)[number]
+
+export interface WidgetPresentation {
+  description: string
+  category: LibraryCategory
+  Icon: ComponentType
+}
+
+/**
+ * How the component library describes each known widget. Presentation only: what a widget is,
+ * adds and stores still comes from its definition and the domain commands.
+ */
+const PRESENTATION: Record<KnownWidgetType, WidgetPresentation> = {
+  welcome: { description: 'A greeting and a short subtitle to open a section.', category: 'Content', Icon: WelcomeWidgetIcon },
+  tasks: { description: 'A checklist you can add to, tick off and reorder.', category: 'Productivity', Icon: TasksWidgetIcon },
+  notes: { description: 'A free-form note with a character counter.', category: 'Content', Icon: NotesWidgetIcon },
+  gallery: { description: 'A set of images with captions from the built-in picture set.', category: 'Content', Icon: GalleryWidgetIcon },
+  analytics: { description: 'Key figures with their values shown as bars.', category: 'Data', Icon: AnalyticsWidgetIcon },
+  calendar: { description: 'A month view with an agenda of dated entries.', category: 'Productivity', Icon: CalendarWidgetIcon },
+}
+
+export const widgetPresentation = (type: KnownWidgetType): WidgetPresentation => PRESENTATION[type]

@@ -1,6 +1,6 @@
 # FlexSpace UI redesign tasks
 
-UI-001 to UI-007 (Phases 0 to 2) complete; UI-008 onward pending. Do not alter backend/schema or original [development tasks](tasks.md) for this redesign. Read [design spec](UI_DESIGN_SPEC.md), [audit/plan](UI_REDESIGN_PLAN.md), and [acceptance checklist](UI_ACCEPTANCE_CHECKLIST.md) first. Existing paths below are relative to the repository root; proposed new files are explicitly labeled.
+UI-001 to UI-010 (Phases 0 to 3) complete; UI-011 onward pending. Do not alter backend/schema or original [development tasks](tasks.md) for this redesign. Read [design spec](UI_DESIGN_SPEC.md), [audit/plan](UI_REDESIGN_PLAN.md), and [acceptance checklist](UI_ACCEPTANCE_CHECKLIST.md) first. Existing paths below are relative to the repository root; proposed new files are explicitly labeled.
 
 Execute one bounded task at a time. Run the stated focused checks, fix regressions, record exact commands/results and screenshots, then mark it complete. A build alone is insufficient evidence for an interaction change. Keep an evidence entry with task ID, commit/ref if available, commands, outcomes, screenshot paths, and remaining limitations. Tests below are verification work for Claude during implementation, not tests run in this planning step.
 

@@ -85,7 +85,8 @@ describe('listing and previewing', () => {
     expect(within(preview).getByText(/Key metrics, Engagement, Follow-ups, Reporting calendar/)).toBeInTheDocument()
     expect(within(preview).getByTitle('primary #0ea5e9')).toBeInTheDocument()
     expect(within(preview).getByRole('button', { name: 'Apply Analytics' })).toBeEnabled()
-    expect(server.templateDetailGets).toEqual(['tpl-analytics'])
+    // Each ready-made design was fetched once for its thumbnail; choosing one reuses that, it does not fetch again.
+    expect([...server.templateDetailGets].sort()).toEqual(['tpl-analytics', 'tpl-creative', 'tpl-productivity'])
     expect(editor().draftConfig).toBe(draft) // previewing changes nothing
     expect(selectIsDirty(editor())).toBe(false)
   })
@@ -272,9 +273,9 @@ describe('guards and failures', () => {
   })
 
   it('reports a template that cannot be loaded, and applies nothing', async () => {
+    server.templateHook = (call) => (call.path === '/templates' ? undefined : apiError(500, 'server_error', 'Boom'))
     const user = await open()
     await openTemplates(user)
-    server.templateHook = () => apiError(500, 'server_error', 'Boom')
     const draft = editor().draftConfig
     await user.click(settings().getByRole('radio', { name: /Analytics/ }))
     expect(await settings().findByRole('alert')).toHaveTextContent(/the template couldn't be loaded/)
