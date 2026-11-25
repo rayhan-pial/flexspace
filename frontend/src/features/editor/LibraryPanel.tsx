@@ -103,7 +103,7 @@ export default function LibraryPanel() {
             type="button"
             aria-pressed={filter === name}
             onClick={() => setFilter(name)}
-            className={`ui-focus rounded-full px-3 py-1 text-xs font-medium ring-1 [@media(pointer:coarse)]:min-h-11 ${
+            className={`ui-focus rounded-full px-3 py-1 text-xs font-medium ring-1 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 ${
               filter === name ? 'bg-ui-selected text-ui-selected-text ring-ui-primary' : 'bg-ui-surface text-ui-text ring-ui-control hover:bg-ui-subtle'
             }`}
           >

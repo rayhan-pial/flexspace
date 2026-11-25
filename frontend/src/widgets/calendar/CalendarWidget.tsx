@@ -22,7 +22,7 @@ function AgendaEntry({ event, handle }: { event: CalendarEvent; handle?: ReactNo
 }
 
 const navButton =
-  'ui-focus rounded p-1 hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40 [@media(pointer:coarse)]:p-3'
+  'ui-focus rounded p-1 hover:bg-black/5 disabled:cursor-not-allowed disabled:opacity-40 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 inline-flex items-center justify-center'
 
 /**
  * A month grid plus the agenda. The grid is always chronological; the agenda lists the saved

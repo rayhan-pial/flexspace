@@ -1,6 +1,6 @@
 # FlexSpace UI redesign tasks
 
-UI-001 to UI-017 (Phases 0 to 5) complete; UI-018 pending. Do not alter backend/schema or original [development tasks](tasks.md) for this redesign. Read [design spec](UI_DESIGN_SPEC.md), [audit/plan](UI_REDESIGN_PLAN.md), and [acceptance checklist](UI_ACCEPTANCE_CHECKLIST.md) first. Existing paths below are relative to the repository root; proposed new files are explicitly labeled.
+UI-001 to UI-018 (Phases 0 to 6) complete, with the open items in the [acceptance checklist](UI_ACCEPTANCE_CHECKLIST.md#8-open-items-and-limits-read-before-release). Do not alter backend/schema or original [development tasks](tasks.md) for this redesign. Read [design spec](UI_DESIGN_SPEC.md), [audit/plan](UI_REDESIGN_PLAN.md), and [acceptance checklist](UI_ACCEPTANCE_CHECKLIST.md) first. Existing paths below are relative to the repository root; proposed new files are explicitly labeled.
 
 Execute one bounded task at a time. Run the stated focused checks, fix regressions, record exact commands/results and screenshots, then mark it complete. A build alone is insufficient evidence for an interaction change. Keep an evidence entry with task ID, commit/ref if available, commands, outcomes, screenshot paths, and remaining limitations. Tests below are verification work for Claude during implementation, not tests run in this planning step.
 
@@ -156,7 +156,7 @@ Execute one bounded task at a time. Run the stated focused checks, fix regressio
 
 ### UI-018 — Run regression gates and prepare demo evidence
 
-- **Status:** Pending. **Depends on:** UI-017.
+- **Status: ✅ Complete (2026-11-25), with open items.** Full gates were run and recorded (backend 264 tests with one intermittent existing failure, frontend 801 tests, 18 of 18 browser scripts), the acceptance checklist now carries dated evidence per row, and a 41-image screenshot matrix and a demonstration sequence are recorded. New scripts: `final-regression.mjs` (exact JSON round trip, unknown and hidden data, structure against the pre-redesign baseline, 44 px coarse-pointer targets) and `screenshot-matrix.mjs` (evidence tool). Fixes found by the final pass: seven editor and canvas controls below 44 px on touch; `acceptance.mjs` now waits for the drag pickup announcement. Open: intermittent backend ordering test, no real screen-reader pass, emulated zoom. Nothing was committed or published by this task. **Depends on:** UI-017.
 - **Files:** UI verification log and evidence; focused existing test scripts only when changed presentation requires deliberate selector updates. Keep original FS task history intact.
 - **Work:** complete [UI acceptance](UI_ACCEPTANCE_CHECKLIST.md), record before/after screenshots and a short real-data demonstration sequence. Update accessible-name selectors deliberately, using exact matches where prefixes conflict; never delete assertions to make a restyle pass.
 - **Accept:** all functional and visual gates have dated evidence, no unexplained regression, no changed schema/backend contract or silently overwritten saved configurations. Screenshot review confirms professional presentation and all supported reordering; two-account/two-tab persistence and isolation still work. No credentials/private configs/database artifacts are tracked.

@@ -68,7 +68,7 @@ function TaskRow({ item, editing, handle, onDone, onRename, onDelete }: RowProps
           type="button"
           onClick={onDelete}
           aria-label={`Delete task "${item.text}"`}
-          className="ui-focus shrink-0 rounded p-1 opacity-60 hover:bg-black/5 hover:text-red-700 hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:p-3"
+          className="ui-focus shrink-0 rounded p-1 opacity-60 hover:bg-black/5 hover:text-red-700 hover:opacity-100 focus-visible:opacity-100 [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11 inline-flex items-center justify-center"
         >
           <Trash2 aria-hidden="true" className="size-4" />
         </button>

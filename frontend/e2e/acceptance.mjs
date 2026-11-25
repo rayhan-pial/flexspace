@@ -94,6 +94,8 @@ try {
   log('3. reorder sections by keyboard, and move a navigation item to the other group with the Move buttons')
   await page.getByRole('button', { name: 'Reorder section Today' }).focus()
   await page.keyboard.press('Space')
+  // The drag starts a moment after Space (about 40 ms); an arrow sent before that is not part of the drag.
+  await page.getByRole('status', { name: 'Sorting status' }).filter({ hasText: 'Picked up section Today.' }).first().waitFor()
   await page.keyboard.press('ArrowDown')
   await page.waitForTimeout(300)
   await page.keyboard.press('Space')

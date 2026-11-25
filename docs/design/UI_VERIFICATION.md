@@ -239,3 +239,42 @@ Right after a viewport resize the grid still shows its previous width for a mome
 - Reduced-motion behavior is checked by computed style (the existing script), not by watching an animation.
 - The dialog backdrop keeps its fixed dark scrim (`bg-slate-900/50`), which is not themed.
 - `phase5-auth-reauth.png` and the two confirmation screenshots were captured; I read the 390 px and revealed-password auth screenshots, the narrow Preview, the Outline and the Analytics inspector, but not every saved image.
+
+## Phase 6 — Final regression and demo evidence (UI-018, 2026-11-25)
+
+### Gate results (final code, scratch SQLite database, both servers running)
+
+| Gate | Result |
+| --- | --- |
+| `npm run typecheck` / `npm run lint` | clean |
+| `npm test` | 801 passed in 57 files |
+| `npm run build` | OK; CSS 40.16 kB, JS 585.82 kB; chunk-size advisory unchanged (UI-001 baseline: CSS 33.37 kB, JS 566.63 kB; no dependency added) |
+| `npm run test:browser` | 18 of 18 OK |
+| Backend `pytest` | 264 tests; 4 of 6 full runs passed; 2 runs had 1 failure (`test_list_shows_system_templates_in_order_then_own_newest_first`), reproduced 3 of 6 times when run alone |
+| Backend and contract diff | `git diff 427ef2f HEAD -- backend contracts` is empty |
+| Tracked files | no `.db`, `.env`, secret or `artifacts/` file is tracked |
+
+### Findings and what was done
+
+- **Backend ordering test is intermittent (not fixed).** The query is `order_by(Template.created_at.desc())` with no tie-breaker (`backend/app/repositories/templates.py`), so two templates created in the same clock tick can come back in either order. It predates the redesign (backend unchanged since FS-028); the redesign rules forbid backend changes, so it is reported, not patched.
+- **`acceptance.mjs` step 3 was intermittent on the redesigned UI** (3 of 9, then 4 of 16 runs; 0 of 10 on the pre-redesign commit run in a temporary worktree). I measured the time from Space to the "Picked up" announcement at about 40 ms on both versions, even with the heavier state of the script, so the app did not get slower at starting a drag. A fresh minimal Space/ArrowDown/Space loop passed 30 of 30 on both. The failing runs sent ArrowDown with no gap, which races that 40 ms; the root cause of the higher failure rate was not isolated. The script now waits for "Picked up section Today." before the arrow: 0 failures in 20 runs. (One diagnostic comparison I ran first was invalid because the old dev server was still answering on port 5173; I discovered and discarded it before drawing conclusions.)
+- **Coarse pointer.** A touch-emulated browser (1100 px, `pointer: coarse`) showed the toolbar title field, Outline rows, Navigation rows, Add section buttons, filter chips, nav links, task delete buttons and calendar arrows under 44 px. All were fixed; the check now measures zero controls under 44 px in the rail, toolbar, all five inspector views and the canvas buttons and grips.
+- **JSON integrity.** Save, logout and login returns the same document and revision (deep equality), including a hidden widget; an injected unknown widget with nested data and the widget order survive an unrelated edit and Save; a fresh workspace has the same shape (ignoring ids) as the baseline captured before the redesign.
+
+### Demonstration sequence (real data, real browser)
+
+`e2e/acceptance.mjs` is the scripted run, in this order: anonymous access returns 401; register (Productivity workspace opens in Edit); add a Calendar, edit note text, change colors, font and size, cycle navigation placement; reorder sections by keyboard and move a navigation item between groups with the Move buttons; hide and show a widget, remove another, switch Preview and Edit; Save, log out, log in and find everything restored; change the theme, Cancel, reload; save a private custom template, apply Creative and Cancel, apply Analytics and Save, restore the default and Cancel; second user sees only their own workspace and gets 404 for the first user's template; two tabs produce a conflict instead of overwriting; unknown widget type survives saves; newer schema opens no writable editor. The other move families (navigation, sections and cards, tasks and gallery, metrics and agenda, outline and grid) and Undo and Redo are in their own scripts, and the exact-JSON and touch checks are in `final-regression.mjs`.
+
+### Screenshot matrix (`artifacts/ui-review/final/`, 41 images)
+
+All three designs at 1920, 1440, 1280, 1024, 768 and 390 px, Edit from 1024 and Preview at every width; selected widget; Outline, Components, Templates and Appearance views; modal states (replace draft, delete template, logout with unsaved changes); a 200%-zoom-sized Preview (720 css px at 2x density); an empty workspace and its Components view. Regenerate with `node e2e/screenshot-matrix.mjs`.
+
+Reviewed by eye (7): Creative at 1280 Edit, Analytics at 1920 Edit, Productivity and Creative at 390 Preview, the logout confirmation, the 200% Preview and the empty-workspace Components view; earlier phase screenshots were read in their own sections. The other 34 images were generated and not individually inspected; their layout was checked numerically by `responsive.mjs` (no sideways scrolling, no clipped widgets, widget widths).
+
+### Not verified or still open
+
+- No real screen reader; no real touch device; 200% zoom emulated.
+- Intermittent backend test (above); decision needed on a tie-breaker.
+- Hover and tooltip states, and focus-ring contrast values, were not measured.
+- Baseline JSON covers the default workspace only.
+- Screenshots are not tracked in git.

@@ -2,10 +2,8 @@ import { useState } from 'react'
 import type { SectionKind } from '../../domain/workspace/types'
 import { newId } from '../../domain/workspace/ids'
 import { addSection } from '../../domain/workspace/lifecycle'
+import Button from '../../shared/ui/Button'
 import { useEditorStore } from './editorStore'
-
-const button =
-  'rounded-ui-control border border-ui-control px-3 py-1.5 text-sm font-medium text-ui-text hover:bg-ui-subtle ui-focus'
 
 /** Adds a section of a chosen layout kind and selects it. */
 export default function AddSection() {
@@ -28,12 +26,12 @@ export default function AddSection() {
     <div className="mt-4 border-t border-ui-border pt-3">
       <p className="mb-2 text-xs font-medium uppercase tracking-wide text-ui-muted">Add section</p>
       <div className="flex flex-wrap gap-2">
-        <button type="button" onClick={() => add('grid')} className={button}>
+        <Button onClick={() => add('grid')}>
           Dashboard grid
-        </button>
-        <button type="button" onClick={() => add('stack')} className={button}>
+        </Button>
+        <Button onClick={() => add('stack')}>
           Stack
-        </button>
+        </Button>
       </div>
       {error && (
         <p role="alert" className="mt-2 rounded-ui-control bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200">

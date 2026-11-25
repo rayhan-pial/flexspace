@@ -31,7 +31,7 @@ function NavLink({ item, editing }: { item: NavItem; editing: boolean }) {
         if (editing) select({ kind: 'navItem', id: item.id })
         if (item.targetSectionId) scrollToSection(item.targetSectionId)
       }}
-      className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm font-medium text-[color:var(--fs-primary,#6366f1)] hover:bg-black/5 ui-focus disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent ${
+      className={`flex w-full items-center gap-2 rounded-lg px-3 py-1.5 text-left text-sm font-medium text-[color:var(--fs-primary,#6366f1)] hover:bg-black/5 ui-focus disabled:cursor-default disabled:opacity-50 disabled:hover:bg-transparent [@media(pointer:coarse)]:min-h-11 ${
         selected ? 'ring-2 ring-ui-primary' : ''
       }`}
     >

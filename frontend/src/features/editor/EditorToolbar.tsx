@@ -73,7 +73,7 @@ export default function EditorToolbar() {
               value={title ?? ''}
               onChange={(e) => onTitleChange(e.target.value)}
               aria-invalid={titleError ? true : undefined}
-              className="ui-focus block w-full rounded-ui-control border border-ui-control bg-ui-surface px-3 py-1.5 text-sm text-ui-text focus:border-ui-primary aria-[invalid=true]:border-ui-danger"
+              className="ui-focus block w-full rounded-ui-control border border-ui-control bg-ui-surface px-3 py-1.5 text-sm text-ui-text focus:border-ui-primary aria-[invalid=true]:border-ui-danger [@media(pointer:coarse)]:min-h-11"
             />
           </div>
         )}

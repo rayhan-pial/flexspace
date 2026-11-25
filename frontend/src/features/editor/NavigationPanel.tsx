@@ -25,7 +25,7 @@ export default function NavigationPanel() {
                 type="button"
                 aria-current={selected ? 'true' : undefined}
                 onClick={() => select({ kind: 'navItem', id: item.id })}
-                className={`flex w-full rounded-ui-control px-2 py-1.5 text-left text-sm ui-focus ${
+                className={`flex w-full rounded-ui-control px-2 py-1.5 text-left text-sm ui-focus [@media(pointer:coarse)]:min-h-11 ${
                   selected ? 'bg-ui-selected font-medium text-ui-selected-text ring-1 ring-ui-primary/40' : 'text-ui-text hover:bg-ui-subtle'
                 }`}
               >
