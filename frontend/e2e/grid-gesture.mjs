@@ -76,7 +76,7 @@ try {
   assert.equal(await status(), 'Unsaved changes')
 
   log('drag Notes right by its handle, into free columns')
-  const handle = await card('w-notes').getByRole('button', { name: /Move or resize/ }).boundingBox()
+  const handle = await card('w-notes').getByRole('heading', { level: 3 }).boundingBox() // a card is grabbed by its title, not a grip
   const handleAt = { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 }
   await drag(handleAt, { x: handleAt.x + 3 * pitch, y: handleAt.y })
   await page.waitForTimeout(500)
@@ -89,12 +89,6 @@ try {
   const area = await card('w-notes').locator('textarea').boundingBox()
   await drag({ x: area.x + area.width - 10, y: area.y + 20 }, { x: area.x + area.width - 10 - 3 * pitch, y: area.y + 20 })
   assert.deepEqual(await box('w-notes'), moved, 'dragging inside the text area did not move the widget')
-
-  log('dragging the widget title (not the handle) does not move it')
-  const title = await card('w-notes').getByRole('heading').boundingBox()
-  await drag({ x: title.x + 5, y: title.y + 5 }, { x: title.x + 5 - 3 * pitch, y: title.y + 5 })
-  assert.deepEqual(await box('w-notes'), moved, 'dragging the title did not move the widget')
-  assert.equal(await status(), 'Unsaved changes') // still only the earlier resize and move
 
   const allBoxes = async () => {
     const ids = await page.evaluate(() => [...document.querySelectorAll('.react-grid-item:not(.react-grid-placeholder) [data-widget-id]')].map((e) => e.getAttribute('data-widget-id')))
@@ -111,7 +105,7 @@ try {
   log('Escape during a drag abandons it: nothing changes, no dirty write, and dragging still works afterwards')
   const preEscape = await allBoxes()
   const statusBefore = await status()
-  const hEsc = await card('w-notes').getByRole('button', { name: /Move or resize/ }).boundingBox()
+  const hEsc = await card('w-notes').getByRole('heading', { level: 3 }).boundingBox() // a card is grabbed by its title, not a grip
   const escAt = { x: hEsc.x + hEsc.width / 2, y: hEsc.y + hEsc.height / 2 }
   await page.mouse.move(escAt.x, escAt.y)
   await page.mouse.down()
@@ -130,7 +124,7 @@ try {
   assert.deepEqual(await allBoxes(), preEscape, 'an outside drop restored every widget')
 
   log('dragging into another widget pushes it out of the way: no overlap, and one Undo restores the whole layout')
-  const handle2 = await card('w-notes').getByRole('button', { name: /Move or resize/ }).boundingBox()
+  const handle2 = await card('w-notes').getByRole('heading', { level: 3 }).boundingBox() // a card is grabbed by its title, not a grip
   const at2 = { x: handle2.x + handle2.width / 2, y: handle2.y + handle2.height / 2 }
   const before = await allBoxes()
   const tasks = before['w-tasks']

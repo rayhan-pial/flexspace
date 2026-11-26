@@ -53,10 +53,16 @@ describe('gallery commands', () => {
     for (const key of ASSET_KEYS) expect(run(addGalleryItem('gal', `k-${key}`, key))).toBeDefined()
   })
   it('rejects keys outside the bundled allowlist, including prototype names', () => {
-    for (const key of ['', 'unknown', 'https://example.com/a.png', '../secret', 'constructor', '__proto__']) {
-      expect(refusal(addGalleryItem('gal', 'x', key))).toMatch(/not a bundled image/)
-      expect(refusal(updateGalleryItem('gal', 'i1', { assetKey: key }))).toMatch(/not a bundled image/)
+    const keys = ['', 'unknown', 'https://example.com/a.png', '../secret', 'constructor', '__proto__', 'upload:', 'upload:../x', 'upload:123E4567-E89B-42D3-A456-426614174000', 'UPLOAD:123e4567-e89b-42d3-a456-426614174000']
+    for (const key of keys) {
+      expect(refusal(addGalleryItem('gal', 'x', key))).toMatch(/not an image you can use/)
+      expect(refusal(updateGalleryItem('gal', 'i1', { assetKey: key }))).toMatch(/not an image you can use/)
     }
+  })
+  it('accepts an uploaded image key (upload:<lowercase uuid>) when adding and updating', () => {
+    const key = 'upload:123e4567-e89b-42d3-a456-426614174000'
+    expect(images(run(addGalleryItem('gal', 'x', key))).at(-1)).toEqual({ id: 'x', assetKey: key, alt: '', caption: '' })
+    expect(images(run(updateGalleryItem('gal', 'i1', { assetKey: key })))[0].assetKey).toBe(key)
   })
   it('updates picture, alt and caption by id, preserving id and order', () => {
     const config = run(updateGalleryItem('gal', 'i1', { assetKey: 'studio', alt: 'New alt', caption: 'New caption' }))

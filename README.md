@@ -71,7 +71,11 @@ npm run build
 
 Use PowerShell for these commands; running Vitest from Git Bash with an absolute `/c/...` path can break module resolution.
 
-### Real-browser suite (27 scripts)
+### Uploaded pictures
+
+A Gallery can show pictures you upload (Properties, **Upload pictures**: PNG, JPEG, GIF or WebP, up to 5 MB each). The bytes are stored in the database (`images` table, Alembic migration `0002`), not in files, and only their owner can read them (`GET /api/images/<id>`, 404 for anyone else; `POST /api/images` takes the raw file and needs sign-in and the CSRF token). The type is decided from the file's own bytes, never from its name or declared type; each user is limited to 200 images and 100 MB. A gallery item refers to its picture as `assetKey: "upload:<id>"`, so the saved workspace format stays version 1. Pictures that neither your saved workspace nor your templates use are deleted an hour after upload, whenever you next save or delete a template.
+
+### Real-browser suite (33 scripts)
 
 `npm run test:browser` drives a real Chromium-family browser through every feature, including the brief's full demonstration run with two accounts and two tabs (`e2e/acceptance.mjs`). It registers throwaway accounts, so use a scratch database, and it needs the API and the dev server running:
 

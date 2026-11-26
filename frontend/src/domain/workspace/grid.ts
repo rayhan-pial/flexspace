@@ -37,6 +37,21 @@ function syncOrder(widgets: Widget[], rects: readonly GridRect[]): Widget[] {
 }
 
 /**
+ * Close the gaps in a grid section after something left it (a widget was hidden or removed): the visible
+ * rectangles are compacted upward, hidden rectangles are kept as they were, and the array order is brought in
+ * step with the visible spatial order. Other kinds of section are returned unchanged.
+ */
+export function settleSection(section: Section): Section {
+  if (section.kind !== 'grid' || !section.layout) return section
+  const hiddenIds = new Set(section.widgets.filter((w) => w.hidden).map((w) => w.id))
+  const known = new Set(section.widgets.map((w) => w.id))
+  const visible = section.layout.filter((r) => known.has(r.i) && !hiddenIds.has(r.i))
+  const compacted = new Map(compactLayout(visible.map(({ i, x, y, w, h }) => ({ i, x, y, w, h }))).map((r) => [r.i, r]))
+  const layout = section.layout.map((r) => compacted.get(r.i) ?? r)
+  return { ...section, layout, widgets: syncOrder(section.widgets, layout) }
+}
+
+/**
  * Commit the final layout of a drag or resize: `rects` must hold exactly the section's visible
  * widgets. The visible result is validated, compacted upward, and hidden rectangles are kept as
  * they were. Fails (leaving the draft alone) on any overlap, bound or minimum-size violation.

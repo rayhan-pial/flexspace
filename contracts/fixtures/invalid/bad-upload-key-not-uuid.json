@@ -1,0 +1,32 @@
+{
+  "description": "uploaded image key must be upload:<lowercase uuid> (bad-upload-key-not-uuid)",
+  "error": "invalid_config",
+  "input": {
+    "schemaVersion": 1,
+    "title": "Uploads",
+    "sections": [
+      {
+        "id": "s1",
+        "kind": "stack",
+        "title": "Pics",
+        "widgets": [
+          {
+            "id": "w1",
+            "type": "gallery",
+            "title": "Photos",
+            "props": {
+              "items": [
+                {
+                  "id": "img-1",
+                  "assetKey": "upload:../../etc/passwd",
+                  "alt": "mine",
+                  "caption": "c"
+                }
+              ]
+            }
+          }
+        ]
+      }
+    ]
+  }
+}

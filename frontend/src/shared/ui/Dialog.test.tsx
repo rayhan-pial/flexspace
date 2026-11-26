@@ -73,6 +73,50 @@ describe('Dialog', () => {
     expect(opener).toHaveFocus()
   })
 
+  it('closes when the dimmed area outside it is clicked, and returns focus to the opener', async () => {
+    const onClose = vi.fn()
+    render(<Harness onClose={onClose} />)
+    const opener = screen.getByRole('button', { name: 'Open gallery' })
+    await userEvent.click(opener)
+    const backdrop = screen.getByRole('dialog').closest('[data-dialog-root]') as HTMLElement
+    await userEvent.click(backdrop)
+    expect(onClose).toHaveBeenCalledTimes(1)
+    expect(screen.queryByRole('dialog')).toBeNull()
+    expect(opener).toHaveFocus()
+  })
+
+  it('does not close when the click is inside the dialog, on its text, or when a press inside ends outside', async () => {
+    const onClose = vi.fn()
+    render(<Harness onClose={onClose} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Open gallery' }))
+    const dialog = screen.getByRole('dialog')
+    const backdrop = dialog.closest('[data-dialog-root]') as HTMLElement
+    await userEvent.click(screen.getByRole('heading', { name: 'Gallery' }))
+    await userEvent.click(dialog)
+    await userEvent.click(screen.getByRole('textbox', { name: 'Search' }))
+    // A drag that starts inside (selecting text) and is released on the backdrop is not an outside click.
+    await userEvent.pointer([{ keys: '[MouseLeft>]', target: screen.getByRole('textbox', { name: 'Name' }) }, { target: backdrop }, { keys: '[/MouseLeft]', target: backdrop }])
+    expect(onClose).not.toHaveBeenCalled()
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('only the topmost of two stacked dialogs closes from a click outside', async () => {
+    const outer = vi.fn()
+    const inner = vi.fn()
+    function Stacked() {
+      const [second, setSecond] = useState(true)
+      return (
+        <Dialog title="Outer" onClose={outer}>
+          {second && <Dialog title="Inner" onClose={() => { inner(); setSecond(false) }}><button>Inner button</button></Dialog>}
+        </Dialog>
+      )
+    }
+    render(<Stacked />)
+    await userEvent.click(screen.getByRole('dialog', { name: 'Inner' }).closest('[data-dialog-root]') as HTMLElement)
+    expect(inner).toHaveBeenCalledTimes(1)
+    expect(outer).not.toHaveBeenCalled()
+  })
+
   it('only the topmost of two dialogs reacts to Escape', async () => {
     const outer = vi.fn()
     const inner = vi.fn()

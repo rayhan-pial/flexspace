@@ -1,8 +1,9 @@
 import type { Command } from './commands'
 import { fail, ok } from './commands'
 import { KNOWN_WIDGET_TYPES, MAX_LIST_ITEMS } from './constants'
-import { repackLayout } from './placement'
-import type { NavItem, Widget } from './types'
+import { settleSection } from './grid'
+import { defaultSizeFor, repackLayout } from './placement'
+import type { GridRect, NavItem, Section, Widget } from './types'
 
 /*
  * Pure move primitives shared by every sortable group (navigation now; sections, stack cards, task
@@ -134,6 +135,69 @@ export function moveGridWidget(widgetId: string, toIndex: number): Command {
     const widgets = [...moved.lists.widgets]
     const layout = repackLayout(widgets, section.layout)
     return ok({ ...config, sections: config.sections.map((s) => (s.id === section.id ? { ...s, widgets, layout } : s)) })
+  }
+}
+
+/**
+ * Reorder sections from the outline, which lists every section (hidden ones too), so `toIndex` is a position in the
+ * whole array. A section moves with all of its widgets, layout and settings: only its place in `sections[]` changes.
+ */
+export function moveOutlineSection(sectionId: string, toIndex: number): Command {
+  return (config) => {
+    const lists = { root: config.sections }
+    const moved = moveBetween(lists, sectionId, 'root', toIndex)
+    if (!moved) return fail(`Section ${sectionId} was not found.`)
+    if (moved.lists === lists) return ok(config)
+    return ok({ ...config, sections: [...moved.lists.root] })
+  }
+}
+
+/**
+ * Move a widget inside its section or into any other section (grid or stack, an empty one included) from the outline,
+ * which lists every widget (hidden ones too), so `toIndex` is a position in the target's whole widget array. The widget
+ * keeps its id, content, appearance and hidden state and exists exactly once afterwards. A grid section repacks its
+ * visible rectangles in the new array order (as an outline reorder always has); a grid it leaves closes the gap; a
+ * widget moving from a stack into a grid starts at its type's default size. Widgets of types this version does not
+ * know can be reordered where they are but never leave their section.
+ */
+export function moveWidgetToSection(widgetId: string, toSectionId: string, toIndex: number): Command {
+  return (config) => {
+    const from = config.sections.find((s) => s.widgets.some((w) => w.id === widgetId))
+    const to = config.sections.find((s) => s.id === toSectionId)
+    if (!from) return fail(`Widget ${widgetId} was not found.`)
+    if (!to) return fail(`Section ${toSectionId} was not found.`)
+    if (!Number.isInteger(toIndex)) return fail('That is not a valid position.')
+    const widget = from.widgets.find((w) => w.id === widgetId)!
+    if (from.id !== to.id && !isSchemaKnown(widget.type)) return fail('Unsupported widgets can only be reordered within their own section.')
+
+    if (from.id === to.id) {
+      const lists = { widgets: from.widgets }
+      const moved = moveBetween(lists, widgetId, 'widgets', toIndex)
+      if (!moved) return fail(`Widget ${widgetId} could not be moved.`)
+      if (moved.lists === lists) return ok(config)
+      const widgets = [...moved.lists.widgets]
+      const next: Section = { ...from, widgets, ...(from.kind === 'grid' && from.layout && { layout: repackLayout(widgets, from.layout) }) }
+      return ok({ ...config, sections: config.sections.map((s) => (s.id === from.id ? next : s)) })
+    }
+
+    const leaving: Section = {
+      ...from,
+      widgets: from.widgets.filter((w) => w.id !== widgetId),
+      ...(from.kind === 'grid' && from.layout && { layout: from.layout.filter((r) => r.i !== widgetId) }),
+    }
+    const index = Math.min(Math.max(toIndex, 0), to.widgets.length)
+    const widgets = [...to.widgets.slice(0, index), widget, ...to.widgets.slice(index)]
+    let arriving: Section = { ...to, widgets }
+    if (to.kind === 'grid') {
+      const own: GridRect | undefined = from.layout?.find((r) => r.i === widgetId)
+      const size = own ? { w: own.w, h: own.h } : defaultSizeFor(widget.type)
+      const rect: GridRect = { i: widgetId, x: 0, y: 0, ...size }
+      arriving = { ...arriving, layout: repackLayout(widgets, [...(to.layout ?? []), rect]) }
+    }
+    return ok({
+      ...config,
+      sections: config.sections.map((s) => (s.id === from.id ? settleSection(leaving) : s.id === to.id ? arriving : s)),
+    })
   }
 }
 

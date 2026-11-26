@@ -79,7 +79,7 @@ try {
 
   log('a section drag by keyboard is one step')
   assert.deepEqual(await sectionTitles(), ['Today', 'Reference'])
-  await page.getByRole('button', { name: 'Reorder section Today' }).focus()
+  await page.getByRole('button', { name: 'Reorder section Today', exact: true }).focus()
   await page.keyboard.press('Space')
   await page.keyboard.press('ArrowDown')
   await page.waitForTimeout(300)

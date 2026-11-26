@@ -27,22 +27,29 @@ export default function EditorShell() {
   const mode = useEffectiveMode()
   const [view, setView] = useState<InspectorView>('properties')
   const [libraryOpen, setLibraryOpen] = useState(false)
+  const [libraryTarget, setLibraryTarget] = useState<string | null>(null)
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [added, setAdded] = useState<AddedWidget | null>(null)
   const [inspectorOpen, setInspectorOpen] = useState(true)
   const inspectorScroll = useRef(0)
-  const openLibrary = useCallback(() => setLibraryOpen(true), [])
+  const columnRef = useRef<HTMLDivElement>(null)
+  const toolbarRef = useRef<HTMLDivElement>(null)
+  const openLibrary = useCallback((sectionId?: string) => {
+    setLibraryTarget(typeof sectionId === 'string' ? sectionId : null)
+    setLibraryOpen(true)
+  }, [])
   const closeLibrary = useCallback(() => setLibraryOpen(false), [])
   const openTemplates = useCallback(() => setTemplatesOpen(true), [])
   const closeTemplates = useCallback(() => setTemplatesOpen(false), [])
   const dismissAdded = useCallback(() => setAdded(null), [])
   const value = useMemo(
-    () => ({ view, setView, libraryOpen, openLibrary, closeLibrary, templatesOpen, openTemplates, closeTemplates, inspectorOpen, setInspectorOpen, inspectorScroll, added, dismissAdded }),
-    [view, libraryOpen, openLibrary, closeLibrary, templatesOpen, openTemplates, closeTemplates, inspectorOpen, added, dismissAdded],
+    () => ({ view, setView, libraryOpen, openLibrary, libraryTarget, canAddFromCanvas: true, closeLibrary, templatesOpen, openTemplates, closeTemplates, inspectorOpen, setInspectorOpen, inspectorScroll, added, dismissAdded }),
+    [view, libraryOpen, openLibrary, libraryTarget, closeLibrary, templatesOpen, openTemplates, closeTemplates, inspectorOpen, added, dismissAdded],
   )
   // Where the last interaction happened: picking something on the canvas opens its Properties,
   // while picking it in the inspector (the outline) leaves the inspector where it is.
   const source = useRef<'canvas' | 'inspector'>('inspector')
+  const pressAt = useRef<{ x: number; y: number } | null>(null)
   useEditSessions()
   useHistoryShortcuts(mode === 'edit')
 
@@ -83,6 +90,18 @@ export default function EditorShell() {
     return () => cancelAnimationFrame(frame)
   }, [added])
 
+  // Share the toolbar's height (it grows when a banner or a second row appears) with the layout below it.
+  useEffect(() => {
+    const toolbar = toolbarRef.current
+    const column = columnRef.current
+    if (!toolbar || !column || typeof ResizeObserver === 'undefined') return
+    const update = () => column.style.setProperty('--toolbar-h', `${toolbar.getBoundingClientRect().height}px`)
+    update()
+    const observer = new ResizeObserver(update)
+    observer.observe(toolbar)
+    return () => observer.disconnect()
+  }, [hasDraft, mode])
+
   if (!hasDraft) return null
 
   const editing = mode === 'edit'
@@ -98,8 +117,12 @@ export default function EditorShell() {
       </a>
       <div className={editing ? 'flex items-start' : ''}>
         {editing && <ApplicationRail />}
-        <div className="flex min-h-screen min-w-0 flex-1 flex-col">
-          <EditorToolbar />
+        <div ref={columnRef} className="flex min-h-screen min-w-0 flex-1 flex-col">
+          {/* From desktop width the toolbar stays at the top while the page scrolls; its height is shared as a CSS variable so
+              the inspector and section jumps can sit below it. */}
+          <div ref={toolbarRef} className="lg:sticky lg:top-0 lg:z-20">
+            <EditorToolbar />
+          </div>
           <SortProvider adapter={workspaceAdapter}>
             <div inert={reloading} aria-busy={reloading || undefined} className={(reloading ? 'opacity-60 ' : '') + (showInspector ? 'grid flex-1 lg:grid-cols-[minmax(0,1fr)_calc(17.5rem+3rem)] xl:grid-cols-[minmax(0,1fr)_calc(19rem+3rem)]' : 'flex flex-1 flex-col')}>
               <main
@@ -108,8 +131,15 @@ export default function EditorShell() {
                 className="flex min-w-0 flex-1 flex-col outline-none"
                 onPointerDownCapture={(event) => {
                   source.current = 'canvas'
-                  // Picking a card's own area on the canvas is an explicit request for its Properties, even if it was already selected (grabbing a handle or control is not).
-                  if (editing && (event.target as HTMLElement).closest?.('[data-widget-id]') && !(event.target as HTMLElement).closest?.('button, [role="button"], input, textarea, select, .react-resizable-handle')) setView('properties')
+                  pressAt.current = { x: event.clientX, y: event.clientY }
+                }}
+                // Clicking (not dragging) a card's own area is an explicit request for its Properties, even if it was
+                // already selected. Grabbing and moving a card, or using a control inside it, leaves the inspector alone.
+                onClickCapture={(event) => {
+                  const target = event.target as HTMLElement
+                  const press = pressAt.current
+                  const moved = press ? Math.hypot(event.clientX - press.x, event.clientY - press.y) > 5 : false
+                  if (editing && !moved && target.closest?.('[data-widget-id]') && !target.closest?.('button, [role="button"]:not([data-widget-id]), input, textarea, select, .react-resizable-handle')) setView('properties')
                 }}
                 onKeyDownCapture={() => { source.current = 'canvas' }}
               >
@@ -131,6 +161,7 @@ export default function EditorShell() {
       {templatesOpen && editing && <TemplatesDialog onClose={closeTemplates} />}
       {libraryOpen && editing && (
         <LibraryDialog
+          initialSectionId={libraryTarget}
           onClose={closeLibrary}
           onOpenOutline={() => {
             setLibraryOpen(false)

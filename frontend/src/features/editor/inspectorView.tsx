@@ -14,7 +14,12 @@ interface InspectorViewValue {
   setView: (view: InspectorView) => void
   /** The Add component dialog is open. Presentation state only, like the inspector view. */
   libraryOpen: boolean
-  openLibrary: () => void
+  /** Open the Add component dialog; with a section id it starts with that section chosen as the destination. */
+  openLibrary: (sectionId?: string) => void
+  /** The section the dialog was opened for, if any (the dialog starts with it chosen). */
+  libraryTarget: string | null
+  /** True inside the editor shell: only there can the canvas offer Add component under each section. */
+  canAddFromCanvas: boolean
   closeLibrary: () => void
   /** The Templates gallery dialog is open. */
   templatesOpen: boolean
@@ -37,6 +42,8 @@ export const InspectorViewContext = createContext<InspectorViewValue>({
   setView: () => {},
   libraryOpen: false,
   openLibrary: () => {},
+  libraryTarget: null,
+  canAddFromCanvas: false,
   closeLibrary: () => {},
   templatesOpen: false,
   openTemplates: () => {},

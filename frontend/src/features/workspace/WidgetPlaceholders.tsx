@@ -6,9 +6,11 @@ import type { ReactNode } from 'react'
  * data stays in the draft and is saved back unchanged.
  */
 
-export function UnsupportedWidget({ widgetId, type, handle }: { widgetId: string; type: string; handle?: ReactNode }) {
+export function UnsupportedWidget({ widgetId, type, handle, dragRef }: { widgetId: string; type: string; handle?: ReactNode; dragRef?: (element: Element | null) => void }) {
   return (
     <article
+      ref={dragRef}
+      role="article"
       data-widget-id={widgetId}
       data-unsupported="true"
       className="flex h-full max-h-48 min-h-0 flex-col overflow-hidden rounded-2xl fs-rule border border-dashed bg-[var(--fs-surface,#f8fafc)] p-4"

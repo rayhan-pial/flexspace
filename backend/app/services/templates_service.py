@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Template
 from app.repositories import templates
+from app.services import images_service
 from app.services.starter_templates import SYSTEM_TEMPLATE_NAMES
 from app.services.workspace_config import normalize_config
 from app.services.workspace_service import MAX_CONFIG_BYTES, ConfigTooLarge, serialized_size
@@ -65,3 +66,7 @@ def delete_template(db: Session, user_id: str, template_id: str) -> None:
     except BaseException:
         db.rollback()
         raise
+    try:
+        images_service.prune_unreferenced(db, user_id)  # uploads only that template used
+    except Exception:  # noqa: BLE001 - housekeeping must not fail the delete
+        db.rollback()

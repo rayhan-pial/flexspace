@@ -86,8 +86,8 @@ try {
   assert.deepEqual(await taskTexts(), originalTasks)
   await clean('an Escaped task drag')
 
-  const s1 = await center(page.getByRole('button', { name: 'Reorder section Today' }))
-  const s2 = await center(page.getByRole('button', { name: 'Reorder section Reference' }))
+  const s1 = await center(page.getByRole('button', { name: 'Reorder section Today', exact: true }))
+  const s2 = await center(page.getByRole('button', { name: 'Reorder section Reference', exact: true }))
   await drag(s1, { x: s2.x, y: s2.y + 10 }, { release: false })
   await page.keyboard.press('Escape')
   await page.mouse.up()
@@ -96,7 +96,7 @@ try {
   await clean('an Escaped section drag')
 
   log('grid gestures that end where they began do not dirty it either (move and resize)')
-  const welcomeHandle = widgetCard('Welcome').getByRole('button', { name: /^Move or resize Welcome/ })
+  const welcomeHandle = widgetCard('Welcome').getByRole('heading', { level: 3 })
   const w = await center(welcomeHandle)
   await drag(w, { x: w.x + 2, y: w.y + 2 }) // far less than one grid cell
   assert.deepEqual(await allBoxes(), original)
@@ -129,7 +129,7 @@ try {
   assert.equal(await status(), 'Unsaved changes') // still exactly the one unsaved change
 
   log('grid movement updates the semantic order: drag Welcome by its grid handle to the bottom')
-  const handle = widgetCard('Welcome').getByRole('button', { name: /^Move or resize Welcome/ })
+  const handle = widgetCard('Welcome').getByRole('heading', { level: 3 })
   const notesBox = await boxOf('Notes')
   await drag(await center(handle), { x: notesBox.x + 40, y: notesBox.y + notesBox.height + 160 }, { steps: 35 })
   const afterGrid = await outlineOrder()
@@ -160,8 +160,8 @@ try {
 
   log('event isolation: dragging a section does not move or resize any widget inside it')
   const insideBefore = await allBoxes()
-  const sec1 = await center(page.getByRole('button', { name: 'Reorder section Today' }))
-  const sec2 = await center(page.getByRole('button', { name: 'Reorder section Reference' }))
+  const sec1 = await center(page.getByRole('button', { name: 'Reorder section Today', exact: true }))
+  const sec2 = await center(page.getByRole('button', { name: 'Reorder section Reference', exact: true }))
   await drag(sec1, { x: sec2.x, y: sec2.y + 10 })
   assert.deepEqual(await sectionTitles(), ['Reference', 'Today'])
   const insideAfter = await allBoxes()

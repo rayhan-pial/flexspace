@@ -3,7 +3,7 @@ import type { Section, Widget } from '../../domain/workspace/types'
 import SortHandle from '../sorting/SortHandle'
 import SortableSection from '../sorting/SortableSection'
 import { useOptionalSortContext } from '../sorting/sortContext'
-import { OUTLINE_ITEM_TYPE, outlineContainerId } from '../sorting/workspaceAdapter'
+import { OUTLINE_ITEM_TYPE, OUTLINE_ROOT, OUTLINE_SECTION_TYPE, outlineContainerId } from '../sorting/workspaceAdapter'
 import { isKnownWidgetType, widgetTypeLabel } from '../workspace/registry'
 import { useEditorStore } from './editorStore'
 
@@ -61,7 +61,7 @@ export default function ComponentOutline() {
   )
 
   const widgetList = (section: Section) => {
-    if (section.kind === 'grid' && sorting) {
+    if (sorting) {
       return (
         <SortableSection
           containerId={outlineContainerId(section.id)}
@@ -88,8 +88,9 @@ export default function ComponentOutline() {
     )
   }
 
-  const renderSection = (section: Section) => (
-    <li key={section.id}>
+  const sectionRow = (section: Section, handle?: ReactNode) => (
+    <div className="flex items-center gap-1">
+      {handle}
       <button
         type="button"
         aria-current={isSelected('section', section.id) ? 'true' : undefined}
@@ -99,9 +100,43 @@ export default function ComponentOutline() {
         <span className="truncate font-medium">{section.title || 'Untitled section'}</span>
         {section.hidden && <span className="shrink-0 text-xs text-ui-muted">hidden</span>}
       </button>
-      {widgetList(section)}
-    </li>
+    </div>
   )
 
-  return <ul aria-label="Components" className="space-y-1">{draft.sections.map(renderSection)}</ul>
+  if (sorting) {
+    // Sections can be dragged to reorder them (each moves with all of its widgets); widgets can be dragged within
+    // their section or into any other section. Both lists show everything, hidden items included.
+    return (
+      <SortableSection
+        containerId={OUTLINE_ROOT}
+        itemType={OUTLINE_SECTION_TYPE}
+        items={draft.sections.map((section) => section.id)}
+        orientation="vertical"
+        label="Components"
+        emptyLabel="No sections"
+        className="gap-1"
+        renderItem={(id, { handleRef }) => {
+          const section = draft.sections.find((s) => s.id === id)
+          if (!section) return null
+          return (
+            <div>
+              {sectionRow(section, <SortHandle handleRef={handleRef} label={`Reorder section ${section.title || 'Untitled section'} in outline`} />)}
+              {widgetList(section)}
+            </div>
+          )
+        }}
+      />
+    )
+  }
+
+  return (
+    <ul aria-label="Components" className="space-y-1">
+      {draft.sections.map((section) => (
+        <li key={section.id}>
+          {sectionRow(section)}
+          {widgetList(section)}
+        </li>
+      ))}
+    </ul>
+  )
 }

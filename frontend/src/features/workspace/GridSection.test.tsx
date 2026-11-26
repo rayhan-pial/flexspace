@@ -97,7 +97,8 @@ describe('React Grid Layout adapter', () => {
     const props = rglProps.current as { width: number; gridConfig: Record<string, unknown>; dragConfig: Record<string, unknown>; resizeConfig: Record<string, unknown>; layout: Array<Record<string, number | string>> }
     expect(props.width).toBe(1000)
     expect(props.gridConfig).toMatchObject({ cols: 12, rowHeight: 32, margin: [16, 16] })
-    expect(props.dragConfig).toMatchObject({ enabled: true, handle: '.fs-grid-handle' })
+    expect(props.dragConfig).toMatchObject({ enabled: true })
+    expect((props.dragConfig as { handle?: string }).handle).toBeUndefined() // the whole card is the grab area
     expect(String(props.dragConfig.cancel)).toContain('textarea')
     expect(props.resizeConfig).toMatchObject({ enabled: true })
     expect(props.layout.find((r) => r.i === 'c')).toMatchObject({ x: 0, y: 4, w: 6, h: 3, minW: 3, minH: 2 }) // welcome minimum

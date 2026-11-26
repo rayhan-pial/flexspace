@@ -40,7 +40,7 @@ def make_user(session, email="a@example.com"):
 
 def test_migration_creates_expected_tables(engine):
     assert set(inspect(engine).get_table_names()) == {
-        "users", "workspaces", "templates", "sessions", "alembic_version"}
+        "users", "workspaces", "templates", "sessions", "images", "alembic_version"}
 
 
 def test_migration_matches_models(engine):

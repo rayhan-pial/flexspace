@@ -95,7 +95,7 @@ try {
   assert.equal(await status(page), 'Unsaved changes')
 
   log('3. reorder sections by keyboard, and move a navigation item to the other group with the Move buttons')
-  await page.getByRole('button', { name: 'Reorder section Today' }).focus()
+  await page.getByRole('button', { name: 'Reorder section Today', exact: true }).focus()
   await page.keyboard.press('Space')
   // The drag starts a moment after Space (about 40 ms); an arrow sent before that is not part of the drag.
   await page.getByRole('status', { name: 'Sorting status' }).filter({ hasText: 'Picked up section Today.' }).first().waitFor()
@@ -118,6 +118,7 @@ try {
   assert.equal(await page.locator('[data-widget-id]').count(), stamped.length - 1)
   assert.equal(await settings(page).getByRole('button', { name: 'Show widget' }).count(), 1, 'a hidden widget stays selected and can be shown again')
   await settings(page).getByRole('button', { name: 'Show widget' }).click()
+  await page.waitForFunction((n) => document.querySelectorAll('[data-widget-id]').length === n, stamped.length)
   assert.equal(await page.locator('[data-widget-id]').count(), stamped.length)
   await page.locator('[data-widget-id]').nth(2).click({ position: { x: 4, y: 4 } })
   await settings(page).getByRole('button', { name: 'Remove widget' }).click()

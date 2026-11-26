@@ -4,6 +4,7 @@ import forest from '../../assets/gallery/forest.svg'
 import mountain from '../../assets/gallery/mountain.svg'
 import studio from '../../assets/gallery/studio.svg'
 import workspace from '../../assets/gallery/workspace.svg'
+import { UPLOAD_KEY } from '../../domain/workspace/constants'
 import type { AssetKey } from '../../domain/workspace/types'
 
 /**
@@ -21,5 +22,8 @@ export const GALLERY_ASSETS: Record<AssetKey, { url: string; label: string }> = 
 }
 
 /** Own-key lookup, so a key such as "constructor" is simply not an image. */
-export const galleryAsset = (key: string): { url: string; label: string } | undefined =>
-  Object.hasOwn(GALLERY_ASSETS, key) ? GALLERY_ASSETS[key as AssetKey] : undefined
+export const galleryAsset = (key: string): { url: string; label: string } | undefined => {
+  // An upload is read from the signed-in user's own private images; the key is checked, never used as a free-form URL.
+  if (UPLOAD_KEY.test(key)) return { url: `/api/images/${key.slice('upload:'.length)}`, label: 'Uploaded image' }
+  return Object.hasOwn(GALLERY_ASSETS, key) ? GALLERY_ASSETS[key as AssetKey] : undefined
+}

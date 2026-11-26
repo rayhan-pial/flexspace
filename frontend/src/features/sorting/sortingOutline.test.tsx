@@ -89,10 +89,11 @@ beforeEach(() => {
 })
 
 describe('the outline as a sortable list', () => {
-  it('lists every widget of a grid section, hidden ones included, each with a grip; other sections have none', () => {
+  it('lists every widget of every section, hidden ones included, each with a grip, and every section has a grip too', () => {
     renderShell()
     expect(outlineOrder()).toEqual(['Greeting', 'Secret note', 'Notes card', 'Todo', 'Plan'])
-    expect(screen.queryByRole('button', { name: /Stack note in outline/ })).not.toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Reorder Stack note in outline' })).toBeInTheDocument() // a stack section's widgets too
+    for (const name of ['Dashboard', 'Reference']) expect(screen.getByRole('button', { name: `Reorder section ${name} in outline` })).toBeInTheDocument()
     expect(within(screen.getByRole('list', { name: 'Components' })).getByRole('button', { name: 'Stack note' })).toBeInTheDocument()
   })
 
@@ -105,7 +106,8 @@ describe('the outline as a sortable list', () => {
     // The canvas stack of cards and the outline both use the adapter of this single provider.
     expect(workspaceAdapter.readItems(outlineContainerId('grid'))).toEqual(['welcome', 'hid', 'notes', 'tasks', 'cal'])
     expect(workspaceAdapter.readItems(stackContainerId('stack'))).toEqual(['st1'])
-    expect(workspaceAdapter.readItems(outlineContainerId('stack'))).toBeNull() // only grid sections have an outline container
+    expect(workspaceAdapter.readItems(outlineContainerId('stack'))).toEqual(['st1']) // stack sections have an outline list too
+    expect(workspaceAdapter.readItems('outline-root')).toEqual(['grid', 'stack'])
     expect(workspaceAdapter.readItems(outlineContainerId('missing'))).toBeNull()
   })
 
@@ -166,39 +168,88 @@ describe('outline reorder changes the canvas', () => {
     expect(selectIsDirty(editor())).toBe(false)
   })
 
-  it('cannot move a widget into another section: nothing previews, nothing commits', () => {
+  it('moves a widget from a grid section into a stack section and back, keeping its content, exactly once', () => {
+    renderShell()
+    const before = editor().draftConfig!
+    const request = { itemId: 'notes', fromContainerId: outlineContainerId('grid'), toContainerId: outlineContainerId('stack'), toIndex: 0 }
+    expect(workspaceAdapter.canMove(request)).toBeNull()
+    expect(workspaceAdapter.commitMove(request).status).toBe('applied')
+    const after = editor().draftConfig!
+    expect(after.sections[1].widgets.map((w) => w.id)).toEqual(['notes', 'st1'])
+    expect(after.sections[0].widgets.map((w) => w.id)).toEqual(['welcome', 'hid', 'tasks', 'cal'])
+    expect(after.sections[0].layout!.some((r) => r.i === 'notes')).toBe(false)
+    expect(after.sections[1].widgets[0]).toEqual(before.sections[0].widgets.find((w) => w.id === 'notes'))
+    expect(after.sections.flatMap((s) => s.widgets).filter((w) => w.id === 'notes')).toHaveLength(1)
+    const back = { itemId: 'notes', fromContainerId: outlineContainerId('stack'), toContainerId: outlineContainerId('grid'), toIndex: 2 }
+    expect(workspaceAdapter.commitMove(back).status).toBe('applied')
+    expect(editor().draftConfig!.sections[0].widgets.map((w) => w.id)).toEqual(['welcome', 'hid', 'notes', 'tasks', 'cal'])
+    expect(editor().draftConfig!.sections[0].layout!.find((r) => r.i === 'notes')).toMatchObject({ w: expect.any(Number), h: expect.any(Number) })
+  })
+
+  it('previews a move into another section in the outline, and an outside drop commits nothing', () => {
     renderShell()
     const before = editor().draftConfig
     start(outlineItem('notes'))
     hover(outlineItem('notes'), container(outlineContainerId('stack')))
-    hover(outlineItem('notes'), container(stackContainerId('stack')))
-    expect(outlineOrder()).toEqual(['Greeting', 'Secret note', 'Notes card', 'Todo', 'Plan'])
-    end(outlineItem('notes'), container(outlineContainerId('stack')))
+    expect(within(screen.getByRole('list', { name: 'Reference widgets' })).getAllByRole('listitem').length).toBeGreaterThan(0)
+    end(outlineItem('notes'), container(outlineContainerId('missing')), true)
     expect(editor().draftConfig).toBe(before)
-    for (const to of [outlineContainerId('stack'), stackContainerId('stack'), outlineContainerId('missing')]) {
-      const request = { itemId: 'notes', fromContainerId: outlineContainerId('grid'), toContainerId: to, toIndex: 0 }
-      expect(workspaceAdapter.canMove(request)).not.toBeNull()
-      expect(workspaceAdapter.commitMove(request).status).toBe('rejected')
-    }
   })
 
-  it('with two grid sections, a widget still cannot move from one section outline to the other', () => {
+  it('with two grid sections a widget moves from one outline to the other and the source closes its gap', () => {
     const parsed = parseWorkspaceConfig({
       schemaVersion: 1, title: 'Two grids',
       sections: [
-        { id: 'g1', kind: 'grid', title: 'First', widgets: [{ id: 'a', type: 'notes' }, { id: 'b', type: 'notes' }], layout: [rect('a', 0, 0, 6, 4), rect('b', 6, 0, 6, 4)] },
+        { id: 'g1', kind: 'grid', title: 'First', widgets: [{ id: 'a', type: 'notes' }, { id: 'b', type: 'notes' }], layout: [rect('a', 0, 0, 12, 4), rect('b', 0, 4, 12, 4)] },
         { id: 'g2', kind: 'grid', title: 'Second', widgets: [{ id: 'c', type: 'notes' }], layout: [rect('c', 0, 0, 6, 4)] },
       ],
     })
     if (!parsed.ok) throw new Error(parsed.message)
     editor().load({ ownerId: 'u', workspaceId: 'w', revision: 1, config: parsed.config })
+    const request = { itemId: 'a', fromContainerId: outlineContainerId('g1'), toContainerId: outlineContainerId('g2'), toIndex: 1 }
+    expect(workspaceAdapter.canMove(request)).toBeNull()
+    expect(workspaceAdapter.commitMove(request).status).toBe('applied')
+    const [g1, g2] = editor().draftConfig!.sections
+    expect(g1.widgets.map((w) => w.id)).toEqual(['b'])
+    expect(g1.layout).toEqual([rect('b', 0, 0, 12, 4)]) // the gap a left is closed
+    expect(g2.widgets.map((w) => w.id)).toEqual(['c', 'a'])
+    expect(g2.layout!.map((r) => r.i).sort()).toEqual(['a', 'c'])
+    expect(editor().history.past).toHaveLength(1)
+    editor().undo()
+    expect(editor().draftConfig!.sections[0].widgets.map((w) => w.id)).toEqual(['a', 'b'])
+  })
+
+  it('refuses to move into a missing section or a stale position, and unsupported widgets stay in their own section', () => {
+    renderShell()
     const before = editor().draftConfig
-    const request = { itemId: 'a', fromContainerId: outlineContainerId('g1'), toContainerId: outlineContainerId('g2'), toIndex: 0 }
-    expect(workspaceAdapter.canMove(request)).toBe('Widgets can only be reordered within their own section.')
-    expect(workspaceAdapter.commitMove(request).status).toBe('rejected')
+    for (const to of [outlineContainerId('missing'), 'section:stack:widgets']) {
+      const request = { itemId: 'notes', fromContainerId: outlineContainerId('grid'), toContainerId: to, toIndex: 0 }
+      expect(workspaceAdapter.canMove(request)).not.toBeNull()
+      expect(workspaceAdapter.commitMove(request).status).toBe('rejected')
+    }
     expect(editor().draftConfig).toBe(before)
-    // reordering inside either section is fine
-    expect(workspaceAdapter.commitMove({ itemId: 'a', fromContainerId: outlineContainerId('g1'), toContainerId: outlineContainerId('g1'), toIndex: 1 }).status).toBe('applied')
+  })
+
+  it('reorders whole sections from the outline: each moves with all of its widgets, and Undo restores', () => {
+    renderShell()
+    const before = editor().draftConfig!
+    const request = { itemId: 'stack', fromContainerId: 'outline-root', toContainerId: 'outline-root', toIndex: 0 }
+    expect(workspaceAdapter.canMove(request)).toBeNull()
+    expect(workspaceAdapter.commitMove(request).status).toBe('applied')
+    const after = editor().draftConfig!
+    expect(after.sections.map((s) => s.id)).toEqual(['stack', 'grid'])
+    expect(after.sections[1]).toBe(before.sections[0]) // the section itself is carried along untouched
+    expect(after.sections[0]).toBe(before.sections[1])
+    editor().undo()
+    expect(editor().draftConfig!.sections.map((s) => s.id)).toEqual(['grid', 'stack'])
+  })
+
+  it('a section cannot be dropped among widgets, nor a widget among sections', () => {
+    renderShell()
+    const section = { itemId: 'stack', fromContainerId: 'outline-root', toContainerId: outlineContainerId('grid'), toIndex: 0 }
+    const widget = { itemId: 'notes', fromContainerId: outlineContainerId('grid'), toContainerId: 'outline-root', toIndex: 0 }
+    expect(workspaceAdapter.canMove(section)).not.toBeNull()
+    expect(workspaceAdapter.canMove(widget)).not.toBeNull()
   })
 
   it('Cancel after an outline reorder restores the saved positions and order', () => {

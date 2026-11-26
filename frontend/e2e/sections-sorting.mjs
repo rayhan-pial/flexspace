@@ -20,7 +20,7 @@ const status = () => page.getByRole('status', { name: 'Save status' }).innerText
 const sectionTitles = () => page.locator('[data-section-id] > div > h2').allInnerTexts()
 const sectionIds = () => page.locator('[data-section-id]').evaluateAll((els) => els.map((e) => e.dataset.sectionId))
 const cardsIn = (sectionId) => page.locator(`[data-section-id="${sectionId}"] [data-widget-id]`).evaluateAll((els) => els.map((e) => e.dataset.widgetId))
-const sectionHandle = (title) => page.getByRole('button', { name: `Reorder section ${title}` })
+const sectionHandle = (title) => page.getByRole('button', { name: `Reorder section ${title}`, exact: true })
 const center = async (locator) => {
   const box = await locator.boundingBox()
   assert.ok(box, 'element has a box')
@@ -85,7 +85,7 @@ try {
   assert.deepEqual(await sectionIds(), before)
 
   log('a card gesture inside its own section does not move the section')
-  const refCardHandle = page.locator(`[data-section-id="${referenceId}"]`).getByRole('button', { name: /^Reorder card / })
+  const refCardHandle = page.locator(`[data-section-id="${referenceId}"]`).getByRole('article').getByRole('heading', { level: 3 })
   const c = await center(refCardHandle)
   await drag(c, { x: c.x + 30, y: c.y + 12 })
   assert.deepEqual(await sectionIds(), before)
@@ -103,7 +103,7 @@ try {
   assert.equal(await page.locator(`[data-widget-id="${cardId}"]`).count(), 1)
 
   log('dropping a card outside every target changes nothing')
-  const card2 = page.locator(`[data-section-id="${newId}"]`).getByRole('button', { name: /^Reorder card / })
+  const card2 = page.locator(`[data-section-id="${newId}"]`).getByRole('article').getByRole('heading', { level: 3 })
   await drag(await center(card2), { x: 1300, y: 60 })
   assert.deepEqual(await cardsIn(newId), [cardId])
 

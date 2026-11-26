@@ -6,6 +6,7 @@ from typing import Any
 
 from sqlalchemy import (
     JSON,
+    LargeBinary,
     CheckConstraint,
     DateTime,
     ForeignKey,
@@ -98,6 +99,20 @@ class Template(Base):
     config: Mapped[dict[str, Any]] = mapped_column(JSON)
     created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=_now)
     updated_at: Mapped[datetime] = mapped_column(UtcDateTime, default=_now)
+
+
+class Image(Base):
+    """An uploaded gallery image. The bytes live in the database; only the owner can read them."""
+
+    __tablename__ = "images"
+    __table_args__ = (Index("ix_images_owner_id", "owner_id"),)
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, default=_uuid)
+    owner_id: Mapped[str] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"))
+    content_type: Mapped[str] = mapped_column(String(32))
+    size: Mapped[int] = mapped_column(Integer)
+    data: Mapped[bytes] = mapped_column(LargeBinary)
+    created_at: Mapped[datetime] = mapped_column(UtcDateTime, default=_now)
 
 
 class UserSession(Base):

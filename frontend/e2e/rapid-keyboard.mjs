@@ -65,7 +65,7 @@ try {
   let order = ['Today', 'Reference']
   for (let round = 0; round < ROUNDS; round += 1) {
     const moving = order[0]
-    await rapid(page.getByRole('button', { name: `Reorder section ${moving}` }), 'ArrowDown')
+    await rapid(page.getByRole('button', { name: `Reorder section ${moving}`, exact: true }), 'ArrowDown')
     await page.waitForFunction((expected) => [...document.querySelectorAll('[data-section-id] > div > h2')].map((h) => h.textContent).join('|') === expected, [order[1], order[0]].join('|'), { timeout: 3000 }).catch(() => { misses += 1 })
     const actual = await sectionTitles()
     if (actual.join('|') !== [order[1], order[0]].join('|')) {
@@ -85,7 +85,7 @@ try {
 
   log('rapid pickup then Escape cancels with no change')
   const before = await sectionTitles()
-  const grip = page.getByRole('button', { name: `Reorder section ${before[0]}` })
+  const grip = page.getByRole('button', { name: `Reorder section ${before[0]}`, exact: true })
   await grip.focus()
   await page.keyboard.press('Space')
   await page.keyboard.press('ArrowDown')

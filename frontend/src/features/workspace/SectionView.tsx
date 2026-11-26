@@ -2,13 +2,12 @@ import type { ReactNode } from 'react'
 import { useId } from 'react'
 import type { Section } from '../../domain/workspace/types'
 import { useEditorStore } from '../editor/editorStore'
+import { useInspectorView } from '../editor/inspectorView'
 import { useEffectiveMode } from '../editor/useEffectiveMode'
-import SortHandle from '../sorting/SortHandle'
 import SortableSection from '../sorting/SortableSection'
 import { stackContainerId, WIDGET_ITEM_TYPE } from '../sorting/workspaceAdapter'
 import GridSection from './GridSection'
 import WidgetRenderer from './WidgetRenderer'
-import { isKnownWidgetType, widgetTypeLabel } from './registry'
 
 /**
  * Renders one section with the adapter for its kind. Hidden widgets are skipped (they stay in the
@@ -20,6 +19,7 @@ import { isKnownWidgetType, widgetTypeLabel } from './registry'
 export default function SectionView({ section, handle }: { section: Section; handle?: ReactNode }) {
   const headingId = useId()
   const editing = useEffectiveMode() === 'edit'
+  const { openLibrary, canAddFromCanvas } = useInspectorView()
   const visible = section.widgets.filter((widget) => !widget.hidden)
   const emptyMessage =
     section.widgets.length === 0
@@ -32,7 +32,7 @@ export default function SectionView({ section, handle }: { section: Section; han
   const findCard = (id: string) => draft?.sections.flatMap((s) => s.widgets).find((widget) => widget.id === id)
 
   return (
-    <section data-section-id={section.id} aria-labelledby={headingId} tabIndex={-1} className="scroll-mt-4 focus:outline-none">
+    <section data-section-id={section.id} aria-labelledby={headingId} tabIndex={-1} className="scroll-mt-[calc(var(--toolbar-h,0px)+1rem)] focus:outline-none">
       <div className="mb-3 flex items-center gap-2">
         {editing && handle}
         <h2 id={headingId} className="min-w-0 text-lg font-semibold tracking-tight">
@@ -53,13 +53,13 @@ export default function SectionView({ section, handle }: { section: Section; han
           label={`${section.title || 'Untitled section'} cards`}
           emptyLabel={`${emptyMessage} You can also drag a card here.`}
           className="gap-4"
+          pointerOnly
           renderItem={(id, { handleRef }) => {
             const widget = findCard(id)
             if (!widget) return null
-            const name = widget.title || (isKnownWidgetType(widget.type) ? widgetTypeLabel(widget.type) : 'unsupported widget')
             return (
               <div className="min-w-0">
-                <WidgetRenderer widget={widget} sortHandle={<SortHandle handleRef={handleRef} label={`Reorder card ${name}`} />} />
+                <WidgetRenderer widget={widget} dragRef={handleRef} />
               </div>
             )
           }}
@@ -77,6 +77,17 @@ export default function SectionView({ section, handle }: { section: Section; han
       )}
 
       {visible.length > 0 && section.kind === 'grid' && <GridSection section={section} widgets={visible} />}
+
+      {editing && canAddFromCanvas && (
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          onClick={() => openLibrary(section.id)}
+          className="ui-focus fs-rule mt-3 flex w-full items-center justify-center gap-2 rounded-xl border border-dashed px-3 py-2.5 text-sm font-medium opacity-70 transition-opacity hover:opacity-100 [@media(pointer:coarse)]:min-h-11"
+        >
+          <span aria-hidden="true">+</span> Add component to {section.title || 'Untitled section'}
+        </button>
+      )}
     </section>
   )
 }

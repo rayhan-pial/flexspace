@@ -29,7 +29,7 @@ export default function Inspector({ className = '' }: { className?: string }) {
     <aside
       ref={ref}
       aria-label="Inspector"
-      className={`min-w-0 rounded-ui-card bg-ui-surface p-4 shadow-ui-surface ring-1 ring-ui-border lg:sticky lg:top-4 lg:max-h-[calc(100vh-2rem)] lg:self-start lg:overflow-y-auto ${className}`}
+      className={`min-w-0 rounded-ui-card bg-ui-surface p-4 shadow-ui-surface ring-1 ring-ui-border lg:sticky lg:top-[calc(var(--toolbar-h,0px)+1rem)] lg:max-h-[calc(100vh-var(--toolbar-h,0px)-2rem)] lg:self-start lg:overflow-y-auto ${className}`}
     >
       <h2 className="mb-3 border-b border-ui-border pb-3 text-base font-semibold text-ui-text">{VIEW_TITLES[view]}</h2>
       {view !== 'properties' && (

@@ -7,6 +7,7 @@ export type NavPlacement = (typeof NAV_PLACEMENTS)[number]
 export type SectionKind = (typeof SECTION_KINDS)[number]
 export type IconName = (typeof ICONS)[number]
 export type AssetKey = (typeof ASSET_KEYS)[number]
+export type UploadKey = `upload:${string}`
 export type KnownWidgetType = (typeof KNOWN_WIDGET_TYPES)[number]
 
 export interface Theme {
@@ -44,7 +45,7 @@ export interface WelcomeProps { greeting: string; subtitle: string }
 export interface TaskItem { id: string; text: string; done: boolean }
 export interface TasksProps { items: TaskItem[] }
 export interface NotesProps { body: string }
-export interface GalleryItem { id: string; assetKey: AssetKey; alt: string; caption: string }
+export interface GalleryItem { id: string; assetKey: AssetKey | UploadKey; alt: string; caption: string }
 export interface GalleryProps { items: GalleryItem[] }
 export interface Metric { id: string; label: string; value: number }
 export interface AnalyticsProps { metrics: Metric[] }

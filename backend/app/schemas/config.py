@@ -108,9 +108,13 @@ class NotesProps(_Model):
     body: Body = ""
 
 
+# A gallery item shows either a bundled picture ("aurora") or one the user uploaded ("upload:<image id>").
+UploadKey = Annotated[StrictStr, StringConstraints(pattern=r"^upload:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$")]
+
+
 class GalleryItem(_Model):
     id: Id
-    asset_key: Literal[ASSET_KEYS]
+    asset_key: Literal[ASSET_KEYS] | UploadKey
     alt: Text = ""
     caption: Text = ""
 

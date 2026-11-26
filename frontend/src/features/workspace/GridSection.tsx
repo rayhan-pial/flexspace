@@ -8,14 +8,13 @@ import { minSizeFor, reflowAfterGesture } from '../../domain/workspace/placement
 import type { GridRect, Section, Widget } from '../../domain/workspace/types'
 import { useEditorStore } from '../editor/editorStore'
 import { useEffectiveMode } from '../editor/useEffectiveMode'
-import { GRID_HANDLE_CLASS } from './GridHandle'
 import WidgetRenderer from './WidgetRenderer'
 
 // Units shared with the CSS fallback in index.css (.fs-grid): 12 columns, 32px rows, 16px gaps.
 const ROW_HEIGHT = 32
 const GAP = 16
-// Nothing inside a widget may start a grid drag; only the handle does.
-const CANCEL = 'input, textarea, select, button, a, [data-no-drag]'
+// A card can be dragged from anywhere except its controls, fields and inner sortable grips.
+const CANCEL = 'input, textarea, select, button, a, [role="button"], [data-no-drag]'
 
 /**
  * React Grid Layout asks its compactor to arrange the layout on mount, on every container resize
@@ -149,7 +148,7 @@ export default function GridSection({ section, widgets }: { section: Section; wi
           width={width}
           layout={layout}
           gridConfig={{ cols: GRID_COLUMNS, rowHeight: ROW_HEIGHT, margin: [GAP, GAP], containerPadding: [0, 0], maxRows: Infinity }}
-          dragConfig={{ enabled: true, handle: `.${GRID_HANDLE_CLASS}`, cancel: CANCEL }}
+          dragConfig={{ enabled: true, cancel: CANCEL }}
           resizeConfig={{ enabled: true, handles: ['se'] }}
           compactor={compactor}
           onDragStart={(l, old) => onStart(l, old)}

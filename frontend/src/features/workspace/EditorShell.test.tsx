@@ -200,8 +200,8 @@ describe('component outline', () => {
     for (const name of ['Overview', 'Reference', 'Secret section', 'Meeting notes', 'Welcome card', 'Hidden note', 'Unsupported: kanban']) {
       expect(list.getByRole('button', { name: new RegExp(`^${name}`) })).toBeInTheDocument()
     }
-    expect(list.getByRole('button', { name: /Hidden note/ })).toHaveTextContent('hidden')
-    expect(list.getByRole('button', { name: /Secret section/ })).toHaveTextContent('hidden')
+    expect(list.getByRole('button', { name: /^Hidden note/ })).toHaveTextContent('hidden')
+    expect(list.getByRole('button', { name: /^Secret section/ })).toHaveTextContent('hidden')
     // ...although the canvas skips them
     expect(canvasCard('n-hidden')).toBeNull()
     expect(screen.queryByRole('heading', { name: 'Secret section' })).not.toBeInTheDocument()
@@ -294,7 +294,7 @@ describe('selection synchronization', () => {
   it('a hidden widget selected from the outline keeps a valid inspector but has no canvas card', async () => {
     const user = await open()
     await goTo(user, 'Outline')
-    await user.click(outline().getByRole('button', { name: /Hidden note/ }))
+    await user.click(outline().getByRole('button', { name: /^Hidden note/ }))
     await goTo(user, 'My workspace')
     expect(inspector().getByRole('heading', { name: 'Hidden note' })).toBeInTheDocument()
     expect(inspector().getByText('Hidden')).toBeInTheDocument()

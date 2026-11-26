@@ -168,8 +168,12 @@ try {
   assert.ok(column.height <= 700, `the inspector fits the window (${column.height}px)`)
   await page.evaluate(() => window.scrollTo(0, 600))
   await page.waitForTimeout(200)
-  const reachable = await page.evaluate(() => Math.round(document.querySelector('aside[aria-label="Inspector"]').getBoundingClientRect().top))
-  assert.ok(reachable >= 0 && reachable <= 24, `the inspector stays at the top of the window while the canvas scrolls (${reachable}px)`)
+  // The top bar is pinned, so the inspector stays just below it (the bar's height plus a 16px margin).
+  const placed = await page.evaluate(() => ({
+    top: Math.round(document.querySelector('aside[aria-label="Inspector"]').getBoundingClientRect().top),
+    bar: Math.round(document.querySelector('[data-toolbar]').getBoundingClientRect().bottom),
+  }))
+  assert.ok(placed.top >= placed.bar && placed.top <= placed.bar + 24, `the inspector stays just below the pinned bar while the canvas scrolls (${placed.top}px, bar ends at ${placed.bar}px)`)
   const side = await measure()
   assert.equal(side.pageOverflow, 0, `no sideways scrolling with the inspector open (${side.pageOverflow}px)`)
 

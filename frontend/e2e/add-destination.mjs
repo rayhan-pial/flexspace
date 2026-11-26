@@ -93,8 +93,10 @@ try {
 
   log('Undo removes the last add, one step at a time; Save and reload keep what remains exactly where it was added')
   await page.getByRole('button', { name: 'Undo', exact: true }).click()
+  await page.waitForTimeout(600)
   assert.deepEqual(await sectionWidgets('Today'), todayBefore)
   await page.getByRole('button', { name: 'Redo', exact: true }).click()
+  await page.waitForTimeout(600)
   assert.deepEqual(await sectionWidgets('Today'), todayAfter)
   await page.getByRole('button', { name: 'Save', exact: true }).click()
   await page.getByText('All changes saved').waitFor()

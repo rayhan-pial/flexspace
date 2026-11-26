@@ -95,7 +95,7 @@ export default function EditorToolbar() {
         <div className="flex flex-wrap items-center gap-2">
           {isDesktop && mode === 'edit' && (
             <>
-              <Button reason={editBlock} aria-haspopup="dialog" onClick={openLibrary}>Add component</Button>
+              <Button reason={editBlock} aria-haspopup="dialog" onClick={() => openLibrary()}>Add component</Button>
               <Button reason={editBlock} aria-haspopup="dialog" onClick={openTemplates}>Templates</Button>
               <Button reason={undoBlocker} onClick={() => undo()} title="Undo (Ctrl+Z)">Undo</Button>
               <Button reason={redoBlocker} onClick={() => redo()} title="Redo (Ctrl+Shift+Z)">Redo</Button>

@@ -15,6 +15,10 @@ interface Props {
   handle?: ReactNode
   /** Code-owned icon for the widget type (decorative), shown before the title. */
   icon?: ReactNode
+  /** Shown at the end of the header in Edit (for example Remove). */
+  actions?: ReactNode
+  /** Makes the whole card the grab area of a sortable stack (its controls and fields still work). */
+  dragRef?: (element: Element | null) => void
   children: ReactNode
 }
 
@@ -26,7 +30,7 @@ export const COMPACT_CARD_HEIGHT = 100
  * FS-015. Clicking anywhere in the card (including its own controls) selects it; Enter/Space
  * select only when the card itself has focus, so typing inside a widget never re-selects.
  */
-export default function WidgetShell({ widgetId, title, mode, selected, appearance, onSelect, handle, icon, children }: Props) {
+export default function WidgetShell({ widgetId, title, mode, selected, appearance, onSelect, handle, icon, actions, dragRef, children }: Props) {
   const headingId = useId()
   const editing = mode === 'edit'
   const cardRef = useRef<HTMLElement>(null)
@@ -42,7 +46,8 @@ export default function WidgetShell({ widgetId, title, mode, selected, appearanc
   }, [])
 
   function onKeyDown(event: KeyboardEvent) {
-    if (editing && event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+    // In a draggable stack, Space lifts the card, so only Enter selects it.
+    if (editing && event.target === event.currentTarget && (event.key === 'Enter' || (event.key === ' ' && !dragRef))) {
       event.preventDefault()
       onSelect()
     }
@@ -50,7 +55,12 @@ export default function WidgetShell({ widgetId, title, mode, selected, appearanc
 
   return (
     <article
-      ref={cardRef}
+      ref={(element) => {
+        cardRef.current = element
+        dragRef?.(element)
+      }}
+      // Explicit, so the drag library (which would give its grab element role="button") keeps this a card with controls inside.
+      role="article"
       aria-labelledby={headingId}
       data-compact={compact ? 'true' : undefined}
       data-widget-id={widgetId}
@@ -59,7 +69,7 @@ export default function WidgetShell({ widgetId, title, mode, selected, appearanc
       onClick={editing ? onSelect : undefined}
       onKeyDown={onKeyDown}
       style={safeAppearanceStyle(appearance)}
-      className={`group ui-focus flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-[var(--fs-surface,#ffffff)] p-4 ring-1 data-[compact=true]:p-2 transition-shadow ${
+      className={`group ui-focus ${editing ? 'cursor-grab active:cursor-grabbing' : ''} flex h-full min-h-0 flex-col overflow-hidden rounded-2xl bg-[var(--fs-surface,#ffffff)] p-4 ring-1 data-[compact=true]:p-2 transition-shadow ${
         editing && selected ? 'shadow-md ring-2 ring-ui-primary' : editing ? 'shadow-sm ring-black/10 hover:ring-ui-control' : 'shadow-sm ring-black/10'
       }`}
     >
@@ -71,6 +81,7 @@ export default function WidgetShell({ widgetId, title, mode, selected, appearanc
           // A word as well as a colour, so the selection is not conveyed by colour alone.
           <span data-selected-label className="ml-auto shrink-0 rounded-full bg-ui-primary px-2 py-0.5 text-[11px] font-medium leading-none text-white">Selected</span>
         )}
+        {editing && actions && <span className={`${selected ? '' : 'ml-auto'} flex shrink-0 items-center`}>{actions}</span>}
       </div>
       <div className="min-h-0 flex-1">{children}</div>
     </article>

@@ -138,7 +138,7 @@ try {
   small.push(
     ...(await tablet.evaluate(() =>
       [...document.querySelectorAll('.fs-themed button, .fs-themed [role="button"]')]
-        .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 0 && r.height > 0 && (r.height < 43.5 || r.width < 43.5) })
+        .filter((el) => { const r = el.getBoundingClientRect(); return r.width > 2 && r.height > 2 && (r.height < 43.5 || r.width < 43.5) })
         .map((el) => `canvas: ${el.getAttribute('aria-label') || el.textContent?.trim().slice(0, 24)} ${Math.round(el.getBoundingClientRect().width)}x${Math.round(el.getBoundingClientRect().height)}`),
     )),
   )

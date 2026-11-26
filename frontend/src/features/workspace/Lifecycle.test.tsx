@@ -140,7 +140,7 @@ describe('component and section lifecycle', () => {
     await user.click(settings().getByRole('button', { name: 'Hide section' }))
     expect(screen.queryByRole('heading', { name: 'Plans', level: 2 })).not.toBeInTheDocument()
     await goTo(user, 'Outline')
-    expect(outline().getByRole('button', { name: /Plans/ })).toHaveTextContent('hidden')
+    expect(outline().getByRole('button', { name: /^Plans/ })).toHaveTextContent('hidden')
     await goTo(user, 'My workspace')
     await user.click(settings().getByRole('button', { name: 'Show section' }))
 

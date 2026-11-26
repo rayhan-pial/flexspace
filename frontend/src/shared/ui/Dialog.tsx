@@ -33,6 +33,9 @@ export default function Dialog({ title, description, onClose, children, footer, 
   const descriptionId = useId()
   const panelRef = useRef<HTMLDivElement>(null)
   const closeRef = useRef(onClose)
+  // A click on the dimmed area closes the dialog, but only if the press began there too: selecting text or dragging
+  // from inside the dialog and letting go outside must not dismiss it.
+  const pressedBackdrop = useRef(false)
 
   useEffect(() => {
     closeRef.current = onClose
@@ -95,7 +98,18 @@ export default function Dialog({ title, description, onClose, children, footer, 
   }, [initialFocusRef])
 
   return createPortal(
-    <div data-dialog-root className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 p-4 sm:p-6">
+    <div
+      data-dialog-root
+      className="fixed inset-0 z-50 grid place-items-center bg-slate-900/50 p-4 sm:p-6"
+      onPointerDown={(event) => {
+        pressedBackdrop.current = event.target === event.currentTarget
+      }}
+      onClick={(event) => {
+        const outside = pressedBackdrop.current && event.target === event.currentTarget
+        pressedBackdrop.current = false
+        if (outside) closeRef.current()
+      }}
+    >
       <div
         ref={panelRef}
         role={role}

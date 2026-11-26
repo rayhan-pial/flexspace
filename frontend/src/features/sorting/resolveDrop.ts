@@ -18,10 +18,10 @@ export function dragFacts(source: unknown, target: unknown): { source: SourceFac
   const src = source as { id: string | number; data?: Partial<SortableData> } | null
   const tgt = target as { id: string | number; data?: Partial<SortableData & ContainerData> } | null
   const sourceFacts =
-    src && src.data?.containerId !== undefined ? { id: String(src.id), containerId: src.data.containerId } : null
+    src && src.data?.containerId !== undefined ? { id: String(src.data.itemId ?? src.id), containerId: src.data.containerId } : null
   let targetFacts: TargetFacts | null = null
   if (tgt?.data?.kind === 'container' && tgt.data.containerId !== undefined) targetFacts = { kind: 'container', containerId: tgt.data.containerId }
-  else if (tgt?.data?.containerId !== undefined) targetFacts = { kind: 'item', id: String(tgt.id), containerId: tgt.data.containerId }
+  else if (tgt?.data?.containerId !== undefined) targetFacts = { kind: 'item', id: String(tgt.data.itemId ?? tgt.id), containerId: tgt.data.containerId }
   return { source: sourceFacts, target: targetFacts }
 }
 

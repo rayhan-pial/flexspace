@@ -8,6 +8,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Workspace
 from app.repositories import workspaces
+from app.services import images_service
 from app.services.workspace_config import normalize_config
 
 MAX_CONFIG_BYTES = 1024 * 1024  # 1 MiB serialized (docs/architecture.md section 3)
@@ -62,5 +63,14 @@ def save_workspace(db: Session, user_id: str, base_revision: int, raw_config: An
         db.rollback()
         raise
     db.expire_all()  # the bulk UPDATE bypassed the identity map; reload revision/timestamps
+    _tidy_images(db, user_id)
     workspace = workspaces.get_for_user(db, user_id)
     return workspace, config
+
+
+def _tidy_images(db: Session, user_id: str) -> None:
+    """Housekeeping after a successful save: drop old uploads nothing uses. Never fails the save."""
+    try:
+        images_service.prune_unreferenced(db, user_id)
+    except Exception:  # noqa: BLE001 - the save already succeeded; leftovers are pruned next time
+        db.rollback()

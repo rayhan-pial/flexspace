@@ -1,6 +1,6 @@
 import { KNOWN_WIDGET_TYPES, MAX_LIST_ITEMS } from '../../domain/workspace/constants'
 import type { WorkspaceConfig } from '../../domain/workspace/types'
-import { listKeyOf, moveGridWidget, moveListItem, moveNavItem, moveSection, moveStackWidget, TRANSFERABLE_KINDS } from '../../domain/workspace/reorder'
+import { listKeyOf, moveListItem, moveNavItem, moveOutlineSection, moveSection, moveStackWidget, moveWidgetToSection, TRANSFERABLE_KINDS } from '../../domain/workspace/reorder'
 import type { ListKind, NavGroup } from '../../domain/workspace/reorder'
 import { useEditorStore } from '../editor/editorStore'
 import type { MoveOutcome, MoveRequest, SortAdapter } from './types'
@@ -11,7 +11,8 @@ import type { MoveOutcome, MoveRequest, SortAdapter } from './types'
  *   nav:primary, nav:secondary   navigation groups          (items of type `nav-item`)
  *   sections:root                the workspace sections     (items of type `section`)
  *   section:<id>:widgets         a stack section's cards    (items of type `widget`)
- *   outline:<id>                 a grid section's widgets in the outline (items of type `outline-widget`)
+ *   outline-root                 every section in the outline (items of type `outline-section`)
+ *   outline:<id>                 a section's widgets in the outline, grid or stack, hidden ones too (items of type `outline-widget`)
  *   widget:<id>:tasks            a Tasks widget's rows      (items of type `task`)
  *   widget:<id>:gallery          a Gallery widget's tiles   (items of type `gallery-item`)
  *   widget:<id>:analytics        an Analytics widget's metric cards   (items of type `metric`)
@@ -31,6 +32,8 @@ export const GALLERY_ITEM_TYPE = 'gallery-item'
 export const METRIC_ITEM_TYPE = 'metric'
 export const EVENT_ITEM_TYPE = 'event'
 export const OUTLINE_ITEM_TYPE = 'outline-widget'
+export const OUTLINE_SECTION_TYPE = 'outline-section'
+export const OUTLINE_ROOT = 'outline-root'
 
 export const stackContainerId = (sectionId: string) => `section:${sectionId}:widgets`
 export const outlineContainerId = (sectionId: string) => `outline:${sectionId}`
@@ -39,6 +42,7 @@ export const listContainerId = (kind: ListKind, widgetId: string) => `widget:${w
 type Container =
   | { kind: 'nav'; group: NavGroup }
   | { kind: 'sections' }
+  | { kind: 'outlineRoot' }
   | { kind: 'widgets'; sectionId: string }
   | { kind: 'outline'; sectionId: string }
   | { kind: ListKind; widgetId: string }
@@ -54,6 +58,7 @@ const isList = (container: Container): container is Extract<Container, { widgetI
 function parse(containerId: string): Container | null {
   if (Object.hasOwn(NAV_GROUPS, containerId)) return { kind: 'nav', group: NAV_GROUPS[containerId] }
   if (containerId === SECTIONS_ROOT) return { kind: 'sections' }
+  if (containerId === OUTLINE_ROOT) return { kind: 'outlineRoot' }
   const stack = STACK_RE.exec(containerId)
   if (stack) return { kind: 'widgets', sectionId: stack[1] }
   const outline = OUTLINE_RE.exec(containerId)
@@ -69,14 +74,16 @@ function itemsOf(draft: WorkspaceConfig, container: Container): string[] | null 
       return draft.navigation[container.group].map((item) => item.id)
     case 'sections':
       return draft.sections.filter((s) => !s.hidden).map((s) => s.id)
+    case 'outlineRoot':
+      return draft.sections.map((s) => s.id) // the outline lists every section, hidden ones included
     case 'widgets': {
       const section = draft.sections.find((s) => s.id === container.sectionId)
       return section && section.kind === 'stack' ? section.widgets.filter((w) => !w.hidden).map((w) => w.id) : null
     }
     case 'outline': {
-      // The outline lists every widget of a grid section, hidden ones included (they can be reordered too).
+      // The outline lists every widget of a section, grid or stack, hidden ones included (they can be moved too).
       const section = draft.sections.find((s) => s.id === container.sectionId)
-      return section && section.kind === 'grid' ? section.widgets.map((w) => w.id) : null
+      return section ? section.widgets.map((w) => w.id) : null
     }
     case 'tasks':
     case 'gallery':
@@ -104,7 +111,11 @@ function canMove({ itemId, fromContainerId, toContainerId }: MoveRequest): strin
   if (!readItems(fromContainerId)?.includes(itemId)) return 'That item is no longer there.'
   if (readItems(toContainerId) === null) return 'That item cannot be moved there.'
 
-  if (from.kind === 'outline' && to.kind === 'outline' && from.sectionId !== to.sectionId) return 'Widgets can only be reordered within their own section.'
+  // Outline widgets may move into any section; ones of types this version does not know stay where they are.
+  if (from.kind === 'outline' && to.kind === 'outline' && from.sectionId !== to.sectionId) {
+    const widget = useEditorStore.getState().draftConfig?.sections.flatMap((s) => s.widgets).find((w) => w.id === itemId)
+    if (!widget || !(KNOWN_WIDGET_TYPES as readonly string[]).includes(widget.type)) return 'Unsupported widgets can only be reordered within their own section.'
+  }
 
   if (isList(from) && to.kind === from.kind && from.widgetId !== to.widgetId) {
     // Metrics and agenda entries belong to their own widget; only tasks and gallery tiles may transfer.
@@ -130,11 +141,13 @@ function commitMove(request: MoveRequest): MoveOutcome {
       ? moveNavItem(request.itemId, to.group, request.toIndex)
       : to.kind === 'sections'
         ? moveSection(request.itemId, request.toIndex)
-        : to.kind === 'widgets'
-          ? moveStackWidget(request.itemId, to.sectionId, request.toIndex)
-          : to.kind === 'outline'
-            ? moveGridWidget(request.itemId, request.toIndex)
-            : moveListItem(to.kind, request.itemId, to.widgetId, request.toIndex)
+        : to.kind === 'outlineRoot'
+          ? moveOutlineSection(request.itemId, request.toIndex)
+          : to.kind === 'widgets'
+            ? moveStackWidget(request.itemId, to.sectionId, request.toIndex)
+            : to.kind === 'outline'
+              ? moveWidgetToSection(request.itemId, to.sectionId, request.toIndex)
+              : moveListItem(to.kind, request.itemId, to.widgetId, request.toIndex)
   const result = useEditorStore.getState().apply(command)
   return result.status === 'rejected' ? { status: 'rejected', error: result.error } : { status: result.status }
 }

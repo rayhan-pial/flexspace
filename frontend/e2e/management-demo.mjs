@@ -47,7 +47,7 @@ try {
 
   log('1. drop a widget on an occupied spot: its neighbors make room')
   await shot('1-reflow-before')
-  const handle = await card('Notes').getByRole('button', { name: /Move or resize/ }).boundingBox()
+  const handle = await card('Notes').getByRole('heading', { level: 3 }).boundingBox()
   const tasks = await card('Tasks').boundingBox()
   await drag({ x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 }, { x: tasks.x + 60, y: tasks.y + 20 })
   await shot('1-reflow-during')

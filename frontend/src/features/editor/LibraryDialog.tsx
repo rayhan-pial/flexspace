@@ -26,12 +26,13 @@ export interface AddedWidget {
  * while the dialog is open, Add is disabled until another is picked: it never retargets silently.
  * Searching, filtering and choosing a destination are presentation only; they never touch the draft.
  */
-export default function LibraryDialog({ onClose, onAdded, onOpenOutline }: { onClose: () => void; onAdded: (added: AddedWidget) => void; onOpenOutline: () => void }) {
+export default function LibraryDialog({ initialSectionId = null, onClose, onAdded, onOpenOutline }: { initialSectionId?: string | null; onClose: () => void; onAdded: (added: AddedWidget) => void; onOpenOutline: () => void }) {
   const draft = useEditorStore((s) => s.draftConfig)
   const selection = useEditorStore((s) => s.selection)
   const apply = useEditorStore((s) => s.apply)
   const select = useEditorStore((s) => s.select)
-  const [chosenId, setChosenId] = useState<string | null>(null)
+  // Opened from a section's own Add component button, the dialog starts with that section chosen.
+  const [chosenId, setChosenId] = useState<string | null>(initialSectionId)
   const [error, setError] = useState<string | null>(null)
   const [query, setQuery] = useState('')
   const [filter, setFilter] = useState<Filter>('All')

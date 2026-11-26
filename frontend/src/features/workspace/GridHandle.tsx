@@ -38,11 +38,12 @@ export default function GridHandle({ widgetId, title }: { widgetId: string; titl
         aria-label={`Move or resize ${title}`}
         aria-describedby={hintId}
         onKeyDown={onKeyDown}
-        className={`${GRID_HANDLE_CLASS} ui-focus inline-flex min-h-6 min-w-6 cursor-grab touch-none items-center justify-center rounded p-0.5 opacity-60 hover:bg-black/10 hover:opacity-100 focus-visible:opacity-100 active:cursor-grabbing [@media(pointer:coarse)]:min-h-11 [@media(pointer:coarse)]:min-w-11`}
+        // Dragging works from anywhere on the card, so the grip is only for the keyboard: invisible until it has focus.
+        className={`${GRID_HANDLE_CLASS} ui-focus sr-only focus:not-sr-only focus:inline-flex focus:min-h-6 focus:min-w-6 focus:items-center focus:justify-center focus:rounded focus:bg-black/10 focus:p-0.5`}
       >
         <GripVertical aria-hidden="true" className="size-4" />
       </span>
-      <span id={hintId} className="sr-only">Drag to move. Arrow keys move one cell; Shift with arrow keys resizes.</span>
+      <span id={hintId} className="sr-only">Drag the card to move it. With this control focused, arrow keys move one cell and Shift with arrow keys resizes.</span>
       {message && <span role="alert" className="text-xs font-medium text-red-700">{message}</span>}
     </span>
   )

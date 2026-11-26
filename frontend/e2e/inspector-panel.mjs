@@ -110,7 +110,7 @@ try {
   assert.equal(await page.evaluate(() => document.activeElement?.textContent?.trim()), 'Templates')
 
   log('mid-drag the toggle is unavailable, and releasing re-enables it; the canvas gesture is unaffected')
-  const handle = await page.getByRole('article', { name: 'Notes' }).getByRole('button', { name: /Move or resize/ }).boundingBox()
+  const handle = await page.getByRole('article', { name: 'Notes' }).getByRole('heading', { level: 3 }).boundingBox()
   const at = { x: handle.x + handle.width / 2, y: handle.y + handle.height / 2 }
   await page.mouse.move(at.x, at.y)
   await page.mouse.down()

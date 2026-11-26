@@ -3,6 +3,7 @@ import { fail, ok } from './commands'
 import { KNOWN_WIDGET_TYPES, MAX_LABEL, MAX_SECTIONS, MAX_WIDGETS } from './constants'
 import { DEFAULT_WIDGET_PROPS } from './defaults'
 import { defaultSizeFor, findFreePosition, overlaps } from './placement'
+import { settleSection } from './grid'
 import type { GridRect, KnownWidgetType, NavItem, Section, SectionKind, Widget, WorkspaceConfig } from './types'
 
 /*
@@ -67,7 +68,7 @@ export function addWidget(sectionId: string, type: string, widgetId: string): Co
 }
 
 /**
- * Hide or show a widget. Hiding keeps its geometry. Showing keeps it too unless that space is now
+ * Hide or show a widget. Hiding keeps its own geometry but closes the gap it leaves. Showing keeps it too unless that space is now
  * taken by a visible widget, in which case it moves to the first free position of the same size.
  */
 export function setWidgetHidden(widgetId: string, hidden: boolean): Command {
@@ -88,7 +89,8 @@ export function setWidgetHidden(widgetId: string, hidden: boolean): Command {
         }
       }
     }
-    return ok(replaceSection(config, section.id, next))
+    // Hiding frees its space, so the cards below move up to fill it (showing it again finds a free spot).
+    return ok(replaceSection(config, section.id, hidden ? settleSection(next) : next))
   }
 }
 
@@ -98,7 +100,7 @@ export function removeWidget(widgetId: string): Command {
     if (!section) return fail(`Widget ${widgetId} was not found.`)
     const next: Section = { ...section, widgets: section.widgets.filter((w) => w.id !== widgetId) }
     if (section.layout) next.layout = section.layout.filter((r) => r.i !== widgetId)
-    return ok(replaceSection(config, section.id, next))
+    return ok(replaceSection(config, section.id, settleSection(next))) // the space it leaves is closed up
   }
 }
 

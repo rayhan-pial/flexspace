@@ -11,9 +11,10 @@ import { CommitTextField, SelectField } from '../../shared/ui/fields'
 import type { WidgetInspectorProps } from '../types'
 import MoveButtons from '../../features/sorting/MoveButtons'
 import { listContainerId, transferTargets, workspaceAdapter } from '../../features/sorting/workspaceAdapter'
+import ImageUploadButton from '../../features/editor/ImageUploadButton'
 import { GALLERY_ASSETS, galleryAsset } from './assets'
 
-const OPTIONS = ASSET_KEYS.map((key) => ({ value: key, label: GALLERY_ASSETS[key].label }))
+const OPTIONS: Array<{ value: string; label: string }> = ASSET_KEYS.map((key) => ({ value: key, label: GALLERY_ASSETS[key].label }))
 
 /** Add, change and remove the images of the selected gallery: picture, alt text and caption. */
 export default function GalleryInspector({ widgetId, props, dispatch }: WidgetInspectorProps<GalleryProps>) {
@@ -49,7 +50,7 @@ export default function GalleryInspector({ widgetId, props, dispatch }: WidgetIn
                   <Trash2 aria-hidden="true" className="size-4" />
                 </button>
               </div>
-              <SelectField label={`Picture for ${name}`} value={item.assetKey} options={OPTIONS} onChange={(assetKey) => run(updateGalleryItem(widgetId, item.id, { assetKey }))} />
+              <SelectField label={`Picture for ${name}`} value={item.assetKey} options={item.assetKey.startsWith('upload:') ? [{ value: item.assetKey, label: 'Your uploaded picture' }, ...OPTIONS] : OPTIONS} onChange={(assetKey) => run(updateGalleryItem(widgetId, item.id, { assetKey }))} />
               <CommitTextField label={`Alt text for ${name}`} value={item.alt} maxLength={MAX_TEXT} onCommit={(alt) => run(updateGalleryItem(widgetId, item.id, { alt } satisfies GalleryItemPatch))} />
               {item.alt === '' && <p className="text-xs text-ui-muted">Describe the picture for screen readers, or leave empty if it is purely decorative.</p>}
               <CommitTextField label={`Caption for ${name}`} value={item.caption} maxLength={MAX_TEXT} onCommit={(caption) => run(updateGalleryItem(widgetId, item.id, { caption }))} />
@@ -68,6 +69,10 @@ export default function GalleryInspector({ widgetId, props, dispatch }: WidgetIn
       <Button reason={props.items.length >= MAX_LIST_ITEMS ? `This widget has reached the limit of ${MAX_LIST_ITEMS} entries.` : null} onClick={() => run(addGalleryItem(widgetId, newId('img'), next))}>
         Add image
       </Button>
+      <ImageUploadButton
+        reason={props.items.length >= MAX_LIST_ITEMS ? `This widget has reached the limit of ${MAX_LIST_ITEMS} entries.` : null}
+        onUploaded={(imageId) => run(addGalleryItem(widgetId, newId('img'), `upload:${imageId}`))}
+      />
       {error && <p role="alert" className="rounded-ui-control bg-red-50 px-3 py-2 text-sm text-red-900 ring-1 ring-red-200">{error}</p>}
     </fieldset>
   )

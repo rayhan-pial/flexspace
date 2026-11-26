@@ -1,11 +1,11 @@
 import {
   ASSET_KEYS, DEFAULT_DISPLAY_MONTH, DEFAULT_MIN_SIZE, DEFAULT_THEME, FONT_FAMILIES, GRID_COLUMNS,
   ICONS, MAX_BODY, MAX_LABEL, MAX_LIST_ITEMS, MAX_ROW_H, MAX_SECTIONS, MAX_TEXT, MAX_WIDGETS,
-  MIN_SIZE, NAV_PLACEMENTS, SECTION_KINDS,
+  MIN_SIZE, NAV_PLACEMENTS, SECTION_KINDS, UPLOAD_KEY,
 } from './constants'
 import { migrateConfig, WorkspaceConfigError } from './migrate'
 import type {
-  GridRect, NavItem, Navigation, ParseResult, Section, Theme, Widget, WorkspaceConfig,
+  AssetKey, GridRect, NavItem, Navigation, ParseResult, Section, Theme, UploadKey, Widget, WorkspaceConfig,
 } from './types'
 
 type Obj = Record<string, unknown>
@@ -55,6 +55,12 @@ function bool(o: Obj, key: string, path: string, def: boolean): boolean {
   if (typeof v !== 'boolean') return fail(`${path}.${key}`, 'must be a boolean')
   return v
 }
+/** A bundled picture key, or an uploaded one (`upload:<lowercase uuid>`), kept exactly as written. */
+function galleryKey(v: unknown, path: string): AssetKey | UploadKey {
+  if (typeof v === 'string' && UPLOAD_KEY.test(v)) return v as UploadKey
+  return oneOf(v, path, ASSET_KEYS)
+}
+
 function oneOf<T extends string>(v: unknown, path: string, allowed: readonly T[]): T {
   if (typeof v !== 'string' || !(allowed as readonly string[]).includes(v)) {
     return fail(path, `must be one of ${allowed.join(', ')}`)
@@ -119,7 +125,7 @@ const PROPS: Record<string, PropsParser> = {
         const g = record(item, p, ['id', 'assetKey', 'alt', 'caption'])
         return {
           id: withId(p, g),
-          assetKey: oneOf(get(g, 'assetKey'), `${p}.assetKey`, ASSET_KEYS),
+          assetKey: galleryKey(get(g, 'assetKey'), `${p}.assetKey`),
           alt: optStr(g, 'alt', p, MAX_TEXT, ''),
           caption: optStr(g, 'caption', p, MAX_TEXT, ''),
         }

@@ -196,7 +196,7 @@ try {
 
   log('a section can be reordered with the keyboard alone, and the move is spoken in plain words')
   assert.deepEqual(await sectionTitles(), ['Today', 'Reference'])
-  const grip = page.getByRole('button', { name: 'Reorder section Today' })
+  const grip = page.getByRole('button', { name: 'Reorder section Today', exact: true })
   await grip.focus()
   await page.keyboard.press('Space')
   assert.equal(await spoken(), 'Picked up section Today.')
@@ -212,7 +212,7 @@ try {
   assert.deepEqual(library, [])
 
   log('Escape cancels a keyboard drag and says so')
-  await page.getByRole('button', { name: 'Reorder section Today' }).focus()
+  await page.getByRole('button', { name: 'Reorder section Today', exact: true }).focus()
   await page.keyboard.press('Space')
   await page.keyboard.press('ArrowUp')
   await page.waitForTimeout(400)
@@ -242,8 +242,12 @@ try {
   assert.ok(panel.maxHeight <= 500, `the panel fits the window (${panel.maxHeight}px)`)
   await page.evaluate(() => window.scrollTo(0, 400))
   await page.waitForTimeout(200)
-  const top = await page.evaluate(() => Math.round(document.querySelector('aside[aria-label="Inspector"]').getBoundingClientRect().top))
-  assert.ok(top >= 0 && top <= 24, `the panel stays at the top of the window while scrolling (${top}px)`)
+  // The top bar is pinned, so the panel stays just below it (the bar's height plus a 16px margin).
+  const { top, bar } = await page.evaluate(() => ({
+    top: Math.round(document.querySelector('aside[aria-label="Inspector"]').getBoundingClientRect().top),
+    bar: Math.round(document.querySelector('[data-toolbar]').getBoundingClientRect().bottom),
+  }))
+  assert.ok(top >= bar && top <= bar + 24, `the panel stays just below the pinned bar while scrolling (${top}px, bar ends at ${bar}px)`)
   await page.setViewportSize({ width: 1440, height: 1000 })
 
   log('below 1024px editing is explained, and nothing needs sideways scrolling or editing controls')

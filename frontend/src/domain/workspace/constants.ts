@@ -20,6 +20,10 @@ export const ICONS = [
   'calendar', 'settings', 'star', 'folder', 'users', 'mail',
 ] as const
 export const ASSET_KEYS = ['aurora', 'workspace', 'mountain', 'studio', 'forest', 'city'] as const
+/** A gallery item may show a picture the user uploaded: `upload:<image id>` (the id is a lowercase UUID). */
+export const UPLOAD_KEY = /^upload:[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024
+export const UPLOAD_TYPES = ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] as const
 export const KNOWN_WIDGET_TYPES = ['welcome', 'tasks', 'notes', 'gallery', 'analytics', 'calendar'] as const
 
 /** Per-type minimum grid size. Owned by the domain (it validates layouts); the widget registry re-exposes it. */

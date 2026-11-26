@@ -44,7 +44,7 @@ function load() {
         widgets: [
           { id: 'a1', type: 'notes', title: 'First card', props: { body: 'one' } },
           { id: 'a2', type: 'tasks', title: 'Second card', props: { items: [{ id: 't1', text: 'task', done: false }] } },
-          { id: 'a3', type: 'kanban', title: 'Board', props: { cols: [1] } },
+          { id: 'a3', type: 'kanban', title: 'Unsupported widget', props: { cols: [1] } },
         ],
       },
       { id: 'sB', kind: 'stack', title: 'Beta', widgets: [{ id: 'b1', type: 'notes', title: 'Beta card', props: { body: 'bee' } }] },
@@ -58,7 +58,7 @@ function load() {
 const sectionOrder = () => editor().draftConfig!.sections.map((s) => s.id)
 const cardOrder = (id: string) => editor().draftConfig!.sections.find((s) => s.id === id)!.widgets.map((w) => w.id)
 const drawnSections = () => within(screen.getByRole('list', { name: 'Sections' })).getAllByRole('heading', { level: 2 }).map((h) => h.textContent)
-const drawnCards = (section: string) => within(screen.getByRole('list', { name: `${section} cards` })).queryAllByRole('button', { name: /^Reorder card / }).map((b) => b.getAttribute('aria-label')!.replace('Reorder card ', ''))
+const drawnCards = (section: string) => within(screen.getByRole('list', { name: `${section} cards` })).queryAllByRole('article').map((card) => card.querySelector('h3')!.textContent!)
 
 const section = (id: string) => ({ id, data: { itemId: id, containerId: SECTIONS_ROOT, itemType: 'section' } })
 const card = (id: string, sectionId: string) => ({ id, data: { itemId: id, containerId: stackContainerId(sectionId), itemType: 'widget' } })
@@ -75,12 +75,12 @@ beforeEach(() => {
 })
 
 describe('what is draggable', () => {
-  it('every visible section has a grip, and every stack card has its own; grid cards keep the grid handle', () => {
+  it('every visible section has a grip, stack cards are dragged by the card itself, and grid cards keep a keyboard-only handle', () => {
     render(<WorkspaceView />)
     for (const name of ['Dashboard', 'Alpha', 'Beta', 'Empty one']) expect(screen.getByRole('button', { name: `Reorder section ${name}` })).toBeInTheDocument()
-    expect(drawnCards('Alpha')).toEqual(['First card', 'Second card', 'Board'])
+    expect(drawnCards('Alpha')).toEqual(['First card', 'Second card', 'Unsupported widget'])
     expect(drawnCards('Beta')).toEqual(['Beta card'])
-    expect(screen.queryByRole('button', { name: 'Reorder card Grid note' })).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /^Reorder card / })).not.toBeInTheDocument() // no visible card grips any more
     expect(screen.getByRole('button', { name: /^Move or resize Grid note/ })).toBeInTheDocument()
   })
 
@@ -149,7 +149,7 @@ describe('reordering and transferring stack cards', () => {
     const sectionsBefore = sectionOrder()
     start(card('a1', 'sA'))
     hover(card('a1', 'sA'), card('a2', 'sA'))
-    expect(drawnCards('Alpha')).toEqual(['Second card', 'First card', 'Board'])
+    expect(drawnCards('Alpha')).toEqual(['Second card', 'First card', 'Unsupported widget'])
     expect(drawnSections()).toEqual(['Dashboard', 'Alpha', 'Beta', 'Empty one']) // sections unchanged during the card drag
     end(card('a1', 'sA'), card('a2', 'sA'))
     expect(cardOrder('sA')).toEqual(['a2', 'a1', 'a3'])
@@ -163,7 +163,7 @@ describe('reordering and transferring stack cards', () => {
     hover(card('a1', 'sA'), section('sB'))
     hover(card('a1', 'sA'), container(SECTIONS_ROOT, 'section'))
     expect(drawnSections()).toEqual(['Dashboard', 'Alpha', 'Beta', 'Empty one'])
-    expect(drawnCards('Alpha')).toEqual(['First card', 'Second card', 'Board'])
+    expect(drawnCards('Alpha')).toEqual(['First card', 'Second card', 'Unsupported widget'])
     end(card('a1', 'sA'), section('sB'))
     expect(editor().draftConfig).toBe(before)
   })
@@ -198,10 +198,10 @@ describe('reordering and transferring stack cards', () => {
     start(card('a3', 'sA'))
     hover(card('a3', 'sA'), container(stackContainerId('sE'), 'widget'))
     expect(drawnCards('Empty one')).toEqual([]) // checked after each hover: it must never show up in another section
-    expect(drawnCards('Alpha')).toEqual(['First card', 'Second card', 'Board'])
+    expect(drawnCards('Alpha')).toEqual(['First card', 'Second card', 'Unsupported widget'])
     hover(card('a3', 'sA'), card('b1', 'sB'))
     expect(drawnCards('Beta')).toEqual(['Beta card'])
-    expect(drawnCards('Alpha')).toEqual(['First card', 'Second card', 'Board'])
+    expect(drawnCards('Alpha')).toEqual(['First card', 'Second card', 'Unsupported widget'])
     end(card('a3', 'sA'), card('b1', 'sB'))
     expect(editor().draftConfig).toBe(before)
 
